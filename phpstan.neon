@@ -13,6 +13,8 @@ parameters:
         - public
         - routes
 
+    excludePaths:
+                - database/migrations/*_create_permission_tables.php
 
     level: max
 
