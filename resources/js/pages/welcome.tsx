@@ -1,5 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { dashboard, login/* @chisel-registration */, register/* @end-chisel-registration */ } from '@/routes';
+import {
+    dashboard,
+    login /* @chisel-registration */,
+    register /* @end-chisel-registration */,
+} from '@/routes';
 
 export default function Welcome({
     canRegister = true,

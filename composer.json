@@ -1,11 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "nunomaduro/laravel-starter-kit-inertia-react",
+    "name": "tooinfinity/infinity-starter-kit",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Infinity Starter Kit (Laravel + Inertia + React) a full-featured, modular Laravel starter kit powered by Laravel Chisel and Laravel Fortify.",
     "keywords": [
         "laravel",
-        "framework"
+        "inertia",
+        "react",
+        "typescript",
+        "chisel",
+        "fortify",
+        "starter kit"
     ],
     "license": "MIT",
     "require": {

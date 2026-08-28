@@ -13,7 +13,7 @@ it('renders verify email page', function (): void {
 
     $response = $this->actingAs($user)
         ->fromRoute('home')
-        ->get(route('verification.notice'));
+        ->get(route('user.verification.notice'));
 
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -28,7 +28,7 @@ it('redirects verified users to dashboard', function (): void {
 
     $response = $this->actingAs($user)
         ->fromRoute('home')
-        ->get(route('verification.notice'));
+        ->get(route('user.verification.notice'));
 
     $response->assertRedirectToRoute('dashboard');
 });
@@ -41,10 +41,10 @@ it('may send verification notification', function (): void {
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('verification.notice')
+        ->fromRoute('user.verification.notice')
         ->post(route('verification.send'));
 
-    $response->assertRedirectToRoute('verification.notice')
+    $response->assertRedirectToRoute('user.verification.notice')
         ->assertSessionHas('status', 'verification-link-sent');
 
     Notification::assertSentTo($user, VerifyEmail::class);
@@ -58,7 +58,7 @@ it('redirects verified users when sending notification', function (): void {
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('verification.notice')
+        ->fromRoute('user.verification.notice')
         ->post(route('verification.send'));
 
     $response->assertRedirectToRoute('dashboard');

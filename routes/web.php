@@ -76,7 +76,7 @@ Route::middleware('auth')->group(function (): void {
     /* @chisel-email-verification */
     // User Email Verification...
     Route::get('verify-email', [UserEmailVerificationNotificationController::class, 'create'])
-        ->name('verification.notice');
+        ->name('user.verification.notice');
     Route::post('email/verification-notification', [UserEmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
@@ -84,7 +84,7 @@ Route::middleware('auth')->group(function (): void {
     // User Email Verification...
     Route::get('verify-email/{id}/{hash}', [UserEmailVerificationController::class, 'update'])
         ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
+        ->name('user.verification.verify');
     /* @end-chisel-email-verification */
 
     // Session...

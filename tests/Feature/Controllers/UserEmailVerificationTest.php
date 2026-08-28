@@ -11,13 +11,13 @@ it('may verify email', function (): void {
     ]);
 
     $verificationUrl = URL::temporarySignedRoute(
-        'verification.verify',
+        'user.verification.verify',
         now()->addMinutes(60),
         ['id' => $user->getKey(), 'hash' => sha1((string) $user->email)]
     );
 
     $response = $this->actingAs($user)
-        ->fromRoute('verification.notice')
+        ->fromRoute('user.verification.notice')
         ->get($verificationUrl);
 
     expect($user->refresh()->hasVerifiedEmail())->toBeTrue();
@@ -31,13 +31,13 @@ it('redirects to dashboard if already verified', function (): void {
     ]);
 
     $verificationUrl = URL::temporarySignedRoute(
-        'verification.verify',
+        'user.verification.verify',
         now()->addMinutes(60),
         ['id' => $user->getKey(), 'hash' => sha1((string) $user->email)]
     );
 
     $response = $this->actingAs($user)
-        ->fromRoute('verification.notice')
+        ->fromRoute('user.verification.notice')
         ->get($verificationUrl);
 
     $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
@@ -48,13 +48,13 @@ it('requires valid signature', function (): void {
         'email_verified_at' => null,
     ]);
 
-    $invalidUrl = route('verification.verify', [
+    $invalidUrl = route('user.verification.verify', [
         'id' => $user->getKey(),
         'hash' => sha1((string) $user->email),
     ]);
 
     $response = $this->actingAs($user)
-        ->fromRoute('verification.notice')
+        ->fromRoute('user.verification.notice')
         ->get($invalidUrl);
 
     $response->assertForbidden();

@@ -41,6 +41,7 @@ final class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
     /* @end-chisel-email-verification */
 
     /* @chisel-two-factor-authentication */
@@ -52,5 +53,6 @@ final class UserFactory extends Factory
             'two_factor_confirmed_at' => null,
         ]);
     }
+
     /* @end-chisel-two-factor-authentication */
 }
