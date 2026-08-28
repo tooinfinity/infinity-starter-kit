@@ -13,6 +13,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+/* @chisel-roles-permissions */
+use Spatie\Permission\Traits\HasRoles;
+
+/* @end-chisel-roles-permissions */
 
 /**
  * @property-read string $id
@@ -38,6 +42,10 @@ final class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
+    /* @chisel-roles-permissions */
+    use HasRoles;
+
+    /* @end-chisel-roles-permissions */
     use HasUuids;
     use Notifiable;
     use TwoFactorAuthenticatable;
