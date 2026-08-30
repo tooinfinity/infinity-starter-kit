@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 use Laravel\Chisel\Script;
 
-it('defines the default authentication feature selection', function (): void {
+it('defines the default authentication and authorization feature selection', function (): void {
     /** @var Script $script */
     $script = require base_path('chisel.php');
 
     $questions = $script->questions();
 
-    expect($questions)->toHaveCount(1)
+    expect($questions)->toHaveCount(2)
         ->and($questions[0]->name)->toBe('auth_features')
         ->and($questions[0]->options)->toBe([
             'registration' => 'Registration',
@@ -21,6 +21,13 @@ it('defines the default authentication feature selection', function (): void {
             'registration',
             'email-verification',
             'two-factor-authentication',
+        ])
+        ->and($questions[1]->name)->toBe('authorization_features')
+        ->and($questions[1]->options)->toBe([
+            'roles-permissions' => 'Spatie Roles & Permissions (spatie/laravel-permission)',
+        ])
+        ->and($questions[1]->default)->toBe([
+            'roles-permissions',
         ]);
 });
 

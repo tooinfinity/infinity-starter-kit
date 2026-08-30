@@ -12,6 +12,10 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /* @chisel-roles-permissions */
+    permissions: string[];
+    roles: string[];
+    /* @end-chisel-roles-permissions */
 };
 
 export type TwoFactorSetupData = {
