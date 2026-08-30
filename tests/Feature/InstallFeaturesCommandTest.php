@@ -10,7 +10,7 @@ it('defines the default authentication and authorization feature selection', fun
 
     $questions = $script->questions();
 
-    expect($questions)->toHaveCount(2)
+    expect($questions)->toHaveCount(3)
         ->and($questions[0]->name)->toBe('auth_features')
         ->and($questions[0]->options)->toBe([
             'registration' => 'Registration',
@@ -28,7 +28,16 @@ it('defines the default authentication and authorization feature selection', fun
         ])
         ->and($questions[1]->default)->toBe([
             'roles-permissions',
+        ])
+        /* @chisel-settings */
+        ->and($questions[2]->name)->toBe('application_features')
+        ->and($questions[2]->options)->toBe([
+            'settings' => 'Application Settings',
+        ])
+        ->and($questions[2]->default)->toBe([
+            'settings',
         ]);
+    /* @end-chisel-settings */
 });
 
 it('registers the feature installer as a post-create command', function (): void {
