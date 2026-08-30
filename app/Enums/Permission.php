@@ -11,6 +11,11 @@ enum Permission: string
     case UsersUpdate = 'users.update';
     case UsersDelete = 'users.delete';
 
+    /* @chisel-settings */
+    case SettingsManage = 'settings.manage';
+
+    /* @end-chisel-settings */
+
     /**
      * @return list<string>
      */

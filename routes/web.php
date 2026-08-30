@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\SessionController;
+/* @chisel-settings */
+use App\Http\Controllers\SettingController;
+/* @end-chisel-settings */
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -42,6 +45,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
     /* @end-chisel-two-factor-authentication */
+
+    /* @chisel-settings */
+    // Application Settings...
+    Route::get('settings/application', [SettingController::class, 'edit'])
+        ->middleware('can:settings.manage')
+        ->name('settings.edit');
+    Route::put('settings/application', [SettingController::class, 'update'])
+        ->name('settings.update');
+    /* @end-chisel-settings */
 });
 
 Route::middleware('guest')->group(function (): void {
