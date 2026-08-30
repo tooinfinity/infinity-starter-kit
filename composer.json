@@ -21,6 +21,7 @@
         "laravel/framework": "^13.18.0",
         "laravel/wayfinder": "^0.1.20",
         "nunomaduro/essentials": "^1.2.0",
+        "spatie/laravel-data": "^4.23",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {

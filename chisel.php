@@ -29,6 +29,15 @@ return Chisel::script(__DIR__)
             default: ['roles-permissions'],
             hint: 'Use space to select, enter to confirm.',
         ),
+        Question::multiselect(
+            name: 'application_features',
+            label: 'Which application features would you like to enable?',
+            options: [
+                'settings' => 'Application Settings',
+            ],
+            default: ['settings'],
+            hint: 'Use space to select, enter to confirm.',
+        ),
     ])
     ->selected(
         'auth_features',
@@ -157,6 +166,44 @@ return Chisel::script(__DIR__)
                 'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
                 'tests/Unit/Enums/PermissionTest.php',
                 'tests/Unit/Enums/RoleTest.php',
+            )->delete();
+        },
+    )
+    ->selected(
+        'application_features',
+        'settings',
+        then: fn (Chisel $chisel) => $chisel->files(
+            'routes/web.php',
+            'app/Enums/Permission.php',
+            'app/Http/Requests/UpdateSettingsRequest.php',
+            'resources/js/layouts/settings/layout.tsx',
+            'resources/js/types/index.ts',
+        )->removeSectionMarkers('settings'),
+        else: function (Chisel $chisel): void {
+            $chisel->files(
+                'routes/web.php',
+                'app/Enums/Permission.php',
+                'app/Http/Requests/UpdateSettingsRequest.php',
+                'resources/js/layouts/settings/layout.tsx',
+                'resources/js/types/index.ts',
+            )->removeSection('settings');
+            $chisel->files(
+                'app/Enums/SettingKey.php',
+                'app/Enums/SettingGroup.php',
+                'app/Models/Setting.php',
+                'app/Actions/GetSetting.php',
+                'app/Actions/UpdateSettings.php',
+                'app/Http/Controllers/SettingController.php',
+                'app/Http/Requests/UpdateSettingsRequest.php',
+                'database/factories/SettingFactory.php',
+                'database/migrations/2026_01_01_000003_create_settings_table.php',
+                'resources/js/pages/settings/application/edit.tsx',
+                'resources/js/types/settings.ts',
+                'tests/Unit/Models/SettingTest.php',
+                'tests/Unit/Enums/SettingKeyTest.php',
+                'tests/Unit/Enums/SettingGroupTest.php',
+                'tests/Feature/Controllers/SettingControllerTest.php',
+                'tests/Feature/Settings/SettingsActionTest.php',
             )->delete();
         },
     );
