@@ -7,6 +7,9 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editPassword } from '@/routes/password';
+/* @chisel-settings */
+import { edit as editSettings } from '@/routes/settings';
+/* @end-chisel-settings */
 /* @chisel-two-factor-authentication */
 import { show as showTwoFactor } from '@/routes/two-factor';
 /* @end-chisel-two-factor-authentication */
@@ -36,6 +39,13 @@ const sidebarNavItems: NavItem[] = [
         href: editAppearance(),
         icon: null,
     },
+    /* @chisel-settings */
+    {
+        title: 'Application',
+        href: editSettings(),
+        icon: null,
+    },
+    /* @end-chisel-settings */
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
