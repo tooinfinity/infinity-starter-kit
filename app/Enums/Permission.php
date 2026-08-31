@@ -10,6 +10,10 @@ enum Permission: string
     case UsersCreate = 'users.create';
     case UsersUpdate = 'users.update';
     case UsersDelete = 'users.delete';
+    /* @chisel-user-management */
+    case UsersManageRoles = 'users.manage-roles';
+    case UsersManagePassword = 'users.manage-password';
+    /* @end-chisel-user-management */
 
     /* @chisel-settings */
     case SettingsManage = 'settings.manage';
