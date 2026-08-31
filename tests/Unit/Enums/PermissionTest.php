@@ -20,6 +20,10 @@ test('values helper returns all permission strings', function (): void {
         'users.create',
         'users.update',
         'users.delete',
+        /* @chisel-user-management */
+        'users.manage-roles',
+        'users.manage-password',
+        /* @end-chisel-user-management */
         /* @chisel-settings */
         'settings.manage',
         /* @end-chisel-settings */
