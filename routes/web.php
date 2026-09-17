@@ -6,12 +6,18 @@ use App\Http\Controllers\SessionController;
 /* @chisel-settings */
 use App\Http\Controllers\SettingController;
 /* @end-chisel-settings */
+/* @chisel-user-management */
 use App\Http\Controllers\UserController;
+/* @end-chisel-user-management */
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
 use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
+use App\Http\Controllers\Users\ActivateUserController;
+use App\Http\Controllers\Users\DeactivateUserController;
+use App\Http\Controllers\Users\UserController as UserManagementController;
+use App\Http\Controllers\Users\UserPasswordController as AdminUserPasswordController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -54,6 +60,25 @@ Route::middleware('auth')->group(function (): void {
     Route::put('settings/application', [SettingController::class, 'update'])
         ->name('settings.update');
     /* @end-chisel-settings */
+
+    /* @chisel-user-management */
+    // User Management...
+    Route::middleware('can:users.view')->group(function (): void {
+        Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::get('users/create', [UserManagementController::class, 'create'])
+            ->middleware('can:users.create')
+            ->name('users.create');
+        Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
+        Route::get('users/{user}/edit', [UserManagementController::class, 'edit'])
+            ->middleware('can:users.update')
+            ->name('users.edit');
+        Route::put('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::patch('users/{user}/activate', ActivateUserController::class)->name('users.activate');
+        Route::patch('users/{user}/deactivate', DeactivateUserController::class)->name('users.deactivate');
+        Route::put('users/{user}/password', AdminUserPasswordController::class)->name('users.password.update');
+        Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+    });
+    /* @end-chisel-user-management */
 });
 
 Route::middleware('guest')->group(function (): void {

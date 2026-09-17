@@ -23,6 +23,9 @@ return new class extends Migration
             $table->text('two_factor_recovery_codes')->nullable();
             $table->timestamp('two_factor_confirmed_at')->nullable();
             /* @end-chisel-two-factor-authentication */
+            /* @chisel-user-management */
+            $table->boolean('is_active')->default(true);
+            /* @end-chisel-user-management */
             $table->rememberToken();
             $table->timestamps();
         });

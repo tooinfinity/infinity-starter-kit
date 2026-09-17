@@ -31,6 +31,9 @@ final class UserFactory extends Factory
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
             /* @end-chisel-two-factor-authentication */
+            /* @chisel-user-management */
+            'is_active' => true,
+            /* @end-chisel-user-management */
         ];
     }
 
@@ -55,4 +58,21 @@ final class UserFactory extends Factory
     }
 
     /* @end-chisel-two-factor-authentication */
+
+    /* @chisel-user-management */
+    public function active(): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_active' => true,
+        ]);
+    }
+
+    public function inactive(): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_active' => false,
+        ]);
+    }
+
+    /* @end-chisel-user-management */
 }

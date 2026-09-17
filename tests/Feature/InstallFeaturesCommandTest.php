@@ -33,9 +33,15 @@ it('defines the default authentication and authorization feature selection', fun
         ->and($questions[2]->name)->toBe('application_features')
         ->and($questions[2]->options)->toBe([
             'settings' => 'Application Settings',
+            /* @chisel-user-management */
+            'user-management' => 'User Management',
+            /* @end-chisel-user-management */
         ])
         ->and($questions[2]->default)->toBe([
             'settings',
+            /* @chisel-user-management */
+            'user-management',
+            /* @end-chisel-user-management */
         ]);
     /* @end-chisel-settings */
 });
