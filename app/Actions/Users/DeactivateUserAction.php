@@ -6,6 +6,9 @@ namespace App\Actions\Users;
 
 use App\Enums\Role;
 use App\Models\User;
+/* @chisel-notifications */
+use App\Notifications\UserDeactivated;
+/* @end-chisel-notifications */
 use Illuminate\Validation\ValidationException;
 
 final readonly class DeactivateUserAction
@@ -29,5 +32,9 @@ final readonly class DeactivateUserAction
         }
 
         $user->forceFill(['is_active' => false])->save();
+
+        /* @chisel-notifications */
+        $user->notify(new UserDeactivated);
+        /* @end-chisel-notifications */
     }
 }

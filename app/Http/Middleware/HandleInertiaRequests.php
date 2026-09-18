@@ -6,9 +6,10 @@ namespace App\Http\Middleware;
 
 /* @chisel-localization */
 use App\Enums\Locale;
-/* @end-chisel-localization */
 use App\Models\User;
+/* @end-chisel-localization */
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
@@ -53,6 +54,28 @@ final class HandleInertiaRequests extends Middleware
             'direction' => Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr',
             'supportedLocales' => Locale::toOptions(),
             /* @end-chisel-localization */
+            /* @chisel-notifications */
+            'notifications' => [
+                'unreadCount' => $user instanceof User ? $user->unreadNotifications()->count() : 0,
+                'recent' => $user instanceof User
+                    ? $user->notifications()
+                        ->latest()
+                        ->limit(5)
+                        ->get()
+                        ->map(fn (DatabaseNotification $notification): array => [
+                            'id' => $notification->id,
+                            'type' => $notification->data['type'] ?? null,
+                            'title' => $notification->data['title'] ?? '',
+                            'body' => $notification->data['body'] ?? '',
+                            'icon' => $notification->data['icon'] ?? null,
+                            'action' => $notification->data['action'] ?? null,
+                            'read_at' => $notification->read_at?->toISOString(),
+                            'created_at' => $notification->created_at?->toISOString() ?? '',
+                        ])
+                        ->all()
+                    : [],
+            ],
+            /* @end-chisel-notifications */
         ];
     }
 }

@@ -6,13 +6,16 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+/* @end-chisel-two-factor-authentication */
+/* @chisel-notifications */
+import { edit as editNotificationPreferences } from '@/routes/notification-preferences';
 import { edit as editPassword } from '@/routes/password';
 /* @chisel-settings */
 import { edit as editSettings } from '@/routes/settings';
 /* @end-chisel-settings */
 /* @chisel-two-factor-authentication */
 import { show as showTwoFactor } from '@/routes/two-factor';
-/* @end-chisel-two-factor-authentication */
+/* @end-chisel-notifications */
 import { edit } from '@/routes/user-profile';
 import type { NavItem } from '@/types';
 
@@ -46,6 +49,13 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     /* @end-chisel-settings */
+    /* @chisel-notifications */
+    {
+        title: 'Notifications',
+        href: editNotificationPreferences(),
+        icon: null,
+    },
+    /* @end-chisel-notifications */
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

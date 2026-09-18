@@ -6,6 +6,9 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 /* @chisel-localization */
 import { LanguageSelector } from '@/components/language-selector';
 /* @end-chisel-localization */
+/* @chisel-notifications */
+import { NotificationBell } from '@/components/notifications/notification-bell';
+/* @end-chisel-notifications */
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -216,6 +219,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         {/* @chisel-localization */}
                         <LanguageSelector />
                         {/* @end-chisel-localization */}
+                        {/* @chisel-notifications */}
+                        <NotificationBell />
+                        {/* @end-chisel-notifications */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
