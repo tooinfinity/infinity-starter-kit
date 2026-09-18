@@ -20,8 +20,8 @@ final class SettingFactory extends Factory
     public function definition(): array
     {
         return [
-            'key' => $this->faker->word(),
-            'value' => $this->faker->word(),
+            'key' => fake()->word(),
+            'value' => fake()->word(),
         ];
     }
 }
