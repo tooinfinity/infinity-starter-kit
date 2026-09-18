@@ -3,6 +3,9 @@ import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+/* @chisel-localization */
+import { LanguageSelector } from '@/components/language-selector';
+/* @end-chisel-localization */
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -210,6 +213,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 ))}
                             </div>
                         </div>
+                        {/* @chisel-localization */}
+                        <LanguageSelector />
+                        {/* @end-chisel-localization */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button

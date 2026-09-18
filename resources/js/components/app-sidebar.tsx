@@ -2,6 +2,9 @@ import { Link } from '@inertiajs/react';
 import { BookOpen, FolderGit2, LayoutGrid, Users } from 'lucide-react';
 /* @end-chisel-user-management */
 import AppLogo from '@/components/app-logo';
+/* @chisel-localization */
+import { LanguageSelector } from '@/components/language-selector';
+/* @end-chisel-localization */
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -69,6 +72,11 @@ export function AppSidebar() {
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />
+                {/* @chisel-localization */}
+                <div className="flex justify-center px-2 py-1 group-data-[collapsible=icon]:px-0">
+                    <LanguageSelector />
+                </div>
+                {/* @end-chisel-localization */}
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

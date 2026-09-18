@@ -26,6 +26,9 @@ return new class extends Migration
             /* @chisel-user-management */
             $table->boolean('is_active')->default(true);
             /* @end-chisel-user-management */
+            /* @chisel-localization */
+            $table->string('locale', 10)->nullable();
+            /* @end-chisel-localization */
             $table->rememberToken();
             $table->timestamps();
         });

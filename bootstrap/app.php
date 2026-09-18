@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+/* @chisel-localization */
+use App\Http\Middleware\HandleLocale;
+/* @end-chisel-localization */
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,10 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state'/* @chisel-localization */, 'locale'/* @end-chisel-localization */]);
 
         $middleware->web(append: [
             HandleAppearance::class,
+            /* @chisel-localization */
+            HandleLocale::class,
+            /* @end-chisel-localization */
             HandleInertiaRequests::class,
             /* @chisel-user-management */
             EnsureUserIsActive::class,

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+/* @chisel-localization */
+use App\Enums\Locale;
+/* @end-chisel-localization */
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -29,6 +32,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read string|null $two_factor_recovery_codes
  * @property-read CarbonInterface|null $two_factor_confirmed_at
  * @property-read bool $is_active
+ * @property-read Locale|null $locale
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
  */
@@ -73,6 +77,9 @@ final class User extends Authenticatable implements MustVerifyEmail
             /* @chisel-user-management */
             'is_active' => 'boolean',
             /* @end-chisel-user-management */
+            /* @chisel-localization */
+            'locale' => Locale::class,
+            /* @end-chisel-localization */
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
