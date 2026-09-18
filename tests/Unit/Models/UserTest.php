@@ -17,6 +17,9 @@ test('to array', function (): void {
             /* @chisel-user-management */
             'is_active',
             /* @end-chisel-user-management */
+            /* @chisel-localization */
+            'locale',
+            /* @end-chisel-localization */
             'created_at',
             'updated_at',
         ]);

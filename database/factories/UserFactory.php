@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\Locale;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -34,6 +35,9 @@ final class UserFactory extends Factory
             /* @chisel-user-management */
             'is_active' => true,
             /* @end-chisel-user-management */
+            /* @chisel-localization */
+            'locale' => null,
+            /* @end-chisel-localization */
         ];
     }
 
@@ -75,4 +79,14 @@ final class UserFactory extends Factory
     }
 
     /* @end-chisel-user-management */
+
+    /* @chisel-localization */
+    public function withLocale(Locale $locale): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'locale' => $locale,
+        ]);
+    }
+
+    /* @end-chisel-localization */
 }

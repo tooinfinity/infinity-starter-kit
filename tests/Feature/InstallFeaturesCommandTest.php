@@ -36,12 +36,18 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-user-management */
             'user-management' => 'User Management',
             /* @end-chisel-user-management */
+            /* @chisel-localization */
+            'localization' => 'Localization / Multi-language Support',
+            /* @end-chisel-localization */
         ])
         ->and($questions[2]->default)->toBe([
             'settings',
             /* @chisel-user-management */
             'user-management',
             /* @end-chisel-user-management */
+            /* @chisel-localization */
+            'localization',
+            /* @end-chisel-localization */
         ]);
     /* @end-chisel-settings */
 });
