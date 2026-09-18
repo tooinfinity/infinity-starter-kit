@@ -9,4 +9,7 @@ export type * from './users';
 /* @chisel-localization */
 export type * from './localization';
 /* @end-chisel-localization */
+/* @chisel-notifications */
+export type * from './notifications';
+/* @end-chisel-notifications */
 export type * from './ui';
