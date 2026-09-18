@@ -39,6 +39,9 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-localization */
             'localization' => 'Localization / Multi-language Support',
             /* @end-chisel-localization */
+            /* @chisel-notifications */
+            'notifications' => 'Notifications',
+            /* @end-chisel-notifications */
         ])
         ->and($questions[2]->default)->toBe([
             'settings',
@@ -48,6 +51,9 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-localization */
             'localization',
             /* @end-chisel-localization */
+            /* @chisel-notifications */
+            'notifications',
+            /* @end-chisel-notifications */
         ]);
     /* @end-chisel-settings */
 });
