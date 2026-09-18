@@ -8,11 +8,17 @@ namespace App\Models;
 use App\Enums\Locale;
 /* @end-chisel-localization */
 use Carbon\CarbonInterface;
+/* @chisel-notifications */
 use Database\Factories\UserFactory;
+/* @end-chisel-notifications */
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+/* @chisel-notifications */
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+/* @end-chisel-notifications */
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -42,7 +48,7 @@ use Spatie\Permission\Traits\HasRoles;
     'two_factor_secret',
     'two_factor_recovery_codes',
 ])]
-final class User extends Authenticatable implements MustVerifyEmail
+final class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail /* @chisel-notifications */ /* @end-chisel-notifications */
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
@@ -84,4 +90,20 @@ final class User extends Authenticatable implements MustVerifyEmail
             'updated_at' => 'datetime',
         ];
     }
+
+    /* @chisel-notifications */
+    public function preferredLocale(): ?string
+    {
+        return $this->locale?->value;
+    }
+
+    /**
+     * @return HasMany<NotificationPreference, $this>
+     */
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    /* @end-chisel-notifications */
 }
