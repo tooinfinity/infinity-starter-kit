@@ -35,8 +35,9 @@ return Chisel::script(__DIR__)
             options: [
                 'settings' => 'Application Settings',
                 'user-management' => 'User Management',
+                'localization' => 'Localization / Multi-language Support',
             ],
-            default: ['settings', 'user-management'],
+            default: ['settings', 'user-management', 'localization'],
             hint: 'Use space to select, enter to confirm.',
         ),
     ])
@@ -267,6 +268,62 @@ return Chisel::script(__DIR__)
                 'tests/Feature/Users/DeleteUserTest.php',
                 'tests/Feature/Users/InactiveUserAuthTest.php',
                 'tests/Feature/Users/SuperAdminProtectionTest.php',
+            )->delete();
+        },
+    )
+    ->selected(
+        'application_features',
+        'localization',
+        then: fn (Chisel $chisel) => $chisel->files(
+            'database/migrations/0001_01_01_000000_create_users_table.php',
+            'app/Models/User.php',
+            'database/factories/UserFactory.php',
+            'bootstrap/app.php',
+            'routes/web.php',
+            'app/Http/Middleware/HandleInertiaRequests.php',
+            'resources/js/types/global.d.ts',
+            'resources/js/types/index.ts',
+            'resources/js/components/app-header.tsx',
+            'resources/js/components/app-sidebar.tsx',
+            'tests/Unit/Models/UserTest.php',
+            'tests/Feature/InstallFeaturesCommandTest.php',
+        )->removeSectionMarkers('localization'),
+        else: function (Chisel $chisel): void {
+            $chisel->files(
+                'database/migrations/0001_01_01_000000_create_users_table.php',
+                'app/Models/User.php',
+                'database/factories/UserFactory.php',
+                'bootstrap/app.php',
+                'routes/web.php',
+                'app/Http/Middleware/HandleInertiaRequests.php',
+                'resources/js/types/global.d.ts',
+                'resources/js/types/index.ts',
+                'resources/js/components/app-header.tsx',
+                'resources/js/components/app-sidebar.tsx',
+                'tests/Unit/Models/UserTest.php',
+                'tests/Feature/InstallFeaturesCommandTest.php',
+            )->removeSection('localization');
+            $chisel->files(
+                'app/Actions/ChangeLocale.php',
+                'app/Actions/ResolveLocale.php',
+                'app/Enums/Locale.php',
+                'app/Http/Controllers/LocaleController.php',
+                'app/Http/Middleware/HandleLocale.php',
+                'app/Http/Requests/ChangeLocaleRequest.php',
+                'lang/en/common.php',
+                'lang/en/localization.php',
+                'lang/fr/common.php',
+                'lang/fr/localization.php',
+                'lang/ar/common.php',
+                'lang/ar/localization.php',
+                'resources/js/components/language-selector.tsx',
+                'resources/js/types/localization.ts',
+                'tests/Unit/Enums/LocaleTest.php',
+                'tests/Feature/Localization/ChangeLocaleTest.php',
+                'tests/Feature/Localization/InertiaLocalePropsTest.php',
+                'tests/Feature/Localization/LocaleMiddlewareTest.php',
+                'tests/Feature/Localization/ResolveLocaleTest.php',
+                'tests/Feature/Localization/TranslationFileTest.php',
             )->delete();
         },
     );

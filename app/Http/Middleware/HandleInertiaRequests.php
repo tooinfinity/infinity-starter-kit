@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+/* @chisel-localization */
+use App\Enums\Locale;
+/* @end-chisel-localization */
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -45,6 +48,11 @@ final class HandleInertiaRequests extends Middleware
                 /* @end-chisel-roles-permissions */
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            /* @chisel-localization */
+            'locale' => app()->getLocale(),
+            'direction' => Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr',
+            'supportedLocales' => Locale::toOptions(),
+            /* @end-chisel-localization */
         ];
     }
 }

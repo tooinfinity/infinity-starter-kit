@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+/* @chisel-localization */
+use App\Http\Controllers\LocaleController;
+/* @end-chisel-localization */
 use App\Http\Controllers\SessionController;
 /* @chisel-settings */
 use App\Http\Controllers\SettingController;
@@ -23,6 +26,10 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
+
+/* @chisel-localization */
+Route::post('locale', [LocaleController::class, 'update'])->name('locale.update');
+/* @end-chisel-localization */
 
 Route::middleware(['auth'/* @chisel-email-verification */, 'verified'/* @end-chisel-email-verification */])->group(function (): void {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');

@@ -20,6 +20,7 @@
         "vite-plus": "latest"
     },
     "dependencies": {
+        "@erag/lang-sync-inertia": "^3.1.0",
         "@headlessui/react": "^2.2.10",
         "@inertiajs/react": "^3.7.1",
         "@inertiajs/vite": "^3.7.1",
