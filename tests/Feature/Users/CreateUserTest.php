@@ -20,6 +20,21 @@ it('renders create user page for authorized user', function (): void {
         ->assertInertia(fn ($page) => $page->component('users/create'));
 });
 
+it('passes database roles to create user page when roles exist', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersCreate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    RoleModel::findOrCreate('custom-role');
+
+    $response = $this->actingAs($admin)
+        ->get(route('users.create'));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('users/create')
+            ->where('availableRoles', fn ($roles): bool => $roles->contains('custom-role')));
+});
+
 it('creates new user with hashed password and roles', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersCreate->value));

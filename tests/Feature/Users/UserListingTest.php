@@ -48,7 +48,7 @@ it('filters users by search query', function (): void {
             ->where('users.data', fn ($data): bool => count($data) === 1 && $data[0]['name'] === 'Alice Johnson'));
 });
 
-it('filters users by active status', function (): void {
+it('filters users by inactive status', function (): void {
     $admin = User::factory()->create();
     $permission = PermissionModel::findOrCreate(Permission::UsersView->value);
     $admin->givePermissionTo($permission);
@@ -62,4 +62,20 @@ it('filters users by active status', function (): void {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('users.data', fn ($data): bool => count($data) === 1 && $data[0]['name'] === 'Inactive User'));
+});
+
+it('filters users by active status', function (): void {
+    $admin = User::factory()->active()->create(['name' => 'Admin User']);
+    $permission = PermissionModel::findOrCreate(Permission::UsersView->value);
+    $admin->givePermissionTo($permission);
+
+    User::factory()->active()->create(['name' => 'Active User']);
+    User::factory()->inactive()->create(['name' => 'Inactive User']);
+
+    $response = $this->actingAs($admin)
+        ->get(route('users.index', ['status' => 'active']));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('users.data', fn ($data): bool => count($data) === 2));
 });

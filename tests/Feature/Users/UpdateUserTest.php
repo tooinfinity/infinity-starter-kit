@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Permission;
+use App\Enums\Role;
 use App\Models\User;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -63,4 +64,61 @@ it('allows keeping same email during update', function (): void {
         ]);
 
     $response->assertSessionHasNoErrors();
+});
+
+it('prevents user from deactivating their own account', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $admin), [
+            'name' => $admin->name,
+            'email' => $admin->email,
+            'is_active' => false,
+            'roles' => [],
+        ]);
+
+    $response->assertSessionHasErrors(['is_active' => __('You cannot deactivate your own account.')]);
+});
+
+it('prevents deactivating the last super admin', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole($superAdminRole);
+
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $superAdmin), [
+            'name' => $superAdmin->name,
+            'email' => $superAdmin->email,
+            'is_active' => false,
+            'roles' => [Role::SuperAdmin->value],
+        ]);
+
+    $response->assertSessionHasErrors(['is_active' => __('Cannot deactivate the last Super Admin.')]);
+});
+
+it('prevents removing super admin role from the last super admin', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $editorRole = RoleModel::findOrCreate('editor');
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole($superAdminRole);
+
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $superAdmin), [
+            'name' => $superAdmin->name,
+            'email' => $superAdmin->email,
+            'is_active' => true,
+            'roles' => ['editor'],
+        ]);
+
+    $response->assertSessionHasErrors(['roles' => __('Cannot remove the Super Admin role from the last Super Admin.')]);
 });
