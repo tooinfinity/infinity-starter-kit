@@ -1,6 +1,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     Edit,
+    FilterX,
     KeyRound,
     MoreHorizontal,
     Plus,
@@ -8,7 +9,9 @@ import {
     Shield,
     Trash2,
     UserCheck,
+    Users,
     UserX,
+    X,
 } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import ActivateUserController from '@/actions/App/Http/Controllers/Users/ActivateUserController';
@@ -16,8 +19,10 @@ import DeactivateUserController from '@/actions/App/Http/Controllers/Users/Deact
 import UserController from '@/actions/App/Http/Controllers/Users/UserController';
 import UserPasswordController from '@/actions/App/Http/Controllers/Users/UserPasswordController';
 import { Can } from '@/components/can';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { TableEmptyState } from '@/components/table-empty-state';
+import { TablePagination } from '@/components/table-pagination';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +42,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { UserStatusBadge } from '@/components/users/user-status-badge';
+import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import { create, edit, index } from '@/routes/users';
 import type {
@@ -57,6 +70,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function UsersIndex({
     users,
     filters,
+    availableRoles: _availableRoles,
 }: {
     users: PaginatedUsers;
     filters: UserFilters;
@@ -69,15 +83,23 @@ export default function UsersIndex({
         null,
     );
 
+    const getInitials = useInitials();
+
     const passwordForm = useForm({
         password: '',
     });
 
-    const handleSearchSubmit = (e: FormEvent) => {
-        e.preventDefault();
+    const handleSearchSubmit = (e?: FormEvent) => {
+        if (e) {
+            e.preventDefault();
+        }
+
         router.get(
             index.url(),
-            { search, status },
+            {
+                search: search || undefined,
+                status: status !== 'all' ? status : undefined,
+            },
             { preserveState: true, replace: true },
         );
     };
@@ -86,10 +108,33 @@ export default function UsersIndex({
         setStatus(newStatus);
         router.get(
             index.url(),
-            { search, status: newStatus },
+            {
+                search: search || undefined,
+                status: newStatus !== 'all' ? newStatus : undefined,
+            },
             { preserveState: true, replace: true },
         );
     };
+
+    const handleClearSearch = () => {
+        setSearch('');
+        router.get(
+            index.url(),
+            {
+                search: undefined,
+                status: status !== 'all' ? status : undefined,
+            },
+            { preserveState: true, replace: true },
+        );
+    };
+
+    const handleResetFilters = () => {
+        setSearch('');
+        setStatus('all');
+        router.get(index.url(), {}, { preserveState: true, replace: true });
+    };
+
+    const hasActiveFilters = Boolean(search) || status !== 'all';
 
     const handleActivate = (user: UserListItem) => {
         router.patch(
@@ -134,15 +179,30 @@ export default function UsersIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="User Management" />
 
-            <div className="space-y-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <Heading
-                        title="User Management"
-                        description="Manage user accounts, roles, permissions, and security."
-                    />
+            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+                {/* Header */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                                User Management
+                            </h1>
+                            <Badge
+                                variant="secondary"
+                                className="text-xs font-medium"
+                            >
+                                {users.total ?? 0}{' '}
+                                {users.total === 1 ? 'user' : 'users'}
+                            </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Manage user accounts, roles, permissions, and
+                            security.
+                        </p>
+                    </div>
 
                     <Can permission="users.create">
-                        <Button asChild>
+                        <Button asChild className="self-start sm:self-auto">
                             <Link href={create.url()}>
                                 <Plus className="mr-2 size-4" />
                                 Add User
@@ -152,41 +212,81 @@ export default function UsersIndex({
                 </div>
 
                 {/* Filters Bar */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <form
-                        onSubmit={handleSearchSubmit}
-                        className="relative max-w-md flex-1"
-                    >
-                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by name or email..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9"
-                        />
-                    </form>
+                <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+                    <form onSubmit={handleSearchSubmit} className="space-y-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {/* Search */}
+                            <div className="relative lg:col-span-2">
+                                <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search by name or email..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pr-8 pl-8"
+                                />
+                                {search && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearSearch}
+                                        className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground"
+                                        aria-label="Clear search"
+                                    >
+                                        <X className="size-4" />
+                                    </button>
+                                )}
+                            </div>
 
-                    <div className="flex items-center gap-1 self-start rounded-lg border bg-muted/40 p-1 sm:self-auto">
-                        {(['all', 'active', 'inactive'] as const).map((tab) => (
-                            <Button
-                                key={tab}
-                                type="button"
-                                variant={status === tab ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => handleStatusFilter(tab)}
-                                className="text-xs capitalize"
-                            >
-                                {tab}
+                            {/* Status Filter */}
+                            <div>
+                                <Select
+                                    value={status}
+                                    onValueChange={(val) =>
+                                        handleStatusFilter(val)
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="All Statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            All Statuses
+                                        </SelectItem>
+                                        <SelectItem value="active">
+                                            Active
+                                        </SelectItem>
+                                        <SelectItem value="inactive">
+                                            Inactive
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                            {hasActiveFilters && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleResetFilters}
+                                    className="gap-1 text-xs"
+                                >
+                                    <FilterX className="size-3.5" />
+                                    Reset
+                                </Button>
+                            )}
+                            <Button type="submit" size="sm" className="text-xs">
+                                Apply Filters
                             </Button>
-                        ))}
-                    </div>
+                        </div>
+                    </form>
                 </div>
 
                 {/* Table */}
-                <div className="overflow-hidden rounded-xl border bg-card">
+                <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="border-b bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                            <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 <tr>
                                     <th className="px-4 py-3.5">User</th>
                                     <th className="px-4 py-3.5">Status</th>
@@ -200,12 +300,51 @@ export default function UsersIndex({
                             <tbody className="divide-y">
                                 {users.data.length === 0 ? (
                                     <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="px-4 py-8 text-center text-muted-foreground"
-                                        >
-                                            No users found matching your
-                                            criteria.
+                                        <td colSpan={5} className="p-0">
+                                            <TableEmptyState
+                                                icon={Users}
+                                                title={
+                                                    hasActiveFilters
+                                                        ? 'No matching users found'
+                                                        : 'No users yet'
+                                                }
+                                                description={
+                                                    hasActiveFilters
+                                                        ? 'Try adjusting or clearing your search or filter options.'
+                                                        : 'Get started by creating your first user account.'
+                                                }
+                                                action={
+                                                    hasActiveFilters ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={
+                                                                handleResetFilters
+                                                            }
+                                                            className="gap-1.5 text-xs"
+                                                        >
+                                                            <FilterX className="size-3.5" />
+                                                            Reset filters
+                                                        </Button>
+                                                    ) : (
+                                                        <Can permission="users.create">
+                                                            <Button
+                                                                asChild
+                                                                size="sm"
+                                                                className="gap-1.5 text-xs"
+                                                            >
+                                                                <Link
+                                                                    href={create.url()}
+                                                                >
+                                                                    <Plus className="size-3.5" />
+                                                                    Add User
+                                                                </Link>
+                                                            </Button>
+                                                        </Can>
+                                                    )
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -215,13 +354,22 @@ export default function UsersIndex({
                                             className="transition-colors hover:bg-muted/30"
                                         >
                                             <td className="px-4 py-3.5">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-foreground">
-                                                        {user.name}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {user.email}
-                                                    </span>
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="size-8 shrink-0">
+                                                        <AvatarFallback className="bg-muted text-xs font-medium text-foreground uppercase">
+                                                            {getInitials(
+                                                                user.name,
+                                                            )}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-foreground">
+                                                            {user.name}
+                                                        </span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {user.email}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3.5">
@@ -241,7 +389,7 @@ export default function UsersIndex({
                                                                 <Badge
                                                                     key={role}
                                                                     variant="secondary"
-                                                                    className="text-xs"
+                                                                    className="text-xs font-normal"
                                                                 >
                                                                     <Shield className="mr-1 size-3 text-muted-foreground" />
                                                                     {role}
@@ -357,43 +505,13 @@ export default function UsersIndex({
                     </div>
 
                     {/* Pagination */}
-                    {users.links.length > 3 && (
-                        <div className="flex items-center justify-between border-t bg-muted/20 px-4 py-3">
-                            <div className="text-xs text-muted-foreground">
-                                Showing {users.from ?? 0} to {users.to ?? 0} of{' '}
-                                {users.total ?? 0} users
-                            </div>
-                            <div className="flex gap-1">
-                                {users.links.map((link, i) => (
-                                    <Button
-                                        key={i}
-                                        variant={
-                                            link.active ? 'default' : 'outline'
-                                        }
-                                        size="sm"
-                                        disabled={!link.url}
-                                        asChild={!!link.url}
-                                        className="h-8 text-xs"
-                                    >
-                                        {link.url ? (
-                                            <Link
-                                                href={link.url}
-                                                dangerouslySetInnerHTML={{
-                                                    __html: link.label,
-                                                }}
-                                            />
-                                        ) : (
-                                            <span
-                                                dangerouslySetInnerHTML={{
-                                                    __html: link.label,
-                                                }}
-                                            />
-                                        )}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <TablePagination
+                        links={users.links}
+                        from={users.from}
+                        to={users.to}
+                        total={users.total}
+                        itemName="users"
+                    />
                 </div>
             </div>
 

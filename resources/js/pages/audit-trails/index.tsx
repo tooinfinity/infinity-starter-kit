@@ -1,10 +1,12 @@
 /* @chisel-audit-trails */
 
-import { Head, Link, router } from '@inertiajs/react';
-import { Eye, FilterX, History, Search } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { Eye, FilterX, History, Search, X } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { AuditTrailDetail } from '@/components/audit-trails/audit-trail-detail';
-import Heading from '@/components/heading';
+import { TableEmptyState } from '@/components/table-empty-state';
+import { TablePagination } from '@/components/table-pagination';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import { index as auditTrailsIndex } from '@/routes/audit-trails';
 import type { BreadcrumbItem } from '@/types';
@@ -52,6 +55,8 @@ export default function AuditTrailsIndex({
         null,
     );
 
+    const getInitials = useInitials();
+
     const handleFilterSubmit = (e?: FormEvent) => {
         if (e) {
             e.preventDefault();
@@ -61,6 +66,20 @@ export default function AuditTrailsIndex({
             auditTrailsIndex.url(),
             {
                 search: search || undefined,
+                event: event !== 'all' ? event : undefined,
+                date_from: dateFrom || undefined,
+                date_to: dateTo || undefined,
+            },
+            { preserveState: true, replace: true },
+        );
+    };
+
+    const handleClearSearch = () => {
+        setSearch('');
+        router.get(
+            auditTrailsIndex.url(),
+            {
+                search: undefined,
                 event: event !== 'all' ? event : undefined,
                 date_from: dateFrom || undefined,
                 date_to: dateTo || undefined,
@@ -138,14 +157,31 @@ export default function AuditTrailsIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Audit Trails" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 p-4 md:p-6">
-                <Heading
-                    title="Audit Trails"
-                    description="Track and monitor administrative and security events."
-                />
+            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+                {/* Header */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                                Audit Trails
+                            </h1>
+                            <Badge
+                                variant="secondary"
+                                className="text-xs font-medium"
+                            >
+                                {auditTrails.total ?? 0}{' '}
+                                {auditTrails.total === 1 ? 'record' : 'records'}
+                            </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Track and monitor administrative and security
+                            events.
+                        </p>
+                    </div>
+                </div>
 
                 {/* Filters */}
-                <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+                <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
                     <form onSubmit={handleFilterSubmit} className="space-y-3">
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <div className="relative">
@@ -154,9 +190,19 @@ export default function AuditTrailsIndex({
                                     placeholder="Search by IP, URL, or user..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="pl-8"
+                                    className="pr-8 pl-8"
                                     data-test="audit-search-input"
                                 />
+                                {search && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearSearch}
+                                        className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground"
+                                        aria-label="Clear search"
+                                    >
+                                        <X className="size-4" />
+                                    </button>
+                                )}
                             </div>
 
                             <div>
@@ -166,7 +212,10 @@ export default function AuditTrailsIndex({
                                         setEvent(val);
                                     }}
                                 >
-                                    <SelectTrigger data-test="audit-event-select">
+                                    <SelectTrigger
+                                        className="w-full"
+                                        data-test="audit-event-select"
+                                    >
                                         <SelectValue placeholder="All Events" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -237,17 +286,17 @@ export default function AuditTrailsIndex({
                 </div>
 
                 {/* Audit Trails Table */}
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+                <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
+                            <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 <tr>
-                                    <th className="px-4 py-3">Event</th>
-                                    <th className="px-4 py-3">Actor</th>
-                                    <th className="px-4 py-3">Target</th>
-                                    <th className="px-4 py-3">IP Address</th>
-                                    <th className="px-4 py-3">Timestamp</th>
-                                    <th className="px-4 py-3 text-right">
+                                    <th className="px-4 py-3.5">Event</th>
+                                    <th className="px-4 py-3.5">Actor</th>
+                                    <th className="px-4 py-3.5">Target</th>
+                                    <th className="px-4 py-3.5">IP Address</th>
+                                    <th className="px-4 py-3.5">Timestamp</th>
+                                    <th className="px-4 py-3.5 text-right">
                                         Actions
                                     </th>
                                 </tr>
@@ -255,21 +304,36 @@ export default function AuditTrailsIndex({
                             <tbody className="divide-y">
                                 {auditTrails.data.length === 0 ? (
                                     <tr>
-                                        <td
-                                            colSpan={6}
-                                            className="px-4 py-12 text-center text-muted-foreground"
-                                        >
-                                            <div className="flex flex-col items-center justify-center gap-2">
-                                                <History className="size-8 opacity-40" />
-                                                <p className="font-medium">
-                                                    No audit trails found
-                                                </p>
-                                                <p className="text-xs">
-                                                    Events will appear here as
-                                                    system actions are
-                                                    performed.
-                                                </p>
-                                            </div>
+                                        <td colSpan={6} className="p-0">
+                                            <TableEmptyState
+                                                icon={History}
+                                                title={
+                                                    hasActiveFilters
+                                                        ? 'No matching audit records'
+                                                        : 'No audit trails found'
+                                                }
+                                                description={
+                                                    hasActiveFilters
+                                                        ? 'No events matched your filter criteria. Try changing or clearing your filters.'
+                                                        : 'Events will appear here as system actions are performed.'
+                                                }
+                                                action={
+                                                    hasActiveFilters ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={
+                                                                handleResetFilters
+                                                            }
+                                                            className="gap-1.5 text-xs"
+                                                        >
+                                                            <FilterX className="size-3.5" />
+                                                            Reset filters
+                                                        </Button>
+                                                    ) : undefined
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -279,7 +343,7 @@ export default function AuditTrailsIndex({
                                             className="transition-colors hover:bg-muted/30"
                                             data-test={`audit-row-${audit.id}`}
                                         >
-                                            <td className="px-4 py-3 font-medium">
+                                            <td className="px-4 py-3.5 font-medium">
                                                 <div className="flex flex-col gap-1">
                                                     <div>
                                                         {renderEventBadge(
@@ -293,27 +357,43 @@ export default function AuditTrailsIndex({
                                                 </div>
                                             </td>
 
-                                            <td className="px-4 py-3">
+                                            <td className="px-4 py-3.5">
                                                 {audit.user ? (
-                                                    <div>
-                                                        <p className="font-medium text-foreground">
-                                                            {audit.user.name}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {audit.user.email}
-                                                        </p>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Avatar className="size-7 shrink-0">
+                                                            <AvatarFallback className="bg-muted text-[10px] font-medium text-foreground uppercase">
+                                                                {getInitials(
+                                                                    audit.user
+                                                                        .name,
+                                                                )}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <p className="font-medium text-foreground">
+                                                                {
+                                                                    audit.user
+                                                                        .name
+                                                                }
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {
+                                                                    audit.user
+                                                                        .email
+                                                                }
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 ) : (
                                                     <Badge
                                                         variant="secondary"
-                                                        className="text-xs"
+                                                        className="text-xs font-normal"
                                                     >
                                                         System
                                                     </Badge>
                                                 )}
                                             </td>
 
-                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                                            <td className="px-4 py-3.5 font-mono text-xs text-muted-foreground">
                                                 {audit.auditable_type ? (
                                                     <div>
                                                         <p className="text-foreground">
@@ -330,17 +410,17 @@ export default function AuditTrailsIndex({
                                                 )}
                                             </td>
 
-                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                                            <td className="px-4 py-3.5 font-mono text-xs text-muted-foreground">
                                                 {audit.ip_address ?? '—'}
                                             </td>
 
-                                            <td className="px-4 py-3 text-xs text-muted-foreground">
+                                            <td className="px-4 py-3.5 text-xs text-muted-foreground">
                                                 {new Date(
                                                     audit.created_at,
                                                 ).toLocaleString()}
                                             </td>
 
-                                            <td className="px-4 py-3 text-right">
+                                            <td className="px-4 py-3.5 text-right">
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -362,44 +442,13 @@ export default function AuditTrailsIndex({
                     </div>
 
                     {/* Pagination */}
-                    {auditTrails.links && auditTrails.links.length > 3 && (
-                        <div className="flex items-center justify-between border-t bg-muted/20 px-4 py-3">
-                            <div className="text-xs text-muted-foreground">
-                                Showing {auditTrails.from ?? 0} to{' '}
-                                {auditTrails.to ?? 0} of{' '}
-                                {auditTrails.total ?? 0} audit records
-                            </div>
-                            <div className="flex gap-1">
-                                {auditTrails.links.map((link, i) => (
-                                    <Button
-                                        key={i}
-                                        variant={
-                                            link.active ? 'default' : 'outline'
-                                        }
-                                        size="sm"
-                                        disabled={!link.url}
-                                        asChild={Boolean(link.url)}
-                                        className="h-8 text-xs"
-                                    >
-                                        {link.url ? (
-                                            <Link
-                                                href={link.url}
-                                                dangerouslySetInnerHTML={{
-                                                    __html: link.label,
-                                                }}
-                                            />
-                                        ) : (
-                                            <span
-                                                dangerouslySetInnerHTML={{
-                                                    __html: link.label,
-                                                }}
-                                            />
-                                        )}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <TablePagination
+                        links={auditTrails.links}
+                        from={auditTrails.from}
+                        to={auditTrails.to}
+                        total={auditTrails.total}
+                        itemName="audit records"
+                    />
                 </div>
             </div>
 
