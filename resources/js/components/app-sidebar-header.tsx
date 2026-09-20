@@ -19,16 +19,15 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            {/* @chisel-notifications */}
+
             <div className="flex items-center gap-2">
+                {/* @chisel-notifications */}
                 <NotificationBell />
-            </div>
-            {/* @end-chisel-notifications */}
-            {/* @chisel-localization */}
-            <div className="flex items-center gap-2">
+                {/* @end-chisel-notifications */}
+                {/* @chisel-localization */}
                 <LanguageSelector />
+                {/* @end-chisel-localization */}
             </div>
-            {/* @end-chisel-localization */}
         </header>
     );
 }
