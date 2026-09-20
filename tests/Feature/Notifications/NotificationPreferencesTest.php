@@ -87,4 +87,16 @@ test('preferences are scoped per user', function (): void {
         );
 });
 
+test('notification preference belongs to a user', function (): void {
+    $user = User::factory()->create();
+    $preference = NotificationPreference::query()->create([
+        'user_id' => $user->id,
+        'notification_type' => NotificationType::System,
+        'database_enabled' => true,
+    ]);
+
+    expect($preference->user)->toBeInstanceOf(User::class)
+        ->and($preference->user->id)->toBe($user->id);
+});
+
 /* @end-chisel-notifications */
