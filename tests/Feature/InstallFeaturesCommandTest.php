@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Laravel\Chisel\PendingAnswers;
+use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
 
 it('defines the default authentication and authorization feature selection', function (): void {
@@ -85,7 +87,7 @@ it('executes chisel with provided answers in non-interactive mode', function ():
         'auth_features' => ['registration'],
     ];
 
-    $pendingAnswers = Mockery::mock(Laravel\Chisel\PendingAnswers::class);
+    $pendingAnswers = Mockery::mock(PendingAnswers::class);
     $pendingAnswers->shouldReceive('onQuestion')->once()->andReturnSelf();
     $pendingAnswers->shouldReceive('interactive')->with(false)->once()->andReturnSelf();
     $pendingAnswers->shouldReceive('withAnswers')->with($answers)->once()->andReturnSelf();
@@ -103,7 +105,7 @@ it('executes chisel with provided answers in non-interactive mode', function ():
 });
 
 it('executes chisel without answers option defaulting to empty array', function (): void {
-    $pendingAnswers = Mockery::mock(Laravel\Chisel\PendingAnswers::class);
+    $pendingAnswers = Mockery::mock(PendingAnswers::class);
     $pendingAnswers->shouldReceive('onQuestion')->once()->andReturnSelf();
     $pendingAnswers->shouldReceive('interactive')->with(false)->once()->andReturnSelf();
     $pendingAnswers->shouldReceive('withAnswers')->with([])->once()->andReturnSelf();
@@ -122,7 +124,7 @@ it('executes chisel without answers option defaulting to empty array', function 
 it('throws when question type is unsupported in question callback', function (): void {
     $capturedCallback = null;
 
-    $pendingAnswers = Mockery::mock(Laravel\Chisel\PendingAnswers::class);
+    $pendingAnswers = Mockery::mock(PendingAnswers::class);
     $pendingAnswers->shouldReceive('onQuestion')
         ->once()
         ->andReturnUsing(function ($callback) use (&$capturedCallback, $pendingAnswers) {
@@ -146,8 +148,8 @@ it('throws when question type is unsupported in question callback', function ():
 
     expect($capturedCallback)->toBeCallable();
 
-    $ref = new ReflectionClass(Laravel\Chisel\Question::class);
-    /** @var Laravel\Chisel\Question $unsupportedQuestion */
+    $ref = new ReflectionClass(Question::class);
+    /** @var Question $unsupportedQuestion */
     $unsupportedQuestion = $ref->newInstanceWithoutConstructor();
     $prop = $ref->getProperty('type');
     $prop->setValue($unsupportedQuestion, 'unsupported_type');

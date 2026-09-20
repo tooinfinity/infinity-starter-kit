@@ -29,7 +29,7 @@ it('denies authorization for user without UsersManageRoles permission or guest',
     expect($requestWithUser->authorize())->toBeFalse();
 
     $requestAsGuest = new UpdateUserRolesRequest;
-    $requestAsGuest->setUserResolver(fn () => null);
+    $requestAsGuest->setUserResolver(fn (): null => null);
 
     expect($requestAsGuest->authorize())->toBeFalse();
 });

@@ -26,7 +26,7 @@ final class InstallFeaturesCommand extends Command
     public function handle(): int
     {
         /** @var Script $script */
-        $script = app()->bound(Script::class) ? app(Script::class) : require base_path('chisel.php');
+        $script = app()->bound(Script::class) ? resolve(Script::class) : require base_path('chisel.php');
 
         $providedAnswers = $this->option('answers') === null
             ? []
