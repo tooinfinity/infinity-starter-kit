@@ -41,7 +41,9 @@ test('RecordAuditTrail stores an audit trail record with all provided attributes
         ->and($record->ip_address)->toBe('192.168.1.100')
         ->and($record->user_agent)->toBe('TestBrowser/1.0')
         ->and($record->tags)->toBe(['users', 'management'])
-        ->and($record->created_at)->not->toBeNull();
+        ->and($record->created_at)->not->toBeNull()
+        ->and($record->auditable)->toBeInstanceOf(User::class)
+        ->and($record->auditable->id)->toBe($target->id);
 });
 
 test('RecordAuditTrail automatically redacts sensitive fields from old and new values', function (): void {
