@@ -71,3 +71,87 @@ it('registers the feature installer as a post-create command', function (): void
     expect($composer['scripts']['post-create-project-cmd'])
         ->toContain('@php artisan install:features --ansi');
 });
+
+it('throws when answers option is invalid json', function (): void {
+    $this->artisan('install:features', ['--answers' => '{invalid-json']);
+})->throws(JsonException::class);
+
+it('throws when answers option does not decode to an array', function (): void {
+    $this->artisan('install:features', ['--answers' => '"just-a-string"']);
+})->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
+
+it('executes chisel with provided answers in non-interactive mode', function (): void {
+    $answers = [
+        'auth_features' => ['registration'],
+    ];
+
+    $pendingAnswers = Mockery::mock(Laravel\Chisel\PendingAnswers::class);
+    $pendingAnswers->shouldReceive('onQuestion')->once()->andReturnSelf();
+    $pendingAnswers->shouldReceive('interactive')->with(false)->once()->andReturnSelf();
+    $pendingAnswers->shouldReceive('withAnswers')->with($answers)->once()->andReturnSelf();
+
+    $mockScript = Mockery::mock(Script::class);
+    $mockScript->shouldReceive('collectAnswers')->once()->andReturn($pendingAnswers);
+    $mockScript->shouldReceive('chisel')->with($pendingAnswers)->once();
+
+    app()->instance(Script::class, $mockScript);
+
+    $this->artisan('install:features', [
+        '--answers' => json_encode($answers, JSON_THROW_ON_ERROR),
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+});
+
+it('executes chisel without answers option defaulting to empty array', function (): void {
+    $pendingAnswers = Mockery::mock(Laravel\Chisel\PendingAnswers::class);
+    $pendingAnswers->shouldReceive('onQuestion')->once()->andReturnSelf();
+    $pendingAnswers->shouldReceive('interactive')->with(false)->once()->andReturnSelf();
+    $pendingAnswers->shouldReceive('withAnswers')->with([])->once()->andReturnSelf();
+
+    $mockScript = Mockery::mock(Script::class);
+    $mockScript->shouldReceive('collectAnswers')->once()->andReturn($pendingAnswers);
+    $mockScript->shouldReceive('chisel')->with($pendingAnswers)->once();
+
+    app()->instance(Script::class, $mockScript);
+
+    $this->artisan('install:features', [
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+});
+
+it('throws when question type is unsupported in question callback', function (): void {
+    $capturedCallback = null;
+
+    $pendingAnswers = Mockery::mock(Laravel\Chisel\PendingAnswers::class);
+    $pendingAnswers->shouldReceive('onQuestion')
+        ->once()
+        ->andReturnUsing(function ($callback) use (&$capturedCallback, $pendingAnswers) {
+            $capturedCallback = $callback;
+
+            return $pendingAnswers;
+        });
+    $pendingAnswers->shouldReceive('interactive')->once()->andReturnSelf();
+    $pendingAnswers->shouldReceive('withAnswers')->once()->andReturnSelf();
+
+    $mockScript = Mockery::mock(Script::class);
+    $mockScript->shouldReceive('collectAnswers')->once()->andReturn($pendingAnswers);
+    $mockScript->shouldReceive('chisel')->once();
+
+    app()->instance(Script::class, $mockScript);
+
+    $this->artisan('install:features', [
+        '--answers' => '{}',
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    expect($capturedCallback)->toBeCallable();
+
+    $ref = new ReflectionClass(Laravel\Chisel\Question::class);
+    /** @var Laravel\Chisel\Question $unsupportedQuestion */
+    $unsupportedQuestion = $ref->newInstanceWithoutConstructor();
+    $prop = $ref->getProperty('type');
+    $prop->setValue($unsupportedQuestion, 'unsupported_type');
+
+    expect(fn () => $capturedCallback($unsupportedQuestion))
+        ->toThrow(RuntimeException::class, 'Unsupported question type [unsupported_type].');
+});
