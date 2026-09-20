@@ -27,6 +27,9 @@ test('values helper returns all permission strings', function (): void {
         /* @chisel-settings */
         'settings.manage',
         /* @end-chisel-settings */
+        /* @chisel-audit-trails */
+        'audit.view',
+        /* @end-chisel-audit-trails */
     ]);
 });
 
