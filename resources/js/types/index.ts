@@ -12,4 +12,7 @@ export type * from './localization';
 /* @chisel-notifications */
 export type * from './notifications';
 /* @end-chisel-notifications */
+/* @chisel-audit-trails */
+export type * from './audit-trails';
+/* @end-chisel-audit-trails */
 export type * from './ui';

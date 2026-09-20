@@ -1,7 +1,10 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
+/* @end-chisel-notifications */
+/* @chisel-localization */
+import { LanguageSelector } from '@/components/language-selector';
 /* @chisel-notifications */
 import { NotificationBell } from '@/components/notifications/notification-bell';
-/* @end-chisel-notifications */
+/* @end-chisel-localization */
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
@@ -16,11 +19,16 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            /* @chisel-notifications */
+            {/* @chisel-notifications */}
             <div className="flex items-center gap-2">
                 <NotificationBell />
             </div>
-            /* @end-chisel-notifications */
+            {/* @end-chisel-notifications */}
+            {/* @chisel-localization */}
+            <div className="flex items-center gap-2">
+                <LanguageSelector />
+            </div>
+            {/* @end-chisel-localization */}
         </header>
     );
 }
