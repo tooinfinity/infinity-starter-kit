@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+/* @chisel-audit-trails */
+use App\Http\Controllers\AuditTrails\AuditTrailController;
+/* @end-chisel-audit-trails */
 /* @chisel-localization */
 use App\Http\Controllers\LocaleController;
 /* @end-chisel-localization */
@@ -103,6 +106,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/notifications', [NotificationPreferenceController::class, 'edit'])->name('notification-preferences.edit');
     Route::put('settings/notifications', [NotificationPreferenceController::class, 'update'])->name('notification-preferences.update');
     /* @end-chisel-notifications */
+
+    /* @chisel-audit-trails */
+    // Audit Trails...
+    Route::get('audit-trails', [AuditTrailController::class, 'index'])
+        ->middleware('can:audit.view')
+        ->name('audit-trails.index');
+    /* @end-chisel-audit-trails */
 });
 
 Route::middleware('guest')->group(function (): void {

@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Users;
 
+/* @chisel-audit-trails */
+use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Data\Users\UpdateUserData;
+/* @end-chisel-audit-trails */
+use App\Enums\AuditEvent;
 use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +16,13 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateUserAction
 {
+    /* @chisel-audit-trails */
+    public function __construct(
+        private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+    ) {}
+
+    /* @end-chisel-audit-trails */
+
     public function handle(User $user, UpdateUserData $data, ?User $currentUser = null): User
     {
         if ($currentUser instanceof User && $user->id === $currentUser->id && ! $data->isActive) {
@@ -41,6 +52,15 @@ final readonly class UpdateUserAction
         }
 
         return DB::transaction(function () use ($user, $data): User {
+            /* @chisel-audit-trails */
+            $oldValues = [
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_active' => $user->is_active,
+                'roles' => $user->getRoleNames()->toArray(),
+            ];
+            /* @end-chisel-audit-trails */
+
             $emailChanged = $user->email !== $data->email;
 
             $user->update([
@@ -55,6 +75,21 @@ final readonly class UpdateUserAction
             }
 
             $user->syncRoles($data->roles);
+
+            /* @chisel-audit-trails */
+            $this->auditTrail->handle(
+                event: AuditEvent::UserUpdated,
+                auditable: $user,
+                oldValues: $oldValues,
+                newValues: [
+                    'name' => $data->name,
+                    'email' => $data->email,
+                    'is_active' => $data->isActive,
+                    'roles' => $data->roles,
+                ],
+                tags: ['users'],
+            );
+            /* @end-chisel-audit-trails */
 
             return $user;
         });

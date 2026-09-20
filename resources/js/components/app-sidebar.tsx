@@ -1,10 +1,10 @@
 import { Link } from '@inertiajs/react';
 import { BookOpen, FolderGit2, LayoutGrid, Users } from 'lucide-react';
 /* @end-chisel-user-management */
+/* @chisel-audit-trails */
+import { History } from 'lucide-react';
+/* @end-chisel-user-management */
 import AppLogo from '@/components/app-logo';
-/* @chisel-localization */
-import { LanguageSelector } from '@/components/language-selector';
-/* @end-chisel-localization */
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -18,8 +18,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as auditTrailsIndex } from '@/routes/audit-trails';
 /* @chisel-user-management */
 import { index as usersIndex } from '@/routes/users';
+/* @end-chisel-audit-trails */
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -36,6 +38,14 @@ const mainNavItems: NavItem[] = [
         permission: 'users.view',
     },
     /* @end-chisel-user-management */
+    /* @chisel-audit-trails */
+    {
+        title: 'Audit Trails',
+        href: auditTrailsIndex(),
+        icon: History,
+        permission: 'audit.view',
+    },
+    /* @end-chisel-audit-trails */
 ];
 
 const footerNavItems: NavItem[] = [
@@ -72,11 +82,6 @@ export function AppSidebar() {
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />
-                {/* @chisel-localization */}
-                <div className="flex justify-center px-2 py-1 group-data-[collapsible=icon]:px-0">
-                    <LanguageSelector />
-                </div>
-                {/* @end-chisel-localization */}
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

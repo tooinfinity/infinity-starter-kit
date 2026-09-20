@@ -20,6 +20,11 @@ enum Permission: string
 
     /* @end-chisel-settings */
 
+    /* @chisel-audit-trails */
+    case AuditView = 'audit.view';
+
+    /* @end-chisel-audit-trails */
+
     /**
      * @return list<string>
      */

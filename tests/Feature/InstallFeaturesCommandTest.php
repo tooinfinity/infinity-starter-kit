@@ -42,6 +42,9 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-notifications */
             'notifications' => 'Notifications',
             /* @end-chisel-notifications */
+            /* @chisel-audit-trails */
+            'audit-trails' => 'Audit Trails',
+            /* @end-chisel-audit-trails */
         ])
         ->and($questions[2]->default)->toBe([
             'settings',
@@ -54,6 +57,9 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-notifications */
             'notifications',
             /* @end-chisel-notifications */
+            /* @chisel-audit-trails */
+            'audit-trails',
+            /* @end-chisel-audit-trails */
         ]);
     /* @end-chisel-settings */
 });
