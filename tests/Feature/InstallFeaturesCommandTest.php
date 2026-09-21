@@ -47,6 +47,9 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-audit-trails */
             'audit-trails' => 'Audit Trails',
             /* @end-chisel-audit-trails */
+            /* @chisel-reporting */
+            'reporting' => 'Reporting & Analytics',
+            /* @end-chisel-reporting */
         ])
         ->and($questions[2]->default)->toBe([
             'settings',
@@ -62,7 +65,11 @@ it('defines the default authentication and authorization feature selection', fun
             /* @chisel-audit-trails */
             'audit-trails',
             /* @end-chisel-audit-trails */
+            /* @chisel-reporting */
+            'reporting',
+            /* @end-chisel-reporting */
         ]);
+
     /* @end-chisel-settings */
 });
 

@@ -3,6 +3,9 @@ import { BookOpen, FolderGit2, LayoutGrid, Users } from 'lucide-react';
 /* @end-chisel-user-management */
 /* @chisel-audit-trails */
 import { History } from 'lucide-react';
+/* @end-chisel-audit-trails */
+/* @chisel-reporting */
+import { BarChart3 } from 'lucide-react';
 /* @end-chisel-user-management */
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -19,9 +22,12 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as auditTrailsIndex } from '@/routes/audit-trails';
+/* @chisel-reporting */
+import { index as reportsIndex } from '@/routes/reports';
+/* @end-chisel-reporting */
 /* @chisel-user-management */
 import { index as usersIndex } from '@/routes/users';
-/* @end-chisel-audit-trails */
+/* @end-chisel-reporting */
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -46,6 +52,14 @@ const mainNavItems: NavItem[] = [
         permission: 'audit.view',
     },
     /* @end-chisel-audit-trails */
+    /* @chisel-reporting */
+    {
+        title: 'Reports',
+        href: reportsIndex(),
+        icon: BarChart3,
+        permission: 'reports.view',
+    },
+    /* @end-chisel-reporting */
 ];
 
 const footerNavItems: NavItem[] = [

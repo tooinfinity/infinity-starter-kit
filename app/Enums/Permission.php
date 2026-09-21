@@ -25,6 +25,12 @@ enum Permission: string
 
     /* @end-chisel-audit-trails */
 
+    /* @chisel-reporting */
+    case ReportsView = 'reports.view';
+    case ReportsExport = 'reports.export';
+
+    /* @end-chisel-reporting */
+
     /**
      * @return list<string>
      */

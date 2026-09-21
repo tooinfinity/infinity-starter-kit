@@ -194,6 +194,33 @@ When authorization is disabled, Chisel removes:
 
 ---
 
+### 📊 Reporting & Analytics Module
+
+A **production-ready, read-only** reporting engine designed to extract actionable insights directly from existing application models (`users` and `audit_trails`) without redundant tables or schema overhead.
+
+#### Implemented Reports
+
+| Report | Path | Metrics & Visualizations |
+| :--- | :--- | :--- |
+| **User Activity & Growth** | `/reports/users` | Total users, active/inactive counts, period registrations, daily registration trend SVG chart, and filterable/sortable user listing. |
+| **Audit Trail Activity** | `/reports/audit` | Total audit events, active actors, top event & resource, event distribution breakdown, daily volume trend chart, and audit log table. |
+
+#### Key Design Decisions
+
+- **Strictly Read-Only** — Directly queries existing application tables; no parallel database models, snapshots, or migrations.
+- **Dedicated Query Services** — Complex aggregations and filtering live in `App\Queries\Reporting`, keeping controllers clean and invokable.
+- **Spatie Data Transfer Objects** — Typed contracts (`ReportSummaryCardData`, `ReportTimeSeriesPointData`, `ReportBreakdownItemData`, `ReportMetadataData`) serialize seamlessly to Inertia.
+- **Zero-Dependency Accessible Visualizations** — Custom SVG/CSS charts featuring interactive tooltips, full keyboard/screen-reader accessibility, RTL layout support, and a companion tabular view switch.
+- **Secure Streaming CSV Export** — Memory-efficient cursor streaming (`cursor()`), Excel UTF-8 BOM (`\xEF\xBB\xBF`), and formula injection sanitization (`=`, `+`, `-`, `@`, `\t`, `\r` neutralized).
+- **Granular RBAC Permissions** — Protected via `Permission::ReportsView` (`reports.view`) and `Permission::ReportsExport` (`reports.export`).
+- **Trilingual Localization** — Full translations available in English (`en`), French (`fr`), and Arabic (`ar`).
+
+#### Chisel Pruning
+
+When reporting is unselected in Chisel, all 25 reporting files (controllers, queries, DTOs, translations, frontend components, pages, and tests) are cleanly deleted and routes are removed.
+
+---
+
 ## 🧹 Interactive Feature Pruning (`chisel.php`)
 
 ### How Feature Pruning Works
@@ -209,7 +236,7 @@ For every unselected feature:
 ### Non-Interactive Installation
 
 ```bash
-php artisan install:features --answers='{"auth_features":["registration","two-factor-authentication"],"authorization_features":["roles-permissions"]}'
+php artisan install:features --answers='{"auth_features":["registration","two-factor-authentication"],"authorization_features":["roles-permissions"],"application_features":["settings","user-management","localization","notifications","audit-trails","reporting"]}'
 ```
 
 ---
@@ -218,32 +245,32 @@ php artisan install:features --answers='{"auth_features":["registration","two-fa
 
 - [x] **Authentication** — Registration, Email Verification, 2FA, Profile, Password, Session management.
 - [x] **Authorization & RBAC** — Spatie Roles & Permissions, PHP enums, Gate bypass, Form Request authorization, frontend hooks.
-- [ ] **User Management** — Admin user directory, creation/edit modals, role assignment, user deactivation.
-- [ ] **Settings** — Expanded user profile, security controls, and application configuration.
-- [ ] **Notifications** — Database & mail notification center, user preference toggles.
-- [ ] **Audit Trails** — Searchable activity log tracking changes, IP addresses, user agents, and timestamps.
-- [ ] **Reporting & Analytics** — Dashboard metrics, date filtering, CSV exports, queued export jobs.
-- [ ] **Localization** — Supported locales, locale switcher component, translated UI messages.
+- [x] **User Management** — Admin user directory, creation/edit modals, role assignment, user deactivation.
+- [x] **Settings** — Expanded user profile, security controls, and application configuration.
+- [x] **Notifications** — Database & mail notification center, user preference toggles.
+- [x] **Audit Trails** — Searchable activity log tracking changes, IP addresses, user agents, and timestamps.
+- [x] **Reporting & Analytics** — Read-only dashboards, SVG trend charts, date range filtering, and secure streaming CSV exports.
+- [x] **Localization** — Supported locales (EN, FR, AR), RTL support, locale switcher component, translated UI messages.
 
 ---
 
 ## 🧪 Testing & Quality Control
 
 ```bash
-# Run all tests
+# Run full test suite with 100% code coverage requirement
 composer test
 
-# Run feature tests
-vendor/bin/pest tests/Feature
+# Run all unit and feature tests
+vendor/bin/pest tests/Unit tests/Feature --compact
 
-# Run authorization tests
-vendor/bin/pest tests/Feature/Authorization tests/Unit/Enums
+# Check type coverage (100% required)
+vendor/bin/pest --type-coverage --min=100
 
-# Code formatters and linters
+# Static analysis (PHPStan at max level)
+vendor/bin/phpstan analyse
+
+# Code formatting & styling
 composer run lint
-
-# Type check (PHPStan & TypeScript)
-composer test:types
 ```
 
 ---
@@ -257,30 +284,51 @@ composer test:types
 │   │   ├── InstallFeaturesCommand.php
 │   │   ├── SetupAuthorizationCommand.php
 │   │   └── SetupAdminUserCommand.php
+│   ├── Data/                     # Spatie Data transfer objects
+│   │   └── Reporting/            # Report summary, series, and breakdown DTOs
 │   ├── Enums/                    # PHP string-backed enums
+│   │   ├── AuditEvent.php
 │   │   ├── Permission.php
+│   │   ├── ReportCategory.php
+│   │   ├── ReportType.php
 │   │   └── Role.php
 │   ├── Http/
 │   │   ├── Controllers/          # Inertia HTTP controllers
+│   │   │   ├── AuditTrails/
+│   │   │   ├── Reporting/        # Invokable reporting & export controllers
+│   │   │   └── Users/
 │   │   ├── Middleware/           # HandleInertiaRequests (shares auth data)
-│   │   └── Requests/            # Form Requests with authorize()
-│   ├── Models/                   # Eloquent models (User with HasRoles)
+│   │   └── Requests/            # Form Requests with authorize() & validation
+│   ├── Models/                   # Eloquent models (User, AuditTrail, Setting)
+│   ├── Queries/                  # Read-only query & export services
+│   │   ├── AuditTrails/
+│   │   ├── Reporting/            # UserReportQuery, AuditReportQuery, CSV streams
+│   │   └── Users/
 │   └── Providers/                # AppServiceProvider (Gate::before)
 ├── chisel.php                    # Feature pruning configuration
 ├── config/
 │   ├── fortify.php
 │   └── permission.php            # Spatie Permission config
-├── database/migrations/          # Users + Spatie Permission tables
+├── database/migrations/          # Users, Audit Trails, Settings, Permissions
+├── lang/                         # Localized translations (en, fr, ar)
 ├── resources/js/
 │   ├── components/
-│   │   └── can.tsx               # <Can> authorization component
+│   │   ├── can.tsx               # <Can> authorization component
+│   │   └── reports/              # Summary cards, SVG charts, date range filters
 │   ├── hooks/
 │   │   └── use-authorization.ts  # useAuthorization() hook
+│   ├── pages/
+│   │   └── reports/              # Catalog index, Users report, Audit report
 │   └── types/
-│       └── auth.ts               # Auth type with permissions/roles
+│       ├── auth.ts               # Auth type with permissions/roles
+│       └── reports.ts            # Report DTO & filter type definitions
 └── tests/
-    ├── Feature/Authorization/    # RBAC + command tests
-    └── Unit/Enums/               # Enum tests
+    ├── Feature/
+    │   ├── Authorization/        # RBAC + command tests
+    │   └── Reporting/            # Report queries, controllers, exports, and pruning tests
+    └── Unit/
+        ├── Enums/                # Enum tests
+        └── Reporting/            # Report type & category tests
 ```
 
 ---

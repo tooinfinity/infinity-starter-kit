@@ -13,6 +13,13 @@ use App\Http\Controllers\MarkAllNotificationsAsReadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationPreferenceController;
 /* @end-chisel-notifications */
+/* @chisel-reporting */
+use App\Http\Controllers\Reporting\AuditReportController;
+use App\Http\Controllers\Reporting\ExportAuditReportController;
+use App\Http\Controllers\Reporting\ExportUserReportController;
+use App\Http\Controllers\Reporting\ReportIndexController;
+use App\Http\Controllers\Reporting\UserReportController;
+/* @end-chisel-reporting */
 use App\Http\Controllers\SessionController;
 /* @chisel-settings */
 use App\Http\Controllers\SettingController;
@@ -113,6 +120,21 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('can:audit.view')
         ->name('audit-trails.index');
     /* @end-chisel-audit-trails */
+
+    /* @chisel-reporting */
+    // Reporting...
+    Route::middleware('can:reports.view')->prefix('reports')->name('reports.')->group(function (): void {
+        Route::get('/', ReportIndexController::class)->name('index');
+        Route::get('users', UserReportController::class)->name('users');
+        Route::get('users/export', ExportUserReportController::class)
+            ->middleware('can:reports.export')
+            ->name('users.export');
+        Route::get('audit', AuditReportController::class)->name('audit');
+        Route::get('audit/export', ExportAuditReportController::class)
+            ->middleware('can:reports.export')
+            ->name('audit.export');
+    });
+    /* @end-chisel-reporting */
 });
 
 Route::middleware('guest')->group(function (): void {
