@@ -15,4 +15,7 @@ export type * from './notifications';
 /* @chisel-audit-trails */
 export type * from './audit-trails';
 /* @end-chisel-audit-trails */
+/* @chisel-reporting */
+export type * from './reports';
+/* @end-chisel-reporting */
 export type * from './ui';
