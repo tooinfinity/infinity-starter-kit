@@ -7,6 +7,7 @@ namespace App\Support\Chisel;
 use App\Enums\Module;
 use App\Exceptions\CircularDependencyException;
 use App\Exceptions\DependentModuleException;
+use Closure;
 
 final class ModuleResolver
 {
@@ -236,11 +237,12 @@ final class ModuleResolver
      * Perform topological sort on modules with cycle detection.
      *
      * @param  list<Module>  $modules
+     * @param  (Closure(Module): list<Module>)|null  $dependencyResolver
      * @return list<Module>
      *
      * @throws CircularDependencyException
      */
-    private static function topologicalSort(array $modules): array
+    public static function topologicalSort(array $modules, ?Closure $dependencyResolver = null): array
     {
         $moduleMap = [];
         foreach ($modules as $m) {
@@ -251,7 +253,7 @@ final class ModuleResolver
         $visiting = [];
         $sorted = [];
 
-        $visit = function (Module $module) use (&$visit, &$visited, &$visiting, &$sorted, $moduleMap): void {
+        $visit = function (Module $module) use (&$visit, &$visited, &$visiting, &$sorted, $moduleMap, $dependencyResolver): void {
             if (isset($visited[$module->value])) {
                 return;
             }
@@ -264,7 +266,11 @@ final class ModuleResolver
 
             $visiting[$module->value] = true;
 
-            foreach ($module->dependencies() as $dependency) {
+            $dependencies = $dependencyResolver instanceof Closure
+                ? $dependencyResolver($module)
+                : $module->dependencies();
+
+            foreach ($dependencies as $dependency) {
                 // If dependency is part of the graph being sorted
                 if (isset($moduleMap[$dependency->value])) {
                     $visit($moduleMap[$dependency->value]);

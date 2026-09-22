@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Module;
+use App\Exceptions\CircularDependencyException;
 use App\Exceptions\DependentModuleException;
 use App\Support\Chisel\ModuleResolver;
 
@@ -118,4 +119,36 @@ test('exclusiveComposerPackages identifies packages not required by remaining mo
 test('exclusiveNpmPackages identifies packages not required by remaining modules', function (): void {
     $packages = ModuleResolver::exclusiveNpmPackages([Module::Localization], [Module::Settings, Module::Authorization]);
     expect($packages)->toBe(['@erag/lang-sync-inertia']);
+
+    $retainedPackages = ModuleResolver::exclusiveNpmPackages([Module::Localization], [Module::Localization]);
+    expect($retainedPackages)->toBe([]);
+});
+
+test('hasDependency evaluates direct and indirect dependencies correctly', function (): void {
+    expect(ModuleResolver::hasDependency(Module::Reporting, Module::Authorization))->toBeTrue()
+        ->and(ModuleResolver::hasDependency(Module::Notifications, Module::Localization))->toBeTrue()
+        ->and(ModuleResolver::hasDependency(Module::Settings, Module::Authorization))->toBeFalse()
+        ->and(ModuleResolver::hasDependency(Module::Reporting, Module::Localization))->toBeFalse();
+});
+
+test('normalize handles non-string values and roles-permissions alias', function (): void {
+    // Non-string entries are ignored (line 296) and 'roles-permissions' resolves to Authorization (line 301)
+    $normalized = ModuleResolver::normalize(['roles-permissions', 123, null]);
+    expect($normalized)->toBe([Module::Authorization]);
+
+    $fromOptional = ModuleResolver::normalize([
+        'optional_modules' => ['roles-permissions', 456],
+    ]);
+    expect($fromOptional)->toBe([Module::Authorization]);
+});
+
+test('topologicalSort throws CircularDependencyException when cycle is detected', function (): void {
+    expect(fn (): array => ModuleResolver::topologicalSort(
+        [Module::Settings, Module::Localization],
+        fn (Module $m): array => match ($m) {
+            Module::Settings => [Module::Localization],
+            Module::Localization => [Module::Settings],
+            default => [],
+        },
+    ))->toThrow(CircularDependencyException::class, 'Circular dependency detected involving module');
 });
