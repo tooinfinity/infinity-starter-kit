@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+/* @chisel-user-management */
 use App\Http\Middleware\EnsureUserIsActive;
+/* @end-chisel-user-management */
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 /* @chisel-localization */

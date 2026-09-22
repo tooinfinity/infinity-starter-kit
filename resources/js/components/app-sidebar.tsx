@@ -1,12 +1,14 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Users } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+/* @chisel-user-management */
+import { Users } from 'lucide-react';
 /* @end-chisel-user-management */
 /* @chisel-audit-trails */
 import { History } from 'lucide-react';
 /* @end-chisel-audit-trails */
 /* @chisel-reporting */
 import { BarChart3 } from 'lucide-react';
-/* @end-chisel-user-management */
+/* @end-chisel-reporting */
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -21,13 +23,15 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+/* @chisel-audit-trails */
 import { index as auditTrailsIndex } from '@/routes/audit-trails';
+/* @end-chisel-audit-trails */
 /* @chisel-reporting */
 import { index as reportsIndex } from '@/routes/reports';
 /* @end-chisel-reporting */
 /* @chisel-user-management */
 import { index as usersIndex } from '@/routes/users';
-/* @end-chisel-reporting */
+/* @end-chisel-user-management */
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [

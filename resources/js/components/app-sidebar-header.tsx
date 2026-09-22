@@ -1,10 +1,10 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
-/* @end-chisel-notifications */
 /* @chisel-localization */
 import { LanguageSelector } from '@/components/language-selector';
+/* @end-chisel-localization */
 /* @chisel-notifications */
 import { NotificationBell } from '@/components/notifications/notification-bell';
-/* @end-chisel-localization */
+/* @end-chisel-notifications */
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 

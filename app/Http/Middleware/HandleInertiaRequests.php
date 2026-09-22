@@ -6,10 +6,12 @@ namespace App\Http\Middleware;
 
 /* @chisel-localization */
 use App\Enums\Locale;
-use App\Models\User;
 /* @end-chisel-localization */
+use App\Models\User;
 use Illuminate\Http\Request;
+/* @chisel-notifications */
 use Illuminate\Notifications\DatabaseNotification;
+/* @end-chisel-notifications */
 use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
