@@ -7,9 +7,9 @@ declare(strict_types=1);
 test('reporting feature is registered in chisel configuration', function (): void {
     $chiselContent = (string) file_get_contents(base_path('chisel.php'));
 
-    expect($chiselContent)->toContain("'reporting' => 'Reporting & Analytics'")
-        ->toContain("removeSectionMarkers('reporting')")
-        ->toContain("removeSection('reporting')");
+    expect($chiselContent)->toContain("'reporting' => 'Reporting'")
+        ->toContain('ModuleRemover::stripMarkers')
+        ->toContain('ModuleRemover::remove');
 });
 
 test('reporting chisel markers exist symmetrically in modified existing files', function (): void {

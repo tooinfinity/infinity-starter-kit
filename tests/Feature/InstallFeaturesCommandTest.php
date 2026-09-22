@@ -6,13 +6,13 @@ use Laravel\Chisel\PendingAnswers;
 use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
 
-it('defines the default authentication and authorization feature selection', function (): void {
+it('defines the default authentication and optional modules selection', function (): void {
     /** @var Script $script */
     $script = require base_path('chisel.php');
 
     $questions = $script->questions();
 
-    expect($questions)->toHaveCount(3)
+    expect($questions)->toHaveCount(2)
         ->and($questions[0]->name)->toBe('auth_features')
         ->and($questions[0]->options)->toBe([
             'registration' => 'Registration',
@@ -24,22 +24,18 @@ it('defines the default authentication and authorization feature selection', fun
             'email-verification',
             'two-factor-authentication',
         ])
-        ->and($questions[1]->name)->toBe('authorization_features')
+        ->and($questions[1]->name)->toBe('optional_modules')
+        ->and($questions[1]->label)->toBe('Which optional modules should be installed?')
         ->and($questions[1]->options)->toBe([
-            'roles-permissions' => 'Spatie Roles & Permissions (spatie/laravel-permission)',
-        ])
-        ->and($questions[1]->default)->toBe([
-            'roles-permissions',
-        ])
-        /* @chisel-settings */
-        ->and($questions[2]->name)->toBe('application_features')
-        ->and($questions[2]->options)->toBe([
-            'settings' => 'Application Settings',
+            'authorization' => 'Authorization',
+            /* @chisel-settings */
+            'settings' => 'Settings',
+            /* @end-chisel-settings */
             /* @chisel-user-management */
             'user-management' => 'User Management',
             /* @end-chisel-user-management */
             /* @chisel-localization */
-            'localization' => 'Localization / Multi-language Support',
+            'localization' => 'Localization',
             /* @end-chisel-localization */
             /* @chisel-notifications */
             'notifications' => 'Notifications',
@@ -48,11 +44,14 @@ it('defines the default authentication and authorization feature selection', fun
             'audit-trails' => 'Audit Trails',
             /* @end-chisel-audit-trails */
             /* @chisel-reporting */
-            'reporting' => 'Reporting & Analytics',
+            'reporting' => 'Reporting',
             /* @end-chisel-reporting */
         ])
-        ->and($questions[2]->default)->toBe([
+        ->and($questions[1]->default)->toBe([
+            'authorization',
+            /* @chisel-settings */
             'settings',
+            /* @end-chisel-settings */
             /* @chisel-user-management */
             'user-management',
             /* @end-chisel-user-management */
@@ -69,8 +68,6 @@ it('defines the default authentication and authorization feature selection', fun
             'reporting',
             /* @end-chisel-reporting */
         ]);
-
-    /* @end-chisel-settings */
 });
 
 it('registers the feature installer as a post-create command', function (): void {

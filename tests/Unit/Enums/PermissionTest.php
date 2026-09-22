@@ -16,11 +16,12 @@ test('values helper returns all permission strings', function (): void {
     $values = Permission::values();
 
     expect($values)->toBe([
+        'authorization.manage',
+        /* @chisel-user-management */
         'users.view',
         'users.create',
         'users.update',
         'users.delete',
-        /* @chisel-user-management */
         'users.manage-roles',
         'users.manage-password',
         /* @end-chisel-user-management */

@@ -6,16 +6,16 @@ use Laravel\Chisel\Script;
 
 /* @chisel-audit-trails */
 
-test('audit trails is registered in chisel application_features', function (): void {
+test('audit trails is registered in chisel optional_modules', function (): void {
     /** @var Script $script */
     $script = require base_path('chisel.php');
 
     $questions = $script->questions();
-    $appFeatures = collect($questions)->firstWhere('name', 'application_features');
+    $optionalModules = collect($questions)->firstWhere('name', 'optional_modules');
 
-    expect($appFeatures)->not->toBeNull()
-        ->and($appFeatures->options)->toHaveKey('audit-trails')
-        ->and($appFeatures->default)->toContain('audit-trails');
+    expect($optionalModules)->not->toBeNull()
+        ->and($optionalModules->options)->toHaveKey('audit-trails')
+        ->and($optionalModules->default)->toContain('audit-trails');
 });
 
 test('audit trails modified files contain valid chisel markers', function (): void {
