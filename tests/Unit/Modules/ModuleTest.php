@@ -96,3 +96,63 @@ test('npm packages are correctly mapped to owning modules', function (): void {
         ->and(Module::Reporting->npmPackages())->toBe([])
         ->and(Module::Authorization->npmPackages())->toBe([]);
 });
+
+test('permissions are correctly mapped to owning modules', function (): void {
+    expect(Module::Authorization->permissions())->toBe(['authorization.manage'])
+        ->and(Module::Settings->permissions())->toBe(['settings.manage'])
+        ->and(Module::UserManagement->permissions())->toBe([
+            'users.view',
+            'users.create',
+            'users.update',
+            'users.delete',
+            'users.manage-roles',
+            'users.manage-password',
+        ])
+        ->and(Module::Localization->permissions())->toBe([])
+        ->and(Module::Notifications->permissions())->toBe([])
+        ->and(Module::AuditTrails->permissions())->toBe(['audit.view'])
+        ->and(Module::Reporting->permissions())->toBe([
+            'reports.view',
+            'reports.export',
+        ]);
+});
+
+test('routes are correctly mapped to owning modules', function (): void {
+    expect(Module::Authorization->routes())->toBe([])
+        ->and(Module::Settings->routes())->toBe([
+            'settings.edit',
+            'settings.update',
+        ])
+        ->and(Module::UserManagement->routes())->toBe([
+            'users.index',
+            'users.create',
+            'users.store',
+            'users.edit',
+            'users.update',
+            'users.activate',
+            'users.deactivate',
+            'users.password.update',
+            'users.destroy',
+        ])
+        ->and(Module::Localization->routes())->toBe([
+            'locale.update',
+        ])
+        ->and(Module::Notifications->routes())->toBe([
+            'notifications.index',
+            'notifications.mark-read',
+            'notifications.mark-all-read',
+            'notifications.destroy',
+            'notification-preferences.edit',
+            'notification-preferences.update',
+        ])
+        ->and(Module::AuditTrails->routes())->toBe([
+            'audit-trails.index',
+        ])
+        ->and(Module::Reporting->routes())->toBe([
+            'reports.index',
+            'reports.users',
+            'reports.users.export',
+            'reports.audit',
+            'reports.audit.export',
+        ]);
+});
