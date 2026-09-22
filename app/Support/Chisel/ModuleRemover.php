@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Support\Chisel;
 
 use App\Enums\Module;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Laravel\Chisel\Chisel;
+use Spatie\Permission\Traits\HasRoles;
 
 final class ModuleRemover
 {
@@ -21,7 +23,7 @@ final class ModuleRemover
             $userModel = $directory.'/app/Models/User.php';
             if (file_exists($userModel)) {
                 $chisel->php('app/Models/User.php')
-                    ->removeImport('Spatie\\Permission\\Traits\\HasRoles')
+                    ->removeImport(HasRoles::class)
                     ->removeTrait('HasRoles');
             }
         }
@@ -30,7 +32,7 @@ final class ModuleRemover
             $userModel = $directory.'/app/Models/User.php';
             if (file_exists($userModel)) {
                 $chisel->php('app/Models/User.php')
-                    ->removeImport('Illuminate\\Contracts\\Translation\\HasLocalePreference')
+                    ->removeImport(HasLocalePreference::class)
                     ->removeInterface('HasLocalePreference');
             }
         }
@@ -106,6 +108,7 @@ final class ModuleRemover
                 unset($data['require'][$pkg]);
                 $modified = true;
             }
+
             if (isset($data['require-dev'][$pkg])) {
                 unset($data['require-dev'][$pkg]);
                 $modified = true;
@@ -141,6 +144,7 @@ final class ModuleRemover
                 unset($data['dependencies'][$pkg]);
                 $modified = true;
             }
+
             if (isset($data['devDependencies'][$pkg])) {
                 unset($data['devDependencies'][$pkg]);
                 $modified = true;

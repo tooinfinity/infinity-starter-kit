@@ -41,8 +41,8 @@ final class RemoveModuleCommand extends Command
 
         try {
             ModuleResolver::validateRemoval($module, $installedModules);
-        } catch (DependentModuleException $e) {
-            $this->components->error($e->getMessage());
+        } catch (DependentModuleException $dependentModuleException) {
+            $this->components->error($dependentModuleException->getMessage());
 
             return self::FAILURE;
         }

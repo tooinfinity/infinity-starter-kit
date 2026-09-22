@@ -25,7 +25,7 @@ final class ModuleResolver
             $raw = (array) $input['optional_modules'];
 
             foreach ($raw as $val) {
-                if ($module = self::findModule($val)) {
+                if (($module = self::findModule($val)) instanceof Module) {
                     $modules[$module->value] = $module;
                 }
             }
@@ -43,7 +43,7 @@ final class ModuleResolver
         if (array_key_exists('application_features', $input)) {
             $rawApp = (array) $input['application_features'];
             foreach ($rawApp as $val) {
-                if ($module = self::findModule($val)) {
+                if (($module = self::findModule($val)) instanceof Module) {
                     $modules[$module->value] = $module;
                 }
             }
@@ -54,7 +54,7 @@ final class ModuleResolver
             && ! array_key_exists('authorization_features', $input)
             && ! array_key_exists('application_features', $input)) {
             foreach ($input as $val) {
-                if ($module = self::findModule($val)) {
+                if (($module = self::findModule($val)) instanceof Module) {
                     $modules[$module->value] = $module;
                 }
             }

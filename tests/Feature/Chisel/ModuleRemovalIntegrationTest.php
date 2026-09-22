@@ -80,7 +80,7 @@ PHP);
 });
 
 afterEach(function (): void {
-    if (isset($this->fixtureDir) && is_dir($this->fixtureDir)) {
+    if (property_exists($this, 'fixtureDir') && $this->fixtureDir !== null && is_dir($this->fixtureDir)) {
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($this->fixtureDir, RecursiveDirectoryIterator::SKIP_DOTS),
             RecursiveIteratorIterator::CHILD_FIRST,
@@ -89,6 +89,7 @@ afterEach(function (): void {
             $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
             $todo($fileinfo->getRealPath());
         }
+
         rmdir($this->fixtureDir);
     }
 });
