@@ -100,8 +100,10 @@ test('removing Reporting removes owned files and sections without removing share
 
     ModuleRemover::remove(Module::Reporting, $chisel, $this->fixtureDir, $remaining);
 
-    // Owned file removed
-    expect(file_exists($this->fixtureDir.'/app/Data/Reporting/ReportSummaryCardData.php'))->toBeFalse();
+    // Owned file and directory removed
+    expect(file_exists($this->fixtureDir.'/app/Data/Reporting/ReportSummaryCardData.php'))->toBeFalse()
+        ->and(is_dir($this->fixtureDir.'/app/Data/Reporting'))->toBeFalse()
+        ->and(is_dir($this->fixtureDir.'/app/Data'))->toBeTrue();
 
     // Section removed from routes
     $routes = file_get_contents($this->fixtureDir.'/routes/web.php');
@@ -171,4 +173,26 @@ test('stripMarkers removes section markers while preserving the code', function 
     expect($routes)->toContain("Route::get('reports', fn () => 'reports');")
         ->and($routes)->not->toContain('@chisel-reporting')
         ->and($routes)->not->toContain('@end-chisel-reporting');
+});
+
+test('pruneEmptyDirectories removes empty directories and bubbles up while preserving protected roots', function (): void {
+    $nestedEmpty = $this->fixtureDir.'/resources/js/pages/reports';
+    mkdir($nestedEmpty, 0777, true);
+
+    expect(is_dir($nestedEmpty))->toBeTrue();
+
+    ModuleRemover::pruneEmptyDirectories($this->fixtureDir, ['resources/js/pages/reports']);
+
+    expect(is_dir($nestedEmpty))->toBeFalse()
+        ->and(is_dir($this->fixtureDir.'/resources/js/pages'))->toBeTrue();
+});
+
+test('all modules define ownedDirectories', function (): void {
+    foreach (Module::cases() as $module) {
+        $directories = $module->ownedDirectories();
+        expect($directories)->toBeArray();
+        foreach ($directories as $dir) {
+            expect($dir)->toBeString()->not->toBeEmpty();
+        }
+    }
 });

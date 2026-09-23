@@ -403,6 +403,67 @@ enum Module: string
     /**
      * @return list<string>
      */
+    public function ownedDirectories(): array
+    {
+        return match ($this) {
+            self::Authorization => [
+                'tests/Feature/Authorization',
+            ],
+            self::Settings => [
+                'resources/js/pages/settings/application',
+                'tests/Feature/Settings',
+            ],
+            self::UserManagement => [
+                'app/Actions/Users',
+                'app/Data/Users',
+                'app/Http/Controllers/Users',
+                'app/Http/Requests/Users',
+                'app/Queries/Users',
+                'resources/js/components/users',
+                'resources/js/pages/users',
+                'tests/Feature/Users',
+            ],
+            self::Localization => [
+                'tests/Feature/Localization',
+                'lang/fr',
+                'lang/ar',
+            ],
+            self::Notifications => [
+                'app/Actions/Notifications',
+                'app/Http/Requests/Notifications',
+                'app/Notifications',
+                'resources/js/components/notifications',
+                'resources/js/pages/notifications',
+                'resources/js/pages/settings/notifications',
+                'tests/Feature/Notifications',
+                'tests/Unit/Actions/Notifications',
+                'tests/Unit/Notifications',
+            ],
+            self::AuditTrails => [
+                'app/Actions/AuditTrails',
+                'app/Http/Controllers/AuditTrails',
+                'app/Http/Requests/AuditTrails',
+                'app/Queries/AuditTrails',
+                'resources/js/components/audit-trails',
+                'resources/js/pages/audit-trails',
+                'tests/Feature/AuditTrails',
+            ],
+            self::Reporting => [
+                'app/Data/Reporting',
+                'app/Queries/Reporting',
+                'app/Http/Requests/Reporting',
+                'app/Http/Controllers/Reporting',
+                'resources/js/components/reports',
+                'resources/js/pages/reports',
+                'tests/Unit/Reporting',
+                'tests/Feature/Reporting',
+            ],
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
     public function sharedFiles(): array
     {
         return match ($this) {
