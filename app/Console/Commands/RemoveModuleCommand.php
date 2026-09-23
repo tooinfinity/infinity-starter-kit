@@ -67,6 +67,10 @@ final class RemoveModuleCommand extends Command
         $chisel = Chisel::in(base_path());
         ModuleRemover::remove($module, $chisel, base_path(), $remainingModules);
 
+        if (file_exists(base_path('artisan'))) {
+            $this->callSilent('wayfinder:generate', ['--with-form' => true, '--no-interaction' => true]);
+        }
+
         $this->components->info("Module [{$module->label()}] successfully removed.");
 
         return self::SUCCESS;
