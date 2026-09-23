@@ -17,6 +17,7 @@ use Inertia\Response;
 
 final readonly class UserController
 {
+    /* @chisel-registration */
     public function create(): Response
     {
         return Inertia::render('user/create');
@@ -38,6 +39,8 @@ final readonly class UserController
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
+
+    /* @end-chisel-registration */
 
     public function destroy(DeleteUserRequest $request, #[CurrentUser] User $user, DeleteUser $action): RedirectResponse
     {
