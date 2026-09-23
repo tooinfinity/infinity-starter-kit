@@ -46,8 +46,12 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
                 /* @chisel-roles-permissions */
-                'permissions' => $user instanceof User ? $user->getAllPermissions()->pluck('name')->toArray() : [],
-                'roles' => $user instanceof User ? $user->getRoleNames()->toArray() : [],
+                'permissions' => $user instanceof User
+                    ? once(fn (): array => $user->getAllPermissions()->pluck('name')->toArray())
+                    : [],
+                'roles' => $user instanceof User
+                    ? once(fn (): array => $user->getRoleNames()->toArray())
+                    : [],
                 /* @end-chisel-roles-permissions */
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
@@ -58,9 +62,11 @@ final class HandleInertiaRequests extends Middleware
             /* @end-chisel-localization */
             /* @chisel-notifications */
             'notifications' => [
-                'unreadCount' => $user instanceof User ? $user->unreadNotifications()->count() : 0,
+                'unreadCount' => $user instanceof User
+                    ? once(fn (): int => $user->unreadNotifications()->count())
+                    : 0,
                 'recent' => $user instanceof User
-                    ? $user->notifications()
+                    ? once(fn (): array => $user->notifications()
                         ->latest()
                         ->limit(5)
                         ->get()
@@ -74,7 +80,7 @@ final class HandleInertiaRequests extends Middleware
                             'read_at' => $notification->read_at?->toISOString(),
                             'created_at' => $notification->created_at?->toISOString() ?? '',
                         ])
-                        ->all()
+                        ->all())
                     : [],
             ],
             /* @end-chisel-notifications */

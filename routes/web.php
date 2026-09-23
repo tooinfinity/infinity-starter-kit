@@ -127,11 +127,11 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/', ReportIndexController::class)->name('index');
         Route::get('users', UserReportController::class)->name('users');
         Route::get('users/export', ExportUserReportController::class)
-            ->middleware('can:reports.export')
+            ->middleware(['can:reports.export', 'throttle:10,1'])
             ->name('users.export');
         Route::get('audit', AuditReportController::class)->name('audit');
         Route::get('audit/export', ExportAuditReportController::class)
-            ->middleware('can:reports.export')
+            ->middleware(['can:reports.export', 'throttle:10,1'])
             ->name('audit.export');
     });
     /* @end-chisel-reporting */

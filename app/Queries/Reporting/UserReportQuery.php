@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Traits\HasRoles;
 
 /* @chisel-reporting */
 
@@ -140,11 +139,8 @@ final readonly class UserReportQuery
     public function buildFilteredQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
         /** @var Builder<User> $query */
-        $query = User::query();
-
-        if (trait_exists(HasRoles::class)) {
-            $query->with('roles');
-        }
+        $query = User::query()
+            ->with('roles');
 
         $query->whereBetween('created_at', [$from, $to]);
 
