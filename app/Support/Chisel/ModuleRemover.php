@@ -57,16 +57,119 @@ final class ModuleRemover
             $chisel->files(...$ownedFiles)->delete();
         }
 
-        // 4. Prune exclusive Composer dependencies
+        // 4. Prune empty directories left behind
+        $directoriesToPrune = array_merge(
+            $module->ownedDirectories(),
+            array_map(dirname(...), $module->ownedFiles()),
+        );
+
+        self::pruneEmptyDirectories($directory, $directoriesToPrune);
+
+        // 5. Prune exclusive Composer dependencies
         $exclusiveComposer = ModuleResolver::exclusiveComposerPackages([$module], $remainingModules);
         if ($exclusiveComposer !== []) {
             self::pruneComposerPackages($directory, $exclusiveComposer);
         }
 
-        // 5. Prune exclusive NPM dependencies
+        // 6. Prune exclusive NPM dependencies
         $exclusiveNpm = ModuleResolver::exclusiveNpmPackages([$module], $remainingModules);
         if ($exclusiveNpm !== []) {
             self::pruneNpmPackages($directory, $exclusiveNpm);
+        }
+    }
+
+    /**
+     * Remove directories if they exist and are empty, bubbling up to non-empty parents.
+     *
+     * @param  list<string>  $paths
+     */
+    public static function pruneEmptyDirectories(string $directory, array $paths): void
+    {
+        $dirs = array_values(array_unique(array_filter($paths, fn (string $p): bool => $p !== '' && $p !== '.')));
+        usort($dirs, fn (string $a, string $b): int => mb_substr_count($b, '/') <=> mb_substr_count($a, '/'));
+
+        $protected = [
+            '',
+            '.',
+            'app',
+            'app/Actions',
+            'app/Console',
+            'app/Console/Commands',
+            'app/Data',
+            'app/Enums',
+            'app/Exceptions',
+            'app/Http',
+            'app/Http/Controllers',
+            'app/Http/Middleware',
+            'app/Http/Requests',
+            'app/Models',
+            'app/Providers',
+            'app/Queries',
+            'app/Rules',
+            'app/Support',
+            'bootstrap',
+            'config',
+            'database',
+            'database/factories',
+            'database/migrations',
+            'database/seeders',
+            'lang',
+            'lang/en',
+            'public',
+            'resources',
+            'resources/css',
+            'resources/js',
+            'resources/js/actions',
+            'resources/js/components',
+            'resources/js/components/ui',
+            'resources/js/hooks',
+            'resources/js/layouts',
+            'resources/js/lib',
+            'resources/js/pages',
+            'resources/js/pages/settings',
+            'resources/js/routes',
+            'resources/js/types',
+            'routes',
+            'storage',
+            'tests',
+            'tests/Browser',
+            'tests/Feature',
+            'tests/Feature/Controllers',
+            'tests/Unit',
+            'tests/Unit/Actions',
+            'tests/Unit/Middleware',
+            'tests/Unit/Models',
+            'tests/Unit/Rules',
+            'tests/Unit/Services',
+            'tests/Unit/Enums',
+        ];
+
+        foreach ($dirs as $relPath) {
+            $current = mb_trim($relPath, '/');
+
+            while ($current !== '' && ! in_array($current, $protected, true)) {
+                $fullPath = $directory.'/'.$current;
+
+                if (! is_dir($fullPath)) {
+                    $current = dirname($current);
+                    if ($current === '.') {
+                        break;
+                    }
+
+                    continue;
+                }
+
+                $items = scandir($fullPath);
+                if ($items !== false && count($items) === 2) {
+                    @rmdir($fullPath);
+                    $current = dirname($current);
+                    if ($current === '.') {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
         }
     }
 
