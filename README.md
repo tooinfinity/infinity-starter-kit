@@ -221,13 +221,13 @@ When reporting is unselected in Chisel, all 25 reporting files (controllers, que
 
 ---
 
-## 🧩 Chisel-Based Optional Module System
+## 🧩 Chisel-Based Scaffolding & Feature Installation
 
-The Infinity Starter Kit features a deterministic, dependency-aware module composition and removal system built on **Laravel Chisel**. The system operates strictly as a project generation and transformation tool—there are **no runtime module registries or database toggles**. Generated code is clean, ordinary Laravel code.
+The Infinity Starter Kit features a deterministic, declarative feature configuration and pruning system built on **Laravel Chisel** (matching the architecture of official starter kits like `laravel/react-starter-kit`). The system operates strictly as a one-time project generation and scaffolding tool. Once configured via `php artisan install:features`, Chisel prunes all unselected features, cleans up its own installer files (`chisel.php`, `InstallFeaturesCommand.php`, and Chisel requirements), leaving behind pure, zero-overhead Laravel application code.
 
-### Module Categories
+### Feature Categories
 
-- **Core (Permanent)**: Authentication foundation (Laravel Fortify), base layout, Inertia v3 infrastructure, React 19 application shell, shared UI primitives (shadcn/ui), TypeScript configs, and SQLite database foundation. Core functionality can never be pruned.
+- **Core (Permanent)**: Authentication foundation (Laravel Fortify), base layout, Inertia v3 infrastructure, React 19 application shell, shared UI primitives (shadcn/ui), TypeScript configs, and SQLite database foundation. Core functionality is never pruned.
 - **Optional Modules**:
   1. **Authorization** (`authorization`): Spatie Roles & Permissions, PHP enums, Gate super-admin bypass, frontend `<Can>` component and `useAuthorization` hook.
   2. **Settings** (`settings`): Key-value application settings storage, `Setting` model, settings controllers, forms, and pages.
@@ -239,41 +239,17 @@ The Infinity Starter Kit features a deterministic, dependency-aware module compo
 
 ---
 
-### 🗺️ Dependency Graph & Compatibility Matrix
+### 🗺️ Feature Compatibility Matrix
 
-Modules declare their requirements explicitly. Dependencies are automatically resolved during installation, and reverse dependencies are strictly validated before removal.
-
-```text
-Authentication (Core)
-    │
-    ├── Authorization
-    │       │
-    │       ├── User Management
-    │       │       │
-    │       │       └── Reporting
-    │       │
-    │       └── Reporting
-    │
-    ├── Settings
-    │
-    ├── Localization
-    │       │
-    │       └── Notifications
-    │
-    └── Audit Trails
-            │
-            └── Reporting
-```
-
-| Module | Identifier | Depends On | Composer Packages | NPM Packages | Permissions |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Authorization** | `authorization` | Core (Authentication) | `spatie/laravel-permission` | — | `authorization.manage` |
-| **Settings** | `settings` | Core | — | — | `settings.manage` |
-| **User Management** | `user-management` | `authorization` | `spatie/laravel-data` | — | `users.view`, `users.create`, `users.update`, `users.delete`, `users.manage-roles`, `users.manage-password` |
-| **Localization** | `localization` | Core | `erag/laravel-lang-sync-inertia` | `@erag/lang-sync-inertia` | — |
-| **Notifications** | `notifications` | `localization` | — | — | — |
-| **Audit Trails** | `audit-trails` | Core (Authentication) | — | — | `audit.view` |
-| **Reporting** | `reporting` | `authorization`, `audit-trails`, `user-management` | `spatie/laravel-data` | — | `reports.view`, `reports.export` |
+| Module | Identifier | Composer Packages | Frontend Packages (Bun) | Permissions |
+| :--- | :--- | :--- | :--- | :--- |
+| **Authorization** | `authorization` | `spatie/laravel-permission` | — | `authorization.manage` |
+| **Settings** | `settings` | — | — | `settings.manage` |
+| **User Management** | `user-management` | `spatie/laravel-data` | — | `users.view`, `users.create`, `users.update`, `users.delete`, `users.manage-roles`, `users.manage-password` |
+| **Localization** | `localization` | `erag/laravel-lang-sync-inertia` | `@erag/lang-sync-inertia` | — |
+| **Notifications** | `notifications` | — | — | — |
+| **Audit Trails** | `audit-trails` | — | — | `audit.view` |
+| **Reporting** | `reporting` | `spatie/laravel-data` | — | `reports.view`, `reports.export` |
 
 ---
 
@@ -305,72 +281,39 @@ Pass answers as a JSON string via the `--answers` option:
 php artisan install:features --answers='{"auth_features":["registration","two-factor-authentication"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}' --no-interaction
 ```
 
-If a module is selected, its required dependencies are automatically included (e.g. selecting `user-management` automatically retains `authorization`). Unselected modules have all exclusive code, routes, permissions, translations, and dependencies cleanly pruned.
+Unselected modules have all exclusive code, routes, permissions, translations, and dependencies cleanly pruned.
+
+#### Post-Installation Self-Cleanup
+
+Upon finishing execution, Chisel automatically cleans up the repository:
+1. Strips `@php artisan install:features --ansi` and `"laravel/chisel"` from `composer.json`.
+2. Formats all PHP code using Laravel Pint (`vendor/bin/pint --format agent`).
+3. Re-generates Wayfinder typed routes and actions (`php artisan wayfinder:generate --with-form --no-interaction`).
+4. Deletes `chisel.php`, `app/Console/Commands/InstallFeaturesCommand.php`, and Chisel installer tests.
 
 ---
 
-### 🗑️ Removing an Optional Module
+### ➕ Developer Checklist: Adding a New Scaffolding Feature
 
-You can safely remove an optional module at any time using the `module:remove` Artisan command:
+Adding a new optional module or feature in `chisel.php` is simple and declarative:
 
-```bash
-php artisan module:remove reporting
-```
-
-#### Reverse Dependency Validation
-
-If another installed module depends on the module you wish to remove, removal is safely blocked:
-
-```bash
-$ php artisan module:remove audit-trails
-ERROR Cannot remove Audit Trails because Reporting depends on it. Remove Reporting first.
-```
-
-To remove `audit-trails`, remove `reporting` first.
-
-#### Database Safety Warning
-
-> [!WARNING]
-> **Database Data Safety:** Removing a module removes its source code, routes, views, configuration, and dependencies. **It does not automatically destroy production database data or drop tables.** If the module previously migrated tables (e.g. `audit_trails`, `settings`), manage database rollbacks explicitly according to your data retention policies.
-
----
-
-### ➕ Developer Checklist: Adding a New Optional Module
-
-Adding a new optional module is predictable and structured:
-
-1. **Define module case in `App\Enums\Module`**:
-   Add a new enum case, identifier, `label()`, `description()`, and `chiselTag()`.
-2. **Declare module dependencies**:
-   Specify any prerequisite modules in `Module::dependencies()`.
-3. **Map owned files**:
-   Add all module-exclusive files (actions, controllers, models, queries, requests, pages, tests) to `Module::ownedFiles()`.
-4. **Map shared files**:
-   Add any core/shared files containing chisel section markers (`/* @chisel-[tag] */`) to `Module::sharedFiles()`.
-5. **Declare Composer packages**:
-   Specify packages in `Module::composerPackages()`. Packages used across multiple modules (e.g., `spatie/laravel-data`) will only be pruned when all consuming modules are removed.
-6. **Declare NPM packages**:
-   Specify frontend packages in `Module::npmPackages()`.
-7. **Declare permissions**:
-   Add module permissions to `App\Enums\Permission` wrapped in chisel markers, and register them in `Module::permissions()`.
-8. **Register routes**:
-   Add route definitions in `routes/web.php` wrapped in chisel markers, and document them in `Module::routes()`.
-9. **Add translations**:
-   Create dedicated translation files in `lang/{en,fr,ar}/[module].php`.
-10. **Implement frontend code**:
-    Place components and pages under `resources/js/` and export types in `resources/js/types/index.ts` with chisel markers.
-11. **Create migrations**:
-    Provide isolated migrations with clear ownership (e.g. `create_[module]_table.php`).
-12. **Configure Chisel transformations**:
-    `chisel.php` automatically discovers the new module options through `Module::options()`.
-13. **Add installation & removal tests**:
-    Ensure the module is covered in `tests/Unit/Modules/ModuleTest.php` and `ModuleResolverTest.php`.
-14. **Verify static analysis & type safety**:
-    Run `vendor/bin/phpstan analyse` (level `max`) and `bun run test:types`.
-15. **Update documentation**:
-    Add the module to the compatibility matrix and roadmap.
-16. **Format code**:
-    Run `vendor/bin/pint --format agent` and `bun run lint`.
+1. **Add Question Option**:
+   Add the feature identifier and label to the `optional_modules` question in `chisel.php`.
+2. **Register Selected Handler**:
+   Use `->selected('optional_modules', '<feature>', then: fn(Chisel $c) => ..., else: fn(Chisel $c) => ...)`:
+   - In `then`: use `$c->files(...)->removeSectionMarkers('<tag>')` to strip markers when kept.
+   - In `else`:
+     - AST mutations via `$c->php('...')->removeImport(...)->removeTrait(...)`
+     - Strip sections via `$c->files(...)->removeSection('<tag>')`
+     - Delete exclusive files via `$c->files(...)->delete()`
+     - Prune exclusive packages via `$c->file('composer.json')->removeLinesContaining(...)`
+     - Prune empty directories using `chiselPruneEmptyDirectories(__DIR__, [...])`
+3. **Handle Shared Packages**:
+   Use `->selectedAny('optional_modules', ['<feature1>', '<feature2>'], else: ...)` for packages shared across multiple features.
+4. **Wrap Shared Code in Markers**:
+   Surround feature-specific routes, sidebar items, and type definitions with `/* @chisel-<tag> */` and `/* @end-chisel-<tag> */`.
+5. **Verify with Pint & Pest**:
+   Run `vendor/bin/pint --format agent` and `php artisan test`.
 
 ---
 

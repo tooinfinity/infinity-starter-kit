@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Laravel\Chisel\PendingAnswers;
-use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
 
 it('defines the default authentication and optional modules selection', function (): void {
@@ -123,41 +122,4 @@ it('executes chisel without answers option defaulting to empty array', function 
     $this->artisan('install:features', [
         '--no-interaction' => true,
     ])->assertSuccessful();
-});
-
-it('throws when question type is unsupported in question callback', function (): void {
-    $capturedCallback = null;
-
-    $pendingAnswers = Mockery::mock(PendingAnswers::class);
-    $pendingAnswers->shouldReceive('onQuestion')
-        ->once()
-        ->andReturnUsing(function ($callback) use (&$capturedCallback, $pendingAnswers) {
-            $capturedCallback = $callback;
-
-            return $pendingAnswers;
-        });
-    $pendingAnswers->shouldReceive('interactive')->once()->andReturnSelf();
-    $pendingAnswers->shouldReceive('withAnswers')->once()->andReturnSelf();
-
-    $mockScript = Mockery::mock(Script::class);
-    $mockScript->shouldReceive('collectAnswers')->once()->andReturn($pendingAnswers);
-    $mockScript->shouldReceive('chisel')->once();
-
-    app()->instance(Script::class, $mockScript);
-
-    $this->artisan('install:features', [
-        '--answers' => '{}',
-        '--no-interaction' => true,
-    ])->assertSuccessful();
-
-    expect($capturedCallback)->toBeCallable();
-
-    $ref = new ReflectionClass(Question::class);
-    /** @var Question $unsupportedQuestion */
-    $unsupportedQuestion = $ref->newInstanceWithoutConstructor();
-    $prop = $ref->getProperty('type');
-    $prop->setValue($unsupportedQuestion, 'unsupported_type');
-
-    expect(fn () => $capturedCallback($unsupportedQuestion))
-        ->toThrow(RuntimeException::class, 'Unsupported question type [unsupported_type].');
 });

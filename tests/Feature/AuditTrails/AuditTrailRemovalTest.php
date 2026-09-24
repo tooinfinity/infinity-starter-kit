@@ -7,6 +7,10 @@ use Laravel\Chisel\Script;
 /* @chisel-audit-trails */
 
 test('audit trails is registered in chisel optional_modules', function (): void {
+    if (! file_exists(base_path('chisel.php'))) {
+        $this->markTestSkipped('Chisel has already been applied and removed.');
+    }
+
     /** @var Script $script */
     $script = require base_path('chisel.php');
 

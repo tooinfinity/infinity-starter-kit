@@ -5,11 +5,13 @@ declare(strict_types=1);
 /* @chisel-reporting */
 
 test('reporting feature is registered in chisel configuration', function (): void {
+    if (! file_exists(base_path('chisel.php'))) {
+        $this->markTestSkipped('Chisel has already been applied and removed.');
+    }
+
     $chiselContent = (string) file_get_contents(base_path('chisel.php'));
 
-    expect($chiselContent)->toContain("'reporting' => 'Reporting'")
-        ->toContain('ModuleRemover::stripMarkers')
-        ->toContain('ModuleRemover::remove');
+    expect($chiselContent)->toContain("'reporting' => 'Reporting'");
 });
 
 test('reporting chisel markers exist symmetrically in modified existing files', function (): void {

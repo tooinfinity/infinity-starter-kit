@@ -7,16 +7,21 @@ namespace App\Console\Commands;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Env;
+use Illuminate\Support\Facades\Request;
 use JsonException;
+use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
 use RuntimeException;
 use Throwable;
 
 use function Laravel\Prompts\multiselect;
+use function Laravel\Prompts\spin;
 
-#[Signature('install:features {--answers= : JSON answers for non-interactive installation}')]
-#[Description('Select the Infinity starter kit features to retain')]
+#[Description('Choose which starter kit features to keep')]
+#[Signature('install:features
+        {--answers= : JSON string of answers to skip interactive prompts}')]
 final class InstallFeaturesCommand extends Command
 {
     /**
@@ -25,6 +30,14 @@ final class InstallFeaturesCommand extends Command
      */
     public function handle(): int
     {
+        if ($this->shouldDeferInstallerHooks()) {
+            return self::SUCCESS;
+        }
+
+        if (! file_exists(base_path('chisel.php'))) {
+            return self::SUCCESS;
+        }
+
         /** @var Script $script */
         $script = app()->bound(Script::class) ? resolve(Script::class) : require base_path('chisel.php');
 
@@ -37,22 +50,75 @@ final class InstallFeaturesCommand extends Command
         /** @var array<string, mixed> $providedAnswers */
         $answers = $script
             ->collectAnswers()
-            ->onQuestion(fn (Question $question): array => match ($question->type) {
-                // @phpstan-ignore match.alwaysTrue (only `multiselect` exists in chisel v0.1; kept for forward compat)
-                'multiselect' => multiselect(
-                    label: $question->label,
-                    options: $question->options,
-                    default: $question->default ?? [],
-                    required: $question->required,
-                    hint: $question->hint,
-                ),
-                default => throw new RuntimeException(sprintf('Unsupported question type [%s].', $question->type)),
-            })
+            ->onQuestion(fn (Question $question): array => multiselect(
+                label: $question->label,
+                options: $question->options,
+                default: $question->default ?? [],
+                required: $question->required,
+                hint: $question->hint,
+            ))
             ->interactive($this->input->isInteractive())
             ->withAnswers($providedAnswers);
 
+        $skipNode = $this->shouldSkipNode();
+
+        if (! $skipNode) {
+            $this->installFrontendDependencies();
+        }
+
         $script->chisel($answers);
 
+        if (! $skipNode) {
+            $this->buildAssets();
+        }
+
         return self::SUCCESS;
+    }
+
+    private function shouldDeferInstallerHooks(): bool
+    {
+        if ($this->option('answers') !== null) {
+            return false;
+        }
+
+        return $this->installerFlag('LARAVEL_INSTALLER_DEFER_HOOKS');
+    }
+
+    private function shouldSkipNode(): bool
+    {
+        if (app()->runningUnitTests()) {
+            return true;
+        }
+
+        return $this->installerFlag('LARAVEL_INSTALLER_NO_NODE');
+    }
+
+    private function installerFlag(string $name): bool
+    {
+        return filter_var(
+            Env::get($name, Request::server($name) ?? getenv($name)),
+            FILTER_VALIDATE_BOOL,
+        );
+    }
+
+    private function installFrontendDependencies(): void
+    {
+        $npm = Chisel::in(base_path())->npm();
+        $packageManager = $npm->packageManager();
+
+        spin(
+            fn () => $npm->install(),
+            "Installing dependencies with {$packageManager->value}...",
+        );
+    }
+
+    private function buildAssets(): void
+    {
+        $npm = Chisel::in(base_path())->npm();
+
+        spin(
+            fn () => $npm->run('build'),
+            'Building assets...',
+        );
     }
 }
