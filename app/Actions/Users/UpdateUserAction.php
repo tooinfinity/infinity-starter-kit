@@ -6,9 +6,11 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
-use App\Data\Users\UpdateUserData;
 /* @end-chisel-audit-trails */
+use App\Data\Users\UpdateUserData;
+/* @chisel-audit-trails */
 use App\Enums\AuditEvent;
+/* @end-chisel-audit-trails */
 use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
