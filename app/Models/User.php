@@ -18,8 +18,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-/* @chisel-notifications */
-/* @end-chisel-notifications */
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
 
@@ -56,8 +54,15 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
 
     /* @end-chisel-roles-permissions */
     use HasUuids;
+
+    /* @chisel-notifications */
     use Notifiable;
+
+    /* @end-chisel-notifications */
+    /* @chisel-two-factor-authentication */
     use TwoFactorAuthenticatable;
+
+    /* @end-chisel-two-factor-authentication */
 
     /**
      * @return array<string, string>
@@ -89,12 +94,15 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
         ];
     }
 
-    /* @chisel-notifications */
+    /* @chisel-localization */
     public function preferredLocale(): ?string
     {
         return $this->locale?->value;
     }
 
+    /* @end-chisel-localization */
+
+    /* @chisel-notifications */
     /**
      * @return HasMany<NotificationPreference, $this>
      */

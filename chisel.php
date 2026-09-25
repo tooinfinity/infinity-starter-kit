@@ -352,8 +352,10 @@ return Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                $paths['auth']['profile'],
                 $paths['auth']['auth_types'],
                 'app/Models/User.php',
+                'app/Actions/Users/UpdateUserAction.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'tests/Unit/Models/UserTest.php',
@@ -368,8 +370,10 @@ return Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                $paths['auth']['profile'],
                 $paths['auth']['auth_types'],
                 'app/Models/User.php',
+                'app/Actions/Users/UpdateUserAction.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'tests/Unit/Models/UserTest.php',
@@ -399,6 +403,7 @@ return Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                'app/Http/Controllers/SessionController.php',
                 $paths['auth']['settings_layout'],
                 $paths['auth']['auth_types'],
                 'app/Models/User.php',
@@ -415,9 +420,10 @@ return Chisel::script(__DIR__)
             $chisel->files(
                 'config/fortify.php',
                 'routes/web.php',
+                'app/Providers/FortifyServiceProvider.php',
+                'app/Http/Controllers/SessionController.php',
                 $paths['auth']['settings_layout'],
                 $paths['auth']['auth_types'],
-                'app/Providers/FortifyServiceProvider.php',
                 'app/Models/User.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
@@ -443,8 +449,8 @@ return Chisel::script(__DIR__)
                 'app/Models/User.php',
                 'app/Providers/AppServiceProvider.php',
                 'app/Http/Middleware/HandleInertiaRequests.php',
+                'resources/js/components/nav-main.tsx',
                 $paths['auth']['auth_types'],
-                'tests/Unit/Enums/PermissionTest.php',
             )->removeSectionMarkers('roles-permissions');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -458,6 +464,7 @@ return Chisel::script(__DIR__)
                 'app/Models/User.php',
                 'app/Providers/AppServiceProvider.php',
                 'app/Http/Middleware/HandleInertiaRequests.php',
+                'resources/js/components/nav-main.tsx',
                 $paths['auth']['auth_types'],
             )->removeSection('roles-permissions');
 
@@ -612,6 +619,12 @@ return Chisel::script(__DIR__)
             )->removeSectionMarkers('localization');
         },
         else: function (Chisel $chisel) use ($paths): void {
+            $chisel->php('app/Models/User.php')
+                ->removeImport('Illuminate\Contracts\Translation\HasLocalePreference')
+                ->removeInterface('HasLocalePreference');
+
+            $chisel->file('app/Models/User.php')
+                ->removeLinesContaining('@property-read Locale|null $locale');
             $chisel->files(
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'app/Models/User.php',

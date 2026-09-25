@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\Permission;
 
-/* @chisel-roles-permissions */
-
 test('all permission values are unique', function (): void {
     $values = Permission::values();
 
@@ -44,5 +42,3 @@ test('each permission is a string-backed enum', function (): void {
         expect($case->value)->toBeString();
     }
 });
-
-/* @end-chisel-roles-permissions */

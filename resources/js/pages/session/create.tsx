@@ -17,14 +17,9 @@ import { request } from '@/routes/password';
 type Props = {
     status?: string;
     canResetPassword: boolean;
-    canRegister: boolean;
 };
 
-export default function Login({
-    status,
-    canResetPassword,
-    canRegister,
-}: Props) {
+export default function Login({ status, canResetPassword }: Props) {
     return (
         <AuthLayout
             title="Log in to your account"
@@ -101,14 +96,12 @@ export default function Login({
                         </div>
 
                         {/* @chisel-registration */}
-                        {canRegister && (
-                            <div className="text-center text-sm text-muted-foreground">
-                                Don't have an account?{' '}
-                                <TextLink href={register()} tabIndex={5}>
-                                    Sign up
-                                </TextLink>
-                            </div>
-                        )}
+                        <div className="text-center text-sm text-muted-foreground">
+                            Don't have an account?{' '}
+                            <TextLink href={register()} tabIndex={5}>
+                                Sign up
+                            </TextLink>
+                        </div>
                         {/* @end-chisel-registration */}
                     </>
                 )}

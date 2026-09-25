@@ -19,6 +19,9 @@
         <include>
             <directory>app</directory>
         </include>
+        <exclude>
+            <file>app/Console/Commands/InstallFeaturesCommand.php</file>
+        </exclude>
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>

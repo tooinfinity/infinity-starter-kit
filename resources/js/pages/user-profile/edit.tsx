@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/user-profile';
+/* @chisel-email-verification */
 import { send } from '@/routes/verification';
+/* @end-chisel-email-verification */
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -19,13 +21,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Edit({
-    mustVerifyEmail,
-    status,
-}: {
-    mustVerifyEmail: boolean;
-    status?: string;
-}) {
+export default function Edit(
+    /* @chisel-email-verification */
+    {
+        mustVerifyEmail,
+        status,
+    }: {
+        mustVerifyEmail: boolean;
+        status?: string;
+    },
+    /* @end-chisel-email-verification */
+) {
     const { auth } = usePage().props;
 
     return (
@@ -90,6 +96,7 @@ export default function Edit({
                                     />
                                 </div>
 
+                                {/* @chisel-email-verification */}
                                 {mustVerifyEmail &&
                                     auth.user.email_verified_at === null && (
                                         <div>
@@ -116,6 +123,7 @@ export default function Edit({
                                             )}
                                         </div>
                                     )}
+                                {/* @end-chisel-email-verification */}
 
                                 <div className="flex items-center gap-4">
                                     <Button

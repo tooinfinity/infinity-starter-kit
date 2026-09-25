@@ -1,5 +1,7 @@
 import { Link } from '@inertiajs/react';
+/* @chisel-roles-permissions */
 import { Can } from '@/components/can';
+/* @end-chisel-roles-permissions */
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -33,6 +35,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                         </SidebarMenuItem>
                     );
 
+                    /* @chisel-roles-permissions */
                     if (item.permission) {
                         return (
                             <Can key={item.title} permission={item.permission}>
@@ -40,6 +43,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                             </Can>
                         );
                     }
+                    /* @end-chisel-roles-permissions */
 
                     return menuItem;
                 })}

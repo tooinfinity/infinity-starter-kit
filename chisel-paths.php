@@ -19,7 +19,13 @@ return [
             'resources/js/pages/user-two-factor-authentication',
             'resources/js/pages/user-two-factor-authentication-challenge',
         ],
+        'two_factor_files' => [
+            'resources/js/components/two-factor-setup-modal.tsx',
+            'resources/js/components/two-factor-recovery-codes.tsx',
+            'resources/js/hooks/use-two-factor-auth.ts',
+        ],
         'settings_layout' => 'resources/js/layouts/settings/layout.tsx',
+        'profile' => 'resources/js/pages/user-profile/edit.tsx',
         'auth_types' => 'resources/js/types/auth.ts',
     ],
 

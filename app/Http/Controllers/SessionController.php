@@ -26,6 +26,7 @@ final readonly class SessionController
     {
         $user = $request->validateCredentials();
 
+        /* @chisel-two-factor-authentication */
         if ($user->hasEnabledTwoFactorAuthentication()) {
             $request->session()->put([
                 'login.id' => $user->getKey(),
@@ -34,6 +35,8 @@ final readonly class SessionController
 
             return to_route('two-factor.login');
         }
+
+        /* @end-chisel-two-factor-authentication */
 
         Auth::login($user, $request->boolean('remember'));
 
