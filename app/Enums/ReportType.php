@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/* @chisel-reporting */
-
 enum ReportType: string
 {
     case UserActivity = 'user_activity';
@@ -56,5 +54,3 @@ enum ReportType: string
         return Permission::ReportsView->value;
     }
 }
-
-/* @end-chisel-reporting */

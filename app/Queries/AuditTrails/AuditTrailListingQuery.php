@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
 
-/* @chisel-audit-trails */
-
 final readonly class AuditTrailListingQuery
 {
     /**
@@ -54,5 +52,3 @@ final readonly class AuditTrailListingQuery
         return $query->latest('created_at')->paginate($perPage)->withQueryString();
     }
 }
-
-/* @end-chisel-audit-trails */

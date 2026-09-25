@@ -1,5 +1,3 @@
-/* @chisel-audit-trails */
-
 import { Head, router } from '@inertiajs/react';
 import { Eye, FilterX, History, Search, X } from 'lucide-react';
 import { FormEvent, useState } from 'react';
@@ -461,5 +459,3 @@ export default function AuditTrailsIndex({
         </AppLayout>
     );
 }
-
-/* @end-chisel-audit-trails */

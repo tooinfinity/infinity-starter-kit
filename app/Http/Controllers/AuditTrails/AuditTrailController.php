@@ -11,8 +11,6 @@ use App\Queries\AuditTrails\AuditTrailListingQuery;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/* @chisel-audit-trails */
-
 final readonly class AuditTrailController
 {
     public function index(AuditTrailIndexRequest $request, AuditTrailListingQuery $query): Response
@@ -58,5 +56,3 @@ final readonly class AuditTrailController
         ]);
     }
 }
-
-/* @end-chisel-audit-trails */

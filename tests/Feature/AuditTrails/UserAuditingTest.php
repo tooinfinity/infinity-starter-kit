@@ -14,8 +14,6 @@ use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
 use App\Models\User;
 
-/* @chisel-audit-trails */
-
 test('CreateUserAction records user.created audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
@@ -147,5 +145,3 @@ test('ChangeUserPasswordAction records user.password_changed audit trail with re
         ->and($audit->new_values['password'])->toBe('[REDACTED]')
         ->and(json_encode($audit->new_values))->not->toContain('brand_new_secret_password');
 });
-
-/* @end-chisel-audit-trails */

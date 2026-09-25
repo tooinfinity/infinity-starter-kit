@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-/* @chisel-audit-trails */
-
 return [
     'title' => 'Pistes d\'audit',
     'description' => 'Suivre et surveiller les événements administratifs et de sécurité.',
@@ -57,5 +55,3 @@ return [
         'close' => 'Fermer',
     ],
 ];
-
-/* @end-chisel-audit-trails */

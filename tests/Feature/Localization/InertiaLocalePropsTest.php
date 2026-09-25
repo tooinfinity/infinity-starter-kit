@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Enums\Locale;
 use App\Models\User;
 
-/* @chisel-localization */
-
 test('Inertia shared props contain locale', function (): void {
     $user = User::factory()->withLocale(Locale::French)->create();
 
@@ -67,5 +65,3 @@ test('LTR direction for French locale', function (): void {
             ->where('direction', 'ltr')
         );
 });
-
-/* @end-chisel-localization */

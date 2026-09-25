@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
-/* @chisel-localization */
-
 final readonly class HandleLocale
 {
     public function __construct(private ResolveLocale $resolveLocale) {}
@@ -30,5 +28,3 @@ final readonly class HandleLocale
         return $next($request);
     }
 }
-
-/* @end-chisel-localization */

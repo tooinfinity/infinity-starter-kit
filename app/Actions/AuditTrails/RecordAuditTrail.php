@@ -10,8 +10,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-/* @chisel-audit-trails */
-
 final readonly class RecordAuditTrail
 {
     /**
@@ -105,5 +103,3 @@ final readonly class RecordAuditTrail
         return $result;
     }
 }
-
-/* @end-chisel-audit-trails */

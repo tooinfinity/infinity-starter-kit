@@ -1,5 +1,3 @@
-/* @chisel-localization */
-
 import { router, usePage } from '@inertiajs/react';
 import { Check, Globe, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -93,5 +91,3 @@ export function LanguageSelector() {
         </DropdownMenu>
     );
 }
-
-/* @end-chisel-localization */

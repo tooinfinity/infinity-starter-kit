@@ -7,8 +7,6 @@ namespace App\Actions\Notifications;
 use App\Models\User;
 use Illuminate\Notifications\DatabaseNotification;
 
-/* @chisel-notifications */
-
 final readonly class MarkNotificationAsRead
 {
     public function handle(User $user, string $notificationId): void
@@ -19,5 +17,3 @@ final readonly class MarkNotificationAsRead
         $notification->markAsRead();
     }
 }
-
-/* @end-chisel-notifications */

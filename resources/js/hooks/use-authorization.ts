@@ -1,6 +1,5 @@
 import { usePage } from '@inertiajs/react';
 
-/* @chisel-roles-permissions */
 type AuthorizationHelpers = {
     can: (permission: string) => boolean;
     canAny: (permissions: string[]) => boolean;
@@ -22,4 +21,3 @@ export function useAuthorization(): AuthorizationHelpers {
         hasRole: (role: string): boolean => roles.includes(role),
     };
 }
-/* @end-chisel-roles-permissions */

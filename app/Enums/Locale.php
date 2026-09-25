@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/* @chisel-localization */
-
 enum Locale: string
 {
     case English = 'en';
@@ -86,5 +84,3 @@ enum Locale: string
         ];
     }
 }
-
-/* @end-chisel-localization */

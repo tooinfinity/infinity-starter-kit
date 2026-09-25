@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/* @chisel-reporting */
-
 final readonly class ExportAuditReportStream
 {
     public function __construct(
@@ -90,5 +88,3 @@ final readonly class ExportAuditReportStream
         return $value;
     }
 }
-
-/* @end-chisel-reporting */

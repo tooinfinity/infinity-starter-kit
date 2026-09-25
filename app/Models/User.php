@@ -8,20 +8,18 @@ namespace App\Models;
 use App\Enums\Locale;
 /* @end-chisel-localization */
 use Carbon\CarbonInterface;
-/* @chisel-notifications */
 use Database\Factories\UserFactory;
-/* @end-chisel-notifications */
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-/* @chisel-notifications */
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-/* @end-chisel-notifications */
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+/* @chisel-notifications */
+/* @end-chisel-notifications */
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
 
@@ -48,7 +46,7 @@ use Spatie\Permission\Traits\HasRoles;
     'two_factor_secret',
     'two_factor_recovery_codes',
 ])]
-final class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail /* @chisel-notifications */ /* @end-chisel-notifications */
+final class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;

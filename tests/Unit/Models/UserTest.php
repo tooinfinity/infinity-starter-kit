@@ -12,8 +12,12 @@ test('to array', function (): void {
             'id',
             'name',
             'email',
+            /* @chisel-email-verification */
             'email_verified_at',
+            /* @end-chisel-email-verification */
+            /* @chisel-two-factor-authentication */
             'two_factor_confirmed_at',
+            /* @end-chisel-two-factor-authentication */
             /* @chisel-user-management */
             'is_active',
             /* @end-chisel-user-management */

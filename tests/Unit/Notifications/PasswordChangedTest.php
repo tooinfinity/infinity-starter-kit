@@ -7,8 +7,6 @@ use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
-/* @chisel-notifications */
-
 test('PasswordChanged notification implements ShouldQueue', function (): void {
     $notification = new PasswordChanged;
 
@@ -50,5 +48,3 @@ test('PasswordChanged notification translates title and body according to app lo
 
     app()->setLocale('en');
 });
-
-/* @end-chisel-notifications */

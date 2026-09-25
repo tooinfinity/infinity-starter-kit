@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 export type ReportSummaryCard = {
     id: string;
     title: string;
@@ -125,5 +123,3 @@ export type AvailableReportEvent = {
     value: string;
     label: string;
 };
-
-/* @end-chisel-reporting */

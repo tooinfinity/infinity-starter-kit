@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/* @chisel-notifications */
-
 enum NotificationType: string
 {
     case Security = 'security';
@@ -37,5 +35,3 @@ enum NotificationType: string
         };
     }
 }
-
-/* @end-chisel-notifications */

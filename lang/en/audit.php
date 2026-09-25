@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-/* @chisel-audit-trails */
-
 return [
     'title' => 'Audit Trails',
     'description' => 'Track and monitor administrative and security events.',
@@ -57,5 +55,3 @@ return [
         'close' => 'Close',
     ],
 ];
-
-/* @end-chisel-audit-trails */

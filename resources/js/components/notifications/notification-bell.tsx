@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 import { usePage } from '@inertiajs/react';
 import { Bell } from 'lucide-react';
 import { useState } from 'react';
@@ -36,5 +34,3 @@ export function NotificationBell() {
         </DropdownMenu>
     );
 }
-
-/* @end-chisel-notifications */

@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 import { Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -107,5 +105,3 @@ export function ReportDateRangeFilter({
         </div>
     );
 }
-
-/* @end-chisel-reporting */

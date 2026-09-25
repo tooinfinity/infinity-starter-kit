@@ -6,8 +6,6 @@ namespace App\Http\Requests\Notifications;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/* @chisel-notifications */
-
 final class MarkNotificationAsReadRequest extends FormRequest
 {
     public function authorize(): bool
@@ -25,5 +23,3 @@ final class MarkNotificationAsReadRequest extends FormRequest
         return [];
     }
 }
-
-/* @end-chisel-notifications */

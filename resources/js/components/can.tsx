@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useAuthorization } from '@/hooks/use-authorization';
 
-/* @chisel-roles-permissions */
 type CanProps = {
     children: ReactNode;
 } & (
@@ -30,4 +29,3 @@ export function Can({
 
     return null;
 }
-/* @end-chisel-roles-permissions */

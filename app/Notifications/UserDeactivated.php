@@ -9,8 +9,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-/* @chisel-notifications */
-
 final class UserDeactivated extends Notification implements ShouldQueue
 {
     use Queueable;
@@ -36,5 +34,3 @@ final class UserDeactivated extends Notification implements ShouldQueue
         ];
     }
 }
-
-/* @end-chisel-notifications */

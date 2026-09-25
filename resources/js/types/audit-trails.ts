@@ -1,5 +1,3 @@
-/* @chisel-audit-trails */
-
 export type AuditEventName =
     | 'user.created'
     | 'user.updated'
@@ -68,5 +66,3 @@ export type AvailableEvent = {
     value: string;
     label: string;
 };
-
-/* @end-chisel-audit-trails */

@@ -6,8 +6,6 @@ use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Database\UniqueConstraintViolationException;
 
-/* @chisel-settings */
-
 test('a setting can be created and retrieved', function (): void {
     $setting = Setting::query()->create([
         'key' => SettingKey::ApplicationName->value,
@@ -72,5 +70,3 @@ test('key is unique', function (): void {
         'value' => 'Second',
     ]))->toThrow(UniqueConstraintViolationException::class);
 });
-
-/* @end-chisel-settings */

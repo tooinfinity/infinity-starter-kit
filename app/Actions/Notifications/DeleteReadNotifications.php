@@ -6,8 +6,6 @@ namespace App\Actions\Notifications;
 
 use App\Models\User;
 
-/* @chisel-notifications */
-
 final readonly class DeleteReadNotifications
 {
     public function handle(User $user): void
@@ -15,5 +13,3 @@ final readonly class DeleteReadNotifications
         $user->readNotifications()->delete();
     }
 }
-
-/* @end-chisel-notifications */

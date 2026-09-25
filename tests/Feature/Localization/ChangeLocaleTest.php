@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Enums\Locale;
 use App\Models\User;
 
-/* @chisel-localization */
-
 test('authenticated user can change their locale', function (): void {
     $user = User::factory()->create(['locale' => null]);
 
@@ -86,5 +84,3 @@ test('next request uses the selected locale', function (): void {
 
     expect(app()->getLocale())->toBe('fr');
 });
-
-/* @end-chisel-localization */

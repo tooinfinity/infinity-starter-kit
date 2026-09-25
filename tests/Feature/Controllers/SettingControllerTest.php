@@ -10,8 +10,6 @@ use Inertia\Support\SessionKey;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
-/* @chisel-settings */
-
 it('renders settings page for authorized user', function (): void {
     $user = User::factory()->create();
     $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
@@ -228,5 +226,3 @@ it('rejects unknown setting keys', function (): void {
     $response->assertRedirect(route('settings.edit'))
         ->assertSessionHasErrors();
 });
-
-/* @end-chisel-settings */

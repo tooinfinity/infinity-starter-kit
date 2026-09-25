@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { CheckCheck } from 'lucide-react';
 import Heading from '@/components/heading';
@@ -112,5 +110,3 @@ export default function NotificationsIndex({ notifications }: Props) {
         </AppLayout>
     );
 }
-
-/* @end-chisel-notifications */

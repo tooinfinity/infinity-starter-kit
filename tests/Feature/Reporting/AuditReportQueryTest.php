@@ -9,8 +9,6 @@ use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
 use Illuminate\Support\Facades\Date;
 
-/* @chisel-reporting */
-
 test('audit report query handles empty dataset gracefully', function (): void {
     AuditTrail::query()->delete();
 
@@ -150,5 +148,3 @@ test('audit report query filters by event, user_id and search', function (): voi
     ]);
     expect($actorResult['paginated']->total())->toBe(1);
 });
-
-/* @end-chisel-reporting */

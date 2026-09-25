@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\NotificationType;
 
-/* @chisel-notifications */
-
 test('NotificationType enum has all expected cases', function (): void {
     $cases = NotificationType::cases();
 
@@ -41,5 +39,3 @@ test('NotificationType returns null for invalid string', function (): void {
     expect(NotificationType::tryFrom('invalid'))->toBeNull()
         ->and(NotificationType::tryFrom(''))->toBeNull();
 });
-
-/* @end-chisel-notifications */

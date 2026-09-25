@@ -9,8 +9,6 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
-/* @chisel-reporting */
-
 test('unauthenticated user cannot access audit report', function (): void {
     $this->get(route('reports.audit'))
         ->assertRedirect(route('login'));
@@ -154,5 +152,3 @@ test('authorized user can export audit report with custom date range and system 
     $content = $response->streamedContent();
     expect($content)->toContain('settings.updated');
 });
-
-/* @end-chisel-reporting */

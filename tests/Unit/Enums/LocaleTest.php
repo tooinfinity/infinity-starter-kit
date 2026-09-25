@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\Locale;
 
-/* @chisel-localization */
-
 test('Locale enum has all expected cases', function (): void {
     $cases = Locale::cases();
 
@@ -93,5 +91,3 @@ test('Locale returns null for invalid string', function (): void {
     expect(Locale::tryFrom('invalid'))->toBeNull()
         ->and(Locale::tryFrom(''))->toBeNull();
 });
-
-/* @end-chisel-localization */

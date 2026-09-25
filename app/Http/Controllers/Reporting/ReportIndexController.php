@@ -10,8 +10,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/* @chisel-reporting */
-
 final readonly class ReportIndexController
 {
     public function __invoke(Request $request): Response
@@ -39,5 +37,3 @@ final readonly class ReportIndexController
         ]);
     }
 }
-
-/* @end-chisel-reporting */

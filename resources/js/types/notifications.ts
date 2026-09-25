@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 export type NotificationType = 'security' | 'user_management' | 'system';
 
 export type NotificationAction = {
@@ -44,5 +42,3 @@ export type NotificationsSharedData = {
     unreadCount: number;
     recent: NotificationItem[];
 };
-
-/* @end-chisel-notifications */

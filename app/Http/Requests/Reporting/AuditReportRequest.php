@@ -9,8 +9,6 @@ use App\Enums\Permission;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/* @chisel-reporting */
-
 final class AuditReportRequest extends FormRequest
 {
     public function authorize(): bool
@@ -51,5 +49,3 @@ final class AuditReportRequest extends FormRequest
         ];
     }
 }
-
-/* @end-chisel-reporting */

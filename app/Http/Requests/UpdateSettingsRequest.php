@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\Permission;
-/* @chisel-settings-authorization */
 use App\Enums\SettingKey;
-/* @end-chisel-settings-authorization */
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -17,11 +15,9 @@ final class UpdateSettingsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /* @chisel-settings-authorization */
         $user = $this->user();
 
         return $user !== null && $user->can(Permission::SettingsManage->value);
-        /* @end-chisel-settings-authorization */
     }
 
     /**

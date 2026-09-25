@@ -8,8 +8,6 @@ use App\Enums\Locale;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-/* @chisel-localization */
-
 final readonly class ResolveLocale
 {
     public function handle(Request $request): Locale
@@ -37,5 +35,3 @@ final readonly class ResolveLocale
         return Locale::default();
     }
 }
-
-/* @end-chisel-localization */

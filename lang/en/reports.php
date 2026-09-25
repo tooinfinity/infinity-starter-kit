@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-/* @chisel-reporting */
-
 return [
     'title' => 'Reports',
     'description' => 'View system and administrative reporting and analytics.',
@@ -90,5 +88,3 @@ return [
         ],
     ],
 ];
-
-/* @end-chisel-reporting */

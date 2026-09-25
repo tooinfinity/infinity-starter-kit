@@ -14,8 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-/* @chisel-audit-trails */
-
 /**
  * @property-read string $id
  * @property-read string|null $user_id
@@ -91,5 +89,3 @@ final class AuditTrail extends Model
         return $this->morphTo();
     }
 }
-
-/* @end-chisel-audit-trails */

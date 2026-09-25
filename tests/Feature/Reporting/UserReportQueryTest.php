@@ -6,8 +6,6 @@ use App\Models\User;
 use App\Queries\Reporting\UserReportQuery;
 use Illuminate\Support\Facades\Date;
 
-/* @chisel-reporting */
-
 test('user report query handles empty dataset gracefully', function (): void {
     User::query()->delete();
 
@@ -164,5 +162,3 @@ test('user report query searches by name and email and supports sorting', functi
     ]);
     expect($sortedResult['paginated']->first()?->name)->toBe('Alice Developer');
 });
-
-/* @end-chisel-reporting */

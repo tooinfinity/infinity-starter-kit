@@ -6,8 +6,6 @@ use App\Enums\Permission;
 use App\Enums\ReportCategory;
 use App\Enums\ReportType;
 
-/* @chisel-reporting */
-
 test('report type enum has valid values', function (): void {
     expect(ReportType::values())->toBe([
         'user_activity',
@@ -36,5 +34,3 @@ test('audit activity report type metadata is correct', function (): void {
         ->and($type->route())->toBe(route('reports.audit'))
         ->and($type->permission())->toBe(Permission::ReportsView->value);
 });
-
-/* @end-chisel-reporting */

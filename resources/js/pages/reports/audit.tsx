@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 import { Head, router } from '@inertiajs/react';
 import { Activity, Download, FilterX, Search } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
@@ -381,5 +379,3 @@ export default function AuditReportPage({
         </AppLayout>
     );
 }
-
-/* @end-chisel-reporting */

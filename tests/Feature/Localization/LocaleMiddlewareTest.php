@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Enums\Locale;
 use App\Models\User;
 
-/* @chisel-localization */
-
 test('middleware sets App locale for authenticated user with explicit locale', function (): void {
     $user = User::factory()->withLocale(Locale::French)->create();
 
@@ -53,5 +51,3 @@ test('middleware sets Arabic RTL direction', function (): void {
 
     expect(app()->getLocale())->toBe('ar');
 });
-
-/* @end-chisel-localization */

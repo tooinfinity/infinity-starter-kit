@@ -8,8 +8,6 @@ use App\Enums\NotificationType;
 use App\Models\NotificationPreference;
 use App\Models\User;
 
-/* @chisel-notifications */
-
 final readonly class UpdateNotificationPreferences
 {
     /**
@@ -36,5 +34,3 @@ final readonly class UpdateNotificationPreferences
         }
     }
 }
-
-/* @end-chisel-notifications */

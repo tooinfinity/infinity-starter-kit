@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 import { Link, router, usePage } from '@inertiajs/react';
 import { CheckCheck } from 'lucide-react';
 import { NotificationEmptyState } from '@/components/notifications/notification-empty-state';
@@ -94,5 +92,3 @@ export function NotificationDropdown({ onClose }: Props) {
         </DropdownMenuContent>
     );
 }
-
-/* @end-chisel-notifications */

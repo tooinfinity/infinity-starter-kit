@@ -8,8 +8,6 @@ use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
-/* @chisel-settings */
-
 test('GetSetting returns stored value', function (): void {
     Setting::query()->create([
         'key' => SettingKey::ApplicationName->value,
@@ -119,5 +117,3 @@ test('UpdateSettings set method works with SettingKey enum', function (): void {
 
     expect($setting->value)->toBe('Enum Set');
 });
-
-/* @end-chisel-settings */

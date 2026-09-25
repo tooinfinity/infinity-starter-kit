@@ -6,8 +6,6 @@ use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Inertia\Testing\AssertableInertia as Assert;
 
-/* @chisel-notifications */
-
 test('guest cannot view notifications', function (): void {
     $this->get(route('notifications.index'))
         ->assertRedirect(route('login'));
@@ -60,5 +58,3 @@ test('notifications are paginated with 15 per page', function (): void {
             ->where('notifications.last_page', 2)
         );
 });
-
-/* @end-chisel-notifications */

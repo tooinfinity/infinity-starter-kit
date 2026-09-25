@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 
-/* @chisel-notifications */
-
 test('guest cannot mark notification as read', function (): void {
     $user = User::factory()->create();
     $user->notify(new PasswordChanged);
@@ -95,5 +93,3 @@ test('mark all read does not affect another users notifications', function (): v
     expect($userA->unreadNotifications()->count())->toBe(0)
         ->and($userB->unreadNotifications()->count())->toBe(1);
 });
-
-/* @end-chisel-notifications */

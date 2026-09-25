@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 import { Link, router } from '@inertiajs/react';
 import {
     Check,
@@ -175,5 +173,3 @@ export function NotificationItem({
         </div>
     );
 }
-
-/* @end-chisel-notifications */

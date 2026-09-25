@@ -24,19 +24,23 @@ use App\Http\Controllers\SessionController;
 /* @chisel-settings */
 use App\Http\Controllers\SettingController;
 /* @end-chisel-settings */
-/* @chisel-user-management */
 use App\Http\Controllers\UserController;
-/* @end-chisel-user-management */
 use App\Http\Controllers\UserEmailResetNotificationController;
+/* @chisel-email-verification */
 use App\Http\Controllers\UserEmailVerificationController;
 use App\Http\Controllers\UserEmailVerificationNotificationController;
+/* @end-chisel-email-verification */
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
+/* @chisel-user-management */
 use App\Http\Controllers\Users\ActivateUserController;
 use App\Http\Controllers\Users\DeactivateUserController;
 use App\Http\Controllers\Users\UserController as UserManagementController;
 use App\Http\Controllers\Users\UserPasswordController as AdminUserPasswordController;
+/* @end-chisel-user-management */
+/* @chisel-two-factor-authentication */
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
+/* @end-chisel-two-factor-authentication */
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 

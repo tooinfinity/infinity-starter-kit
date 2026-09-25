@@ -6,8 +6,6 @@ namespace App\Data\Reporting;
 
 use Spatie\LaravelData\Data;
 
-/* @chisel-reporting */
-
 final class ReportBreakdownItemData extends Data
 {
     public function __construct(
@@ -17,5 +15,3 @@ final class ReportBreakdownItemData extends Data
         public float $percentage,
     ) {}
 }
-
-/* @end-chisel-reporting */

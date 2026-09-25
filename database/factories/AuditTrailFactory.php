@@ -9,8 +9,6 @@ use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/* @chisel-audit-trails */
-
 /**
  * @extends Factory<AuditTrail>
  */
@@ -53,5 +51,3 @@ final class AuditTrailFactory extends Factory
         ]);
     }
 }
-
-/* @end-chisel-audit-trails */

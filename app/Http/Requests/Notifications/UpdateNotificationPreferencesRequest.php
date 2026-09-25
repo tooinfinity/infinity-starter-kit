@@ -7,8 +7,6 @@ namespace App\Http\Requests\Notifications;
 use App\Enums\NotificationType;
 use Illuminate\Foundation\Http\FormRequest;
 
-/* @chisel-notifications */
-
 final class UpdateNotificationPreferencesRequest extends FormRequest
 {
     public function authorize(): bool
@@ -43,5 +41,3 @@ final class UpdateNotificationPreferencesRequest extends FormRequest
         );
     }
 }
-
-/* @end-chisel-notifications */

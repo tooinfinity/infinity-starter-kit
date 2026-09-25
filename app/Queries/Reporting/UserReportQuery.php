@@ -15,8 +15,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
-/* @chisel-reporting */
-
 final readonly class UserReportQuery
 {
     /**
@@ -163,5 +161,3 @@ final readonly class UserReportQuery
         return $query;
     }
 }
-
-/* @end-chisel-reporting */

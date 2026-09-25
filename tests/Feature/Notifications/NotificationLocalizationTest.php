@@ -8,8 +8,6 @@ use App\Notifications\PasswordChanged;
 use App\Notifications\UserActivated;
 use App\Notifications\UserDeactivated;
 
-/* @chisel-notifications */
-
 test('user preferredLocale returns their locale value', function (): void {
     $user = User::factory()->create(['locale' => Locale::French]);
 
@@ -55,5 +53,3 @@ test('notifications sent in Arabic locale are translated in Arabic', function ()
 
     app()->setLocale('en');
 });
-
-/* @end-chisel-notifications */

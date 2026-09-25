@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\AuditEvent;
 
-/* @chisel-audit-trails */
-
 test('AuditEvent enum has expected cases and values', function (): void {
     expect(AuditEvent::UserCreated->value)->toBe('user.created')
         ->and(AuditEvent::UserUpdated->value)->toBe('user.updated')
@@ -33,5 +31,3 @@ test('AuditEvent label returns translated string', function (): void {
         expect($case->label())->toBeString()->not->toBeEmpty();
     }
 });
-
-/* @end-chisel-audit-trails */

@@ -9,8 +9,6 @@ use App\Enums\Permission;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/* @chisel-audit-trails */
-
 final class AuditTrailIndexRequest extends FormRequest
 {
     public function authorize(): bool
@@ -47,5 +45,3 @@ final class AuditTrailIndexRequest extends FormRequest
         ];
     }
 }
-
-/* @end-chisel-audit-trails */

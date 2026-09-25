@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
-/* @chisel-roles-permissions */
-
 test('super admin bypasses all gate checks', function (): void {
     $user = User::factory()->create();
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
@@ -99,5 +97,3 @@ test('shared inertia props return empty arrays for guests', function (): void {
             ->where('auth.roles', [])
         );
 });
-
-/* @end-chisel-roles-permissions */

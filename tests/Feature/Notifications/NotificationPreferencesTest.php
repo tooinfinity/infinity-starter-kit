@@ -7,8 +7,6 @@ use App\Models\NotificationPreference;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-/* @chisel-notifications */
-
 test('guest cannot view notification preferences', function (): void {
     $this->get(route('notification-preferences.edit'))
         ->assertRedirect(route('login'));
@@ -98,5 +96,3 @@ test('notification preference belongs to a user', function (): void {
     expect($preference->user)->toBeInstanceOf(User::class)
         ->and($preference->user->id)->toBe($user->id);
 });
-
-/* @end-chisel-notifications */

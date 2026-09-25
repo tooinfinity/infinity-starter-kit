@@ -11,8 +11,6 @@ use App\Queries\Reporting\AuditReportQuery;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/* @chisel-reporting */
-
 final readonly class AuditReportController
 {
     public function __invoke(AuditReportRequest $request, AuditReportQuery $query): Response
@@ -63,5 +61,3 @@ final readonly class AuditReportController
         ]);
     }
 }
-
-/* @end-chisel-reporting */

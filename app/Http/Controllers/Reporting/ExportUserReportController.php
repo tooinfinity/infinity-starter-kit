@@ -8,8 +8,6 @@ use App\Http\Requests\Reporting\ExportReportRequest;
 use App\Queries\Reporting\ExportUserReportStream;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/* @chisel-reporting */
-
 final readonly class ExportUserReportController
 {
     public function __invoke(ExportReportRequest $request, ExportUserReportStream $stream): StreamedResponse
@@ -22,5 +20,3 @@ final readonly class ExportUserReportController
         ]);
     }
 }
-
-/* @end-chisel-reporting */

@@ -17,8 +17,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
-/* @chisel-reporting */
-
 final readonly class AuditReportQuery
 {
     /**
@@ -221,5 +219,3 @@ final readonly class AuditReportQuery
         return $query;
     }
 }
-
-/* @end-chisel-reporting */

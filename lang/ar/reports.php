@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-/* @chisel-reporting */
-
 return [
     'title' => 'التقارير',
     'description' => 'عرض تقارير وتحليلات النظام والعمليات الإدارية.',
@@ -90,5 +88,3 @@ return [
         ],
     ],
 ];
-
-/* @end-chisel-reporting */

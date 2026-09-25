@@ -6,8 +6,6 @@ namespace App\Actions\Notifications;
 
 use App\Models\User;
 
-/* @chisel-notifications */
-
 final readonly class MarkAllNotificationsAsRead
 {
     public function handle(User $user): void
@@ -15,5 +13,3 @@ final readonly class MarkAllNotificationsAsRead
         $user->unreadNotifications()->update(['read_at' => now()]);
     }
 }
-
-/* @end-chisel-notifications */

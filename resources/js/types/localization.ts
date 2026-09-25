@@ -1,5 +1,3 @@
-/* @chisel-localization */
-
 export type Direction = 'ltr' | 'rtl';
 
 export type LocaleOption = {
@@ -8,5 +6,3 @@ export type LocaleOption = {
     nativeName: string;
     direction: Direction;
 };
-
-/* @end-chisel-localization */

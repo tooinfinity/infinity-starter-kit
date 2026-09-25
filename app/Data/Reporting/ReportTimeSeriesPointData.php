@@ -6,8 +6,6 @@ namespace App\Data\Reporting;
 
 use Spatie\LaravelData\Data;
 
-/* @chisel-reporting */
-
 final class ReportTimeSeriesPointData extends Data
 {
     public function __construct(
@@ -15,5 +13,3 @@ final class ReportTimeSeriesPointData extends Data
         public int|float $value,
     ) {}
 }
-
-/* @end-chisel-reporting */

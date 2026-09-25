@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\Locale;
 
-/* @chisel-localization */
-
 test('all required translation files exist for English', function (): void {
     expect(file_exists(lang_path('en/common.php')))->toBeTrue()
         ->and(file_exists(lang_path('en/localization.php')))->toBeTrue();
@@ -82,5 +80,3 @@ function array_keys_recursive(array $array, string $prefix = ''): array
 
     return $keys;
 }
-
-/* @end-chisel-localization */

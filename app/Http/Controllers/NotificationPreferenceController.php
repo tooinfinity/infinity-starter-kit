@@ -14,8 +14,6 @@ use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/* @chisel-notifications */
-
 final readonly class NotificationPreferenceController
 {
     public function edit(#[CurrentUser] User $user): Response
@@ -54,5 +52,3 @@ final readonly class NotificationPreferenceController
         return back();
     }
 }
-
-/* @end-chisel-notifications */

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\SettingGroup;
 
-/* @chisel-settings */
-
 test('all setting group values are unique', function (): void {
     $values = SettingGroup::values();
 
@@ -29,5 +27,3 @@ test('each setting group is a string-backed enum', function (): void {
 test('label returns a human-readable label', function (): void {
     expect(SettingGroup::Application->label())->toBe('Application');
 });
-
-/* @end-chisel-settings */

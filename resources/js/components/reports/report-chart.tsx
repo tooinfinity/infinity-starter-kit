@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 import { BarChart2, Table as TableIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -167,5 +165,3 @@ export function ReportChart({
         </Card>
     );
 }
-
-/* @end-chisel-reporting */

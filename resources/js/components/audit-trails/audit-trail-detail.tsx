@@ -1,5 +1,3 @@
-/* @chisel-audit-trails */
-
 import { ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -228,5 +226,3 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
         </Dialog>
     );
 }
-
-/* @end-chisel-audit-trails */

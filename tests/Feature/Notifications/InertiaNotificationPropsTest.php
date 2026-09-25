@@ -6,8 +6,6 @@ use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Inertia\Testing\AssertableInertia as Assert;
 
-/* @chisel-notifications */
-
 test('guest has unreadCount 0 and empty recent in shared props', function (): void {
     $this->get(route('login'))
         ->assertOk()
@@ -53,5 +51,3 @@ test('unreadCount updates when notification is marked as read', function (): voi
             ->where('notifications.unreadCount', 0)
         );
 });
-
-/* @end-chisel-notifications */

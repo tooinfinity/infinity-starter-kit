@@ -6,8 +6,6 @@ use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Illuminate\Support\Str;
 
-/* @chisel-notifications */
-
 test('user cannot mark another users notification as read via IDOR', function (): void {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
@@ -63,5 +61,3 @@ test('invalid uuid format returns 403 on mark read', function (): void {
         ->patch(route('notifications.mark-read', ['notification' => 'not-a-uuid']))
         ->assertForbidden();
 });
-
-/* @end-chisel-notifications */

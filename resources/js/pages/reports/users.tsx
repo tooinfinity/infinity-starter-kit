@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 import { Head, router } from '@inertiajs/react';
 import { Download, FilterX, Search, Users as UsersIcon } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
@@ -324,5 +322,3 @@ export default function UserReportPage({
         </AppLayout>
     );
 }
-
-/* @end-chisel-reporting */

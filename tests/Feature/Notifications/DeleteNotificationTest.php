@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 
-/* @chisel-notifications */
-
 test('guest cannot delete notification', function (): void {
     $user = User::factory()->create();
     $user->notify(new PasswordChanged);
@@ -46,5 +44,3 @@ test('user cannot delete another users notification', function (): void {
 
     expect($userB->notifications()->count())->toBe(1);
 });
-
-/* @end-chisel-notifications */

@@ -13,8 +13,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/* @chisel-notifications */
-
 /**
  * @property-read string $id
  * @property-read string $user_id
@@ -58,5 +56,3 @@ final class NotificationPreference extends Model
         return $this->belongsTo(User::class);
     }
 }
-
-/* @end-chisel-notifications */

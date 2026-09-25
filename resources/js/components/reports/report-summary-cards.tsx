@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 import {
     Activity,
     BarChart3,
@@ -67,5 +65,3 @@ export function ReportSummaryCards({ cards }: ReportSummaryCardsProps) {
         </div>
     );
 }
-
-/* @end-chisel-reporting */

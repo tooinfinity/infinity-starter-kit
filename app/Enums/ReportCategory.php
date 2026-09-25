@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/* @chisel-reporting */
-
 enum ReportCategory: string
 {
     case Users = 'users';
@@ -27,5 +25,3 @@ enum ReportCategory: string
         };
     }
 }
-
-/* @end-chisel-reporting */

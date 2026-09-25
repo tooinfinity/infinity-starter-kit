@@ -7,8 +7,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role as RoleModel;
 
-/* @chisel-roles-permissions */
-
 beforeEach(function (): void {
     RoleModel::findOrCreate(Role::SuperAdmin->value);
 });
@@ -51,5 +49,3 @@ test('admin setup cancels when user declines existing user assignment', function
 
     expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeFalse();
 });
-
-/* @end-chisel-roles-permissions */

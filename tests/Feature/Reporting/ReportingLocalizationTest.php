@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\App;
 
-/* @chisel-reporting */
-
 test('reporting localization files exist for en, fr, and ar', function (): void {
     expect(file_exists(base_path('lang/en/reports.php')))->toBeTrue();
     expect(file_exists(base_path('lang/fr/reports.php')))->toBeTrue();
@@ -52,5 +50,3 @@ test('translations can be retrieved in multiple locales', function (): void {
     App::setLocale('ar');
     expect(__('reports.title'))->toBe('التقارير');
 });
-
-/* @end-chisel-reporting */

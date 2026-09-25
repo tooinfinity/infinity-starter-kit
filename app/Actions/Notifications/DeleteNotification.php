@@ -6,8 +6,6 @@ namespace App\Actions\Notifications;
 
 use App\Models\User;
 
-/* @chisel-notifications */
-
 final readonly class DeleteNotification
 {
     public function handle(User $user, string $notificationId): void
@@ -15,5 +13,3 @@ final readonly class DeleteNotification
         $user->notifications()->findOrFail($notificationId)->delete();
     }
 }
-
-/* @end-chisel-notifications */

@@ -7,8 +7,6 @@ use App\Models\AuditTrail;
 use App\Models\User;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
-/* @chisel-audit-trails */
-
 test('guest cannot access audit trails and is redirected to login', function (): void {
     $this->get(route('audit-trails.index'))
         ->assertRedirect(route('login'));
@@ -53,5 +51,3 @@ test('no create update or delete endpoints exist for audit trails', function ():
         ->delete('/audit-trails/'.$record->id)
         ->assertNotFound();
 });
-
-/* @end-chisel-audit-trails */

@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 import { BellOff } from 'lucide-react';
 
 type Props = {
@@ -27,5 +25,3 @@ export function NotificationEmptyState({
         </div>
     );
 }
-
-/* @end-chisel-notifications */

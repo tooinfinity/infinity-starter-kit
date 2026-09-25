@@ -1,5 +1,3 @@
-/* @chisel-notifications */
-
 import { Head, useForm } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
 import Heading from '@/components/heading';
@@ -140,5 +138,3 @@ export default function NotificationPreferencesEdit({ preferences }: Props) {
         </AppLayout>
     );
 }
-
-/* @end-chisel-notifications */

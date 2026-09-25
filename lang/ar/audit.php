@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-/* @chisel-audit-trails */
-
 return [
     'title' => 'سجلات التدقيق',
     'description' => 'تتبع ومراقبة الأحداث الإدارية والأمنية.',
@@ -57,5 +55,3 @@ return [
         'close' => 'إغلاق',
     ],
 ];
-
-/* @end-chisel-audit-trails */

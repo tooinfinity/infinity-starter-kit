@@ -7,8 +7,6 @@ use App\Enums\Locale;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-/* @chisel-localization */
-
 test('resolves authenticated user explicit locale', function (): void {
     $user = User::factory()->withLocale(Locale::French)->create();
     $request = Request::create('/');
@@ -65,5 +63,3 @@ test('authenticated user locale overrides guest cookie', function (): void {
 
     expect($action->handle($request))->toBe(Locale::French);
 });
-
-/* @end-chisel-localization */

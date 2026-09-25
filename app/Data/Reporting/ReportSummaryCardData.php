@@ -6,8 +6,6 @@ namespace App\Data\Reporting;
 
 use Spatie\LaravelData\Data;
 
-/* @chisel-reporting */
-
 final class ReportSummaryCardData extends Data
 {
     public function __construct(
@@ -18,5 +16,3 @@ final class ReportSummaryCardData extends Data
         public string $icon,
     ) {}
 }
-
-/* @end-chisel-reporting */

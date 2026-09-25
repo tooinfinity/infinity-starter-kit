@@ -9,8 +9,6 @@ use App\Http\Requests\ChangeLocaleRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 
-/* @chisel-localization */
-
 final readonly class LocaleController
 {
     public function update(ChangeLocaleRequest $request, ChangeLocale $action): RedirectResponse
@@ -26,5 +24,3 @@ final readonly class LocaleController
             ->withCookie(cookie('locale', $locale->value, 525600));
     }
 }
-
-/* @end-chisel-localization */

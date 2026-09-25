@@ -10,8 +10,6 @@ use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 
-/* @chisel-notifications */
-
 final readonly class MarkAllNotificationsAsReadController
 {
     public function __invoke(#[CurrentUser] User $user, MarkAllNotificationsAsRead $action): RedirectResponse
@@ -26,5 +24,3 @@ final readonly class MarkAllNotificationsAsReadController
         return back();
     }
 }
-
-/* @end-chisel-notifications */

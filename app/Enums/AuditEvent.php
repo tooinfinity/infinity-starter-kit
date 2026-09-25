@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/* @chisel-audit-trails */
-
 enum AuditEvent: string
 {
     case UserCreated = 'user.created';
@@ -37,5 +35,3 @@ enum AuditEvent: string
         };
     }
 }
-
-/* @end-chisel-audit-trails */

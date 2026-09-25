@@ -6,8 +6,6 @@ namespace App\Data\Reporting;
 
 use Spatie\LaravelData\Data;
 
-/* @chisel-reporting */
-
 final class ReportMetadataData extends Data
 {
     public function __construct(
@@ -20,5 +18,3 @@ final class ReportMetadataData extends Data
         public string $permission,
     ) {}
 }
-
-/* @end-chisel-reporting */

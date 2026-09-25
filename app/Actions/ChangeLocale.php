@@ -7,8 +7,6 @@ namespace App\Actions;
 use App\Enums\Locale;
 use App\Models\User;
 
-/* @chisel-localization */
-
 final readonly class ChangeLocale
 {
     public function handle(User $user, Locale $locale): void
@@ -16,5 +14,3 @@ final readonly class ChangeLocale
         $user->update(['locale' => $locale]);
     }
 }
-
-/* @end-chisel-localization */

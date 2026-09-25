@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Enums\SettingGroup;
 use App\Enums\SettingKey;
 
-/* @chisel-settings */
-
 test('all setting key values are unique', function (): void {
     $values = SettingKey::values();
 
@@ -48,5 +46,3 @@ test('rules returns non-empty validation rules', function (): void {
         expect($case->rules())->toBeArray()->not->toBeEmpty();
     }
 });
-
-/* @end-chisel-settings */

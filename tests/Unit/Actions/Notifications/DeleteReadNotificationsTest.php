@@ -6,8 +6,6 @@ use App\Actions\Notifications\DeleteReadNotifications;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 
-/* @chisel-notifications */
-
 it('deletes read notifications for user while preserving unread ones', function (): void {
     $user = User::factory()->create();
 
@@ -30,5 +28,3 @@ it('deletes read notifications for user while preserving unread ones', function 
         ->and($user->readNotifications()->count())->toBe(0)
         ->and($user->unreadNotifications()->count())->toBe(1);
 });
-
-/* @end-chisel-notifications */

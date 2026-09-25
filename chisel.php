@@ -312,9 +312,6 @@ return Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
-                'app/Models/User.php',
-                'database/factories/UserFactory.php',
-                'database/migrations/0001_01_01_000000_create_users_table.php',
                 $paths['auth']['login'],
                 $paths['auth']['welcome'],
                 'app/Http/Controllers/UserController.php',
@@ -350,14 +347,16 @@ return Chisel::script(__DIR__)
     ->selected(
         'auth_features',
         'email-verification',
-        then: function (Chisel $chisel): void {
+        then: function (Chisel $chisel) use ($paths): void {
             $chisel->files(
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                $paths['auth']['auth_types'],
                 'app/Models/User.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
+                'tests/Unit/Models/UserTest.php',
             )->removeSectionMarkers('email-verification');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -369,9 +368,11 @@ return Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                $paths['auth']['auth_types'],
                 'app/Models/User.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
+                'tests/Unit/Models/UserTest.php',
             )->removeSection('email-verification');
 
             $chisel->files(
@@ -399,9 +400,11 @@ return Chisel::script(__DIR__)
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
                 $paths['auth']['settings_layout'],
+                $paths['auth']['auth_types'],
                 'app/Models/User.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
+                'tests/Unit/Models/UserTest.php',
             )->removeSectionMarkers('two-factor-authentication');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -413,10 +416,12 @@ return Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 $paths['auth']['settings_layout'],
+                $paths['auth']['auth_types'],
                 'app/Providers/FortifyServiceProvider.php',
                 'app/Models/User.php',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
+                'tests/Unit/Models/UserTest.php',
             )->removeSection('two-factor-authentication');
 
             $chisel->files(
@@ -439,6 +444,7 @@ return Chisel::script(__DIR__)
                 'app/Providers/AppServiceProvider.php',
                 'app/Http/Middleware/HandleInertiaRequests.php',
                 $paths['auth']['auth_types'],
+                'tests/Unit/Enums/PermissionTest.php',
             )->removeSectionMarkers('roles-permissions');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -481,22 +487,18 @@ return Chisel::script(__DIR__)
             $chisel->files(
                 'routes/web.php',
                 'app/Enums/Permission.php',
-                'app/Http/Requests/UpdateSettingsRequest.php',
                 $paths['auth']['settings_layout'],
                 'resources/js/types/index.ts',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSectionMarkers('settings');
         },
         else: function (Chisel $chisel) use ($paths): void {
             $chisel->files(
                 'routes/web.php',
                 'app/Enums/Permission.php',
-                'app/Http/Requests/UpdateSettingsRequest.php',
                 $paths['auth']['settings_layout'],
                 'resources/js/types/index.ts',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSection('settings');
 
             $chisel->files(...[
@@ -534,8 +536,8 @@ return Chisel::script(__DIR__)
                 'routes/web.php',
                 'resources/js/types/index.ts',
                 'resources/js/components/app-sidebar.tsx',
+                'tests/Unit/Models/UserTest.php',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSectionMarkers('user-management');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -548,8 +550,8 @@ return Chisel::script(__DIR__)
                 'routes/web.php',
                 'resources/js/types/index.ts',
                 'resources/js/components/app-sidebar.tsx',
+                'tests/Unit/Models/UserTest.php',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSection('user-management');
 
             $chisel->files(...[
@@ -606,9 +608,7 @@ return Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
                 'resources/js/components/app-header.tsx',
                 'resources/js/components/app-sidebar-header.tsx',
-                'resources/js/components/app-sidebar.tsx',
                 'tests/Unit/Models/UserTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSectionMarkers('localization');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -623,9 +623,7 @@ return Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
                 'resources/js/components/app-header.tsx',
                 'resources/js/components/app-sidebar-header.tsx',
-                'resources/js/components/app-sidebar.tsx',
                 'tests/Unit/Models/UserTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSection('localization');
 
             $chisel->files(...[
@@ -673,7 +671,6 @@ return Chisel::script(__DIR__)
                 $paths['auth']['settings_layout'],
                 'resources/js/types/global.d.ts',
                 'resources/js/types/index.ts',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSectionMarkers('notifications');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -695,7 +692,6 @@ return Chisel::script(__DIR__)
                 $paths['auth']['settings_layout'],
                 'resources/js/types/global.d.ts',
                 'resources/js/types/index.ts',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSection('notifications');
 
             $chisel->files(...[
@@ -756,7 +752,6 @@ return Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
                 'resources/js/components/app-sidebar.tsx',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSectionMarkers('audit-trails');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -773,7 +768,6 @@ return Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
                 'resources/js/components/app-sidebar.tsx',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSection('audit-trails');
 
             $chisel->files(...[
@@ -792,7 +786,6 @@ return Chisel::script(__DIR__)
                 ...$paths['audit_trails']['pages'],
                 $paths['audit_trails']['types'],
                 'tests/Feature/AuditTrails/AuditTrailListingTest.php',
-                'tests/Feature/AuditTrails/AuditTrailRemovalTest.php',
                 'tests/Feature/AuditTrails/AuditTrailSecurityTest.php',
                 'tests/Feature/AuditTrails/AuditTrailTransactionTest.php',
                 'tests/Feature/AuditTrails/RecordAuditTrailTest.php',
@@ -814,7 +807,6 @@ return Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
                 'resources/js/components/app-sidebar.tsx',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSectionMarkers('reporting');
         },
         else: function (Chisel $chisel) use ($paths): void {
@@ -824,7 +816,6 @@ return Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
                 'resources/js/components/app-sidebar.tsx',
                 'tests/Unit/Enums/PermissionTest.php',
-                'tests/Feature/InstallFeaturesCommandTest.php',
             )->removeSection('reporting');
 
             $chisel->files(...[
@@ -860,7 +851,6 @@ return Chisel::script(__DIR__)
                 'tests/Feature/Reporting/UserReportControllerTest.php',
                 'tests/Feature/Reporting/AuditReportControllerTest.php',
                 'tests/Feature/Reporting/ReportingLocalizationTest.php',
-                'tests/Feature/Reporting/ReportingRemovalTest.php',
             ])->delete();
 
             chiselPruneEmptyDirectories(__DIR__, $paths['reporting']['empty_dirs']);
@@ -897,6 +887,5 @@ return Chisel::script(__DIR__)
             'app/Console/Commands/InstallFeaturesCommand.php',
             'chisel.php',
             'chisel-paths.php',
-            'tests/Feature/InstallFeaturesCommandTest.php',
         )->delete();
     });

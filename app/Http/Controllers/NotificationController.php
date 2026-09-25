@@ -15,8 +15,6 @@ use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/* @chisel-notifications */
-
 final readonly class NotificationController
 {
     public function index(#[CurrentUser] User $user): Response
@@ -71,5 +69,3 @@ final readonly class NotificationController
         return back();
     }
 }
-
-/* @end-chisel-notifications */

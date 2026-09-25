@@ -1,5 +1,3 @@
-/* @chisel-reporting */
-
 import { Head, Link } from '@inertiajs/react';
 import { ArrowRight, BarChart3, Shield, Users } from 'lucide-react';
 import Heading from '@/components/heading';
@@ -92,5 +90,3 @@ export default function ReportsIndex({ reports }: ReportsIndexProps) {
         </AppLayout>
     );
 }
-
-/* @end-chisel-reporting */

@@ -9,8 +9,6 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/* @chisel-localization */
-
 final class ChangeLocaleRequest extends FormRequest
 {
     /**
@@ -31,5 +29,3 @@ final class ChangeLocaleRequest extends FormRequest
         return Locale::from($validated['locale']);
     }
 }
-
-/* @end-chisel-localization */

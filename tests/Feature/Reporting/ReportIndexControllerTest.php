@@ -7,8 +7,6 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
-/* @chisel-reporting */
-
 test('unauthenticated users are redirected to login', function (): void {
     $this->get(route('reports.index'))
         ->assertRedirect(route('login'));
@@ -37,5 +35,3 @@ test('authorized users can view report index with available reports', function (
             ->where('reports.1.identifier', 'audit_activity')
         );
 });
-
-/* @end-chisel-reporting */

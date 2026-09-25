@@ -10,8 +10,6 @@ use App\Queries\Reporting\UserReportQuery;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/* @chisel-reporting */
-
 final readonly class UserReportController
 {
     public function __invoke(UserReportRequest $request, UserReportQuery $query): Response
@@ -45,5 +43,3 @@ final readonly class UserReportController
         ]);
     }
 }
-
-/* @end-chisel-reporting */

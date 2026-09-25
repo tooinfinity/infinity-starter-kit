@@ -9,8 +9,6 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
-/* @chisel-audit-trails */
-
 test('authorized user can view audit trails listing page with inertia', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
@@ -140,5 +138,3 @@ test('audit trails pagination per_page works correctly', function (): void {
             ->where('auditTrails.total', 10)
         );
 });
-
-/* @end-chisel-audit-trails */

@@ -9,8 +9,6 @@ use App\Models\AuditTrail;
 use App\Models\Setting;
 use App\Models\User;
 
-/* @chisel-audit-trails */
-
 test('UpdateSettings records settings.updated audit trail for each setting change', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
@@ -55,5 +53,3 @@ test('UpdateSettings set method records settings.updated audit trail', function 
     expect($audit)->not->toBeNull()
         ->and($audit->new_values['value'])->toBe('Custom Name Via Set');
 });
-
-/* @end-chisel-audit-trails */

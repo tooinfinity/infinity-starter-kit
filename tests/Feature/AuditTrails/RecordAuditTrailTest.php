@@ -8,8 +8,6 @@ use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-/* @chisel-audit-trails */
-
 test('RecordAuditTrail stores an audit trail record with all provided attributes', function (): void {
     $actor = User::factory()->create();
     $target = User::factory()->create();
@@ -112,5 +110,3 @@ test('RecordAuditTrail falls back to authenticated user when actor is not passed
 
     expect($record->user_id)->toBe($user->id);
 });
-
-/* @end-chisel-audit-trails */
