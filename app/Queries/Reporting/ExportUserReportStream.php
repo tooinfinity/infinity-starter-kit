@@ -7,6 +7,7 @@ namespace App\Queries\Reporting;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
+use Spatie\Permission\Traits\HasRoles;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final readonly class ExportUserReportStream
@@ -56,10 +57,12 @@ final readonly class ExportUserReportStream
             foreach ($query->cursor() as $user) {
                 /** @var User $user */
                 $roleNames = [];
-                foreach ($user->roles as $role) {
-                    $name = $role->getAttribute('name');
-                    if (is_string($name)) {
-                        $roleNames[] = $name;
+                if (trait_exists(HasRoles::class)) {
+                    foreach ($user->roles as $role) {
+                        $name = $role->getAttribute('name');
+                        if (is_string($name)) {
+                            $roleNames[] = $name;
+                        }
                     }
                 }
 

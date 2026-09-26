@@ -9,6 +9,7 @@ use App\Enums\Permission;
 use App\Models\User;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -16,7 +17,7 @@ final class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(Permission::UsersCreate->value) ?? false;
+        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersCreate->value) ?? false);
     }
 
     /**
@@ -41,7 +42,7 @@ final class StoreUserRequest extends FormRequest
             ],
             'is_active' => ['sometimes', 'boolean'],
             'roles' => ['sometimes', 'array'],
-            'roles.*' => ['string', 'exists:roles,name'],
+            'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
         ];
     }
 

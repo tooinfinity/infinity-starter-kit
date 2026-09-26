@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Models\AuditTrail;
+
 enum ReportType: string
 {
     case UserActivity = 'user_activity';
@@ -15,6 +17,20 @@ enum ReportType: string
     public static function values(): array
     {
         return array_column(self::cases(), 'value');
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function availableCases(): array
+    {
+        return array_filter(
+            self::cases(),
+            fn (self $case): bool => match ($case) {
+                self::UserActivity => true,
+                self::AuditActivity => class_exists(AuditTrail::class),
+            },
+        );
     }
 
     public function label(): string
@@ -51,6 +67,6 @@ enum ReportType: string
 
     public function permission(): string
     {
-        return Permission::ReportsView->value;
+        return enum_exists(Permission::class) ? Permission::ReportsView->value : 'reports.view';
     }
 }

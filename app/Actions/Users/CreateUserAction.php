@@ -6,14 +6,15 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
-/* @end-chisel-audit-trails */
 use App\Data\Users\CreateUserData;
-/* @chisel-audit-trails */
-use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\AuditEvent;
+/* @chisel-audit-trails */
 use App\Models\User;
+/* @end-chisel-audit-trails */
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Traits\HasRoles;
 
 final readonly class CreateUserAction
 {
@@ -34,7 +35,7 @@ final readonly class CreateUserAction
                 'is_active' => $data->isActive,
             ]);
 
-            if ($data->roles !== []) {
+            if ($data->roles !== [] && trait_exists(HasRoles::class)) {
                 $user->syncRoles($data->roles);
             }
 

@@ -13,7 +13,7 @@ final class AuditTrailIndexRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(Permission::AuditView->value) ?? false;
+        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::AuditView->value) ?? false);
     }
 
     /**

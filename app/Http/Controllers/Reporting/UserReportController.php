@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Queries\Reporting\UserReportQuery;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Traits\HasRoles;
 
 final readonly class UserReportController
 {
@@ -24,7 +25,7 @@ final readonly class UserReportController
             'name' => $user->name,
             'email' => $user->email,
             'is_active' => $user->is_active,
-            'roles' => $user->roles->pluck('name')->all(),
+            'roles' => trait_exists(HasRoles::class) ? $user->roles->pluck('name')->all() : [],
             'created_at' => $user->created_at->toISOString(),
         ]);
 

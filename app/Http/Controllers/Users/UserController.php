@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role as RoleModel;
+use Spatie\Permission\Traits\HasRoles;
 
 final readonly class UserController
 {
@@ -36,7 +37,7 @@ final readonly class UserController
             'email' => $user->email,
             'is_active' => $user->is_active,
             'email_verified_at' => $user->email_verified_at?->toISOString(),
-            'roles' => $user->getRoleNames()->toArray(),
+            'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
             'created_at' => $user->created_at->toISOString(),
             'updated_at' => $user->updated_at->toISOString(),
         ]);
@@ -76,7 +77,7 @@ final readonly class UserController
                 'email' => $user->email,
                 'is_active' => $user->is_active,
                 'email_verified_at' => $user->email_verified_at?->toISOString(),
-                'roles' => $user->getRoleNames()->toArray(),
+                'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
                 'created_at' => $user->created_at->toISOString(),
                 'updated_at' => $user->updated_at->toISOString(),
             ],
@@ -122,6 +123,6 @@ final readonly class UserController
             }
         }
 
-        return RoleEnum::values();
+        return enum_exists(RoleEnum::class) ? RoleEnum::values() : [];
     }
 }

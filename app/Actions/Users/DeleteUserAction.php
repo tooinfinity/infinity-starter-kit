@@ -7,11 +7,12 @@ namespace App\Actions\Users;
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
-/* @end-chisel-audit-trails */
 use App\Enums\Role;
+/* @end-chisel-audit-trails */
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Traits\HasRoles;
 
 final readonly class DeleteUserAction
 {
@@ -30,7 +31,7 @@ final readonly class DeleteUserAction
             ]);
         }
 
-        if ($user->hasRole(Role::SuperAdmin->value)) {
+        if (trait_exists(HasRoles::class) && $user->hasRole(Role::SuperAdmin->value)) {
             $superAdminCount = User::query()->role(Role::SuperAdmin->value)->count();
 
             if ($superAdminCount <= 1) {
@@ -49,7 +50,7 @@ final readonly class DeleteUserAction
                     'name' => $user->name,
                     'email' => $user->email,
                     'is_active' => $user->is_active,
-                    'roles' => $user->getRoleNames()->toArray(),
+                    'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
                 ],
                 tags: ['users'],
             );

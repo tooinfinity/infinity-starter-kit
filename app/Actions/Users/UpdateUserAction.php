@@ -6,15 +6,16 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
-/* @end-chisel-audit-trails */
 use App\Data\Users\UpdateUserData;
-/* @chisel-audit-trails */
-use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\AuditEvent;
+/* @chisel-audit-trails */
 use App\Enums\Role;
+/* @end-chisel-audit-trails */
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Traits\HasRoles;
 
 final readonly class UpdateUserAction
 {
@@ -33,7 +34,7 @@ final readonly class UpdateUserAction
             ]);
         }
 
-        $isSuperAdmin = $user->hasRole(Role::SuperAdmin->value);
+        $isSuperAdmin = trait_exists(HasRoles::class) && $user->hasRole(Role::SuperAdmin->value);
 
         if ($isSuperAdmin) {
             $superAdminCount = User::query()->role(Role::SuperAdmin->value)->count();
@@ -59,7 +60,7 @@ final readonly class UpdateUserAction
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_active' => $user->is_active,
-                'roles' => $user->getRoleNames()->toArray(),
+                'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
             ];
             /* @end-chisel-audit-trails */
 
@@ -81,7 +82,9 @@ final readonly class UpdateUserAction
 
             /* @end-chisel-email-verification */
 
-            $user->syncRoles($data->roles);
+            if (trait_exists(HasRoles::class)) {
+                $user->syncRoles($data->roles);
+            }
 
             /* @chisel-audit-trails */
             $this->auditTrail->handle(

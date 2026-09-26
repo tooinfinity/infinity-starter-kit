@@ -195,7 +195,9 @@ if (! function_exists('chiselPruneEmptyDirectories')) {
  *         two_factor_show: string,
  *         two_factor_challenge: string,
  *         two_factor_dirs: list<string>,
+ *         two_factor_files: list<string>,
  *         settings_layout: string,
+ *         profile: string,
  *         auth_types: string,
  *     },
  *     authorization: array{
@@ -430,13 +432,14 @@ return Chisel::script(__DIR__)
                 'tests/Unit/Models/UserTest.php',
             )->removeSection('two-factor-authentication');
 
-            $chisel->files(
+            $chisel->files(...[
                 'app/Http/Controllers/UserTwoFactorAuthenticationController.php',
                 'app/Http/Requests/ShowUserTwoFactorAuthenticationRequest.php',
                 $paths['auth']['two_factor_show'],
                 $paths['auth']['two_factor_challenge'],
+                ...$paths['auth']['two_factor_files'],
                 'tests/Feature/Controllers/UserTwoFactorAuthenticationControllerTest.php',
-            )->delete();
+            ])->delete();
 
             chiselPruneEmptyDirectories(__DIR__, $paths['auth']['two_factor_dirs']);
         },
@@ -450,6 +453,7 @@ return Chisel::script(__DIR__)
                 'app/Providers/AppServiceProvider.php',
                 'app/Http/Middleware/HandleInertiaRequests.php',
                 'resources/js/components/nav-main.tsx',
+                'routes/web.php',
                 $paths['auth']['auth_types'],
             )->removeSectionMarkers('roles-permissions');
         },
@@ -465,6 +469,7 @@ return Chisel::script(__DIR__)
                 'app/Providers/AppServiceProvider.php',
                 'app/Http/Middleware/HandleInertiaRequests.php',
                 'resources/js/components/nav-main.tsx',
+                'routes/web.php',
                 $paths['auth']['auth_types'],
             )->removeSection('roles-permissions');
 
@@ -687,11 +692,6 @@ return Chisel::script(__DIR__)
             )->removeSectionMarkers('notifications');
         },
         else: function (Chisel $chisel) use ($paths): void {
-            if (file_exists(__DIR__.'/app/Models/User.php')) {
-                $chisel->php('app/Models/User.php')
-                    ->removeImport('Illuminate\\Contracts\\Translation\\HasLocalePreference')
-                    ->removeInterface('HasLocalePreference');
-            }
 
             $chisel->files(
                 'app/Actions/UpdateUserPassword.php',
@@ -804,7 +804,15 @@ return Chisel::script(__DIR__)
                 'tests/Feature/AuditTrails/RecordAuditTrailTest.php',
                 'tests/Feature/AuditTrails/SettingsAuditingTest.php',
                 'tests/Feature/AuditTrails/UserAuditingTest.php',
-                'tests/Unit/AuditEventEnumTest.php',
+                'tests/Unit/Enums/AuditEventEnumTest.php',
+                'app/Http/Controllers/Reporting/AuditReportController.php',
+                'app/Http/Controllers/Reporting/ExportAuditReportController.php',
+                'app/Http/Requests/Reporting/AuditReportRequest.php',
+                'app/Queries/Reporting/AuditReportQuery.php',
+                'app/Queries/Reporting/ExportAuditReportStream.php',
+                'resources/js/pages/reports/audit.tsx',
+                'tests/Feature/Reporting/AuditReportControllerTest.php',
+                'tests/Feature/Reporting/AuditReportQueryTest.php',
             ])->delete();
 
             chiselPruneEmptyDirectories(__DIR__, $paths['audit_trails']['empty_dirs']);

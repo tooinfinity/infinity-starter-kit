@@ -6,12 +6,13 @@ namespace App\Http\Requests\Users;
 
 use App\Enums\Permission;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 
 final class UpdateUserRolesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(Permission::UsersManageRoles->value) ?? false;
+        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersManageRoles->value) ?? false);
     }
 
     /**
@@ -21,7 +22,7 @@ final class UpdateUserRolesRequest extends FormRequest
     {
         return [
             'roles' => ['required', 'array'],
-            'roles.*' => ['string', 'exists:roles,name'],
+            'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
         ];
     }
 }

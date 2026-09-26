@@ -12,7 +12,7 @@ final class UpdateUserPasswordRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(Permission::UsersManagePassword->value) ?? false;
+        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersManagePassword->value) ?? false);
     }
 
     /**

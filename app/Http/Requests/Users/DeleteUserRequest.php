@@ -11,7 +11,7 @@ final class DeleteUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(Permission::UsersDelete->value) ?? false;
+        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersDelete->value) ?? false);
     }
 
     /**

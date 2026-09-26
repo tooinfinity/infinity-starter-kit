@@ -9,13 +9,14 @@ use App\Enums\Permission;
 use App\Models\User;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 final class UpdateUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(Permission::UsersUpdate->value) ?? false;
+        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersUpdate->value) ?? false);
     }
 
     /**
@@ -40,7 +41,7 @@ final class UpdateUserRequest extends FormRequest
             ],
             'is_active' => ['sometimes', 'boolean'],
             'roles' => ['sometimes', 'array'],
-            'roles.*' => ['string', 'exists:roles,name'],
+            'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
         ];
     }
 

@@ -7,14 +7,15 @@ namespace App\Actions\Users;
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
-/* @end-chisel-audit-trails */
 use App\Enums\Role;
+/* @end-chisel-audit-trails */
 use App\Models\User;
-/* @chisel-notifications */
 use App\Notifications\UserDeactivated;
-/* @end-chisel-notifications */
+/* @chisel-notifications */
 use Illuminate\Support\Facades\DB;
+/* @end-chisel-notifications */
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Traits\HasRoles;
 
 final readonly class DeactivateUserAction
 {
@@ -33,7 +34,7 @@ final readonly class DeactivateUserAction
             ]);
         }
 
-        if ($user->hasRole(Role::SuperAdmin->value)) {
+        if (trait_exists(HasRoles::class) && $user->hasRole(Role::SuperAdmin->value)) {
             $superAdminCount = User::query()->role(Role::SuperAdmin->value)->count();
 
             if ($superAdminCount <= 1) {
