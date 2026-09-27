@@ -13,7 +13,10 @@ use Illuminate\Console\Command;
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\text;
 
-#[Signature('admin:setup')]
+#[Signature('admin:setup
+        {--name= : Name of the administrator}
+        {--email= : Email of the administrator}
+        {--password= : Password for the administrator}')]
 #[Description('Create an administrator user and assign the Super Admin role')]
 final class SetupAdminUserCommand extends Command
 {
@@ -21,24 +24,42 @@ final class SetupAdminUserCommand extends Command
     {
         $this->components->info('Setting up administrator user...');
 
-        $name = text(
-            label: 'Name',
-            required: true,
-            validate: ['name' => ['required', 'string', 'max:255']],
-        );
+        $optionName = $this->option('name');
+        $optionEmail = $this->option('email');
+        $optionPassword = $this->option('password');
 
-        $email = text(
-            label: 'Email',
-            required: true,
-            validate: ['email' => ['required', 'email', 'max:255']],
-        );
+        $isInteractive = $this->input->isInteractive();
+
+        if (! $isInteractive && $optionEmail === null) {
+            $this->components->info('No administrator credentials provided in non-interactive mode; skipping administrator creation.');
+
+            return self::SUCCESS;
+        }
+
+        $name = is_string($optionName) && $optionName !== ''
+            ? $optionName
+            : ($optionEmail !== null
+                ? 'Administrator'
+                : text(
+                    label: 'Name',
+                    required: true,
+                    validate: ['name' => ['required', 'string', 'max:255']],
+                ));
+
+        $email = is_string($optionEmail) && $optionEmail !== ''
+            ? $optionEmail
+            : text(
+                label: 'Email',
+                required: true,
+                validate: ['email' => ['required', 'email', 'max:255']],
+            );
 
         $existingUser = User::query()->where('email', $email)->first();
 
         if ($existingUser instanceof User) {
             $this->components->warn(sprintf('A user with email [%s] already exists.', $email));
 
-            if (! $this->components->confirm('Assign the Super Admin role to this existing user?')) {
+            if ($optionEmail === null && ! $this->components->confirm('Assign the Super Admin role to this existing user?')) {
                 $this->components->info('Operation cancelled.');
 
                 return self::SUCCESS;
@@ -52,11 +73,25 @@ final class SetupAdminUserCommand extends Command
             return self::SUCCESS;
         }
 
-        $inputPassword = password(
-            label: 'Password',
-            required: true,
-            validate: ['password' => ['required', 'string', 'min:8']],
-        );
+        if (is_string($optionPassword) && $optionPassword !== '') {
+            if (mb_strlen($optionPassword) < 8) {
+                $this->components->error('The administrator password must be at least 8 characters.');
+
+                return self::FAILURE;
+            }
+
+            $inputPassword = $optionPassword;
+        } elseif ($isInteractive) {
+            $inputPassword = password(
+                label: 'Password',
+                required: true,
+                validate: ['password' => ['required', 'string', 'min:8']],
+            );
+        } else {
+            $this->components->error('A password of at least 8 characters is required to create an administrator user in non-interactive mode.');
+
+            return self::FAILURE;
+        }
 
         $user = User::query()->create([
             'name' => $name,

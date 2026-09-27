@@ -5,6 +5,9 @@ includes:
 
 parameters:
 
+    bootstrapFiles:
+        - chisel.php
+
     paths:
         - app
         - bootstrap/app.php

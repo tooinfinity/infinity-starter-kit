@@ -60,16 +60,6 @@ if (! function_exists('chiselRun')) {
     }
 }
 
-if (! function_exists('chiselDirectory')) {
-    function chiselDirectory(Chisel $chisel): string
-    {
-        static $extractor;
-        $extractor ??= Closure::bind(fn (Chisel $c): string => $c->directory, null, Chisel::class);
-
-        return $extractor($chisel);
-    }
-}
-
 if (! function_exists('chiselSkipsNode')) {
     function chiselSkipsNode(): bool
     {
@@ -90,13 +80,9 @@ if (! function_exists('chiselRemoveFrontendPackages')) {
     function chiselRemoveFrontendPackages(string $directory, Chisel $c, string ...$packages): void
     {
         if (! chiselSkipsNode()) {
-            try {
-                $c->npm()->remove(...$packages);
+            $c->npm()->remove(...$packages);
 
-                return;
-            } catch (Throwable) {
-                // Fall back to safe JSON removal if package manager is unavailable
-            }
+            return;
         }
 
         $packageJsonPath = $directory.'/package.json';
@@ -258,6 +244,54 @@ if (! function_exists('chiselValidateDependencies')) {
     }
 }
 
+if (! function_exists('chiselCleanPhpstanConfig')) {
+    function chiselCleanPhpstanConfig(string $directory): void
+    {
+        $neonPath = $directory.'/phpstan.neon';
+        if (! file_exists($neonPath)) {
+            return;
+        }
+
+        $content = (string) file_get_contents($neonPath);
+        $cleaned = preg_replace("/\n\s*bootstrapFiles:\s*\n\s*-\s*chisel\.php\s*/", '', $content);
+        if ($cleaned !== null && $cleaned !== $content) {
+            file_put_contents($neonPath, $cleaned);
+        }
+    }
+}
+
+if (! function_exists('chiselCleanup')) {
+    /**
+     * Remove Chisel installer machinery from the project after successful installation.
+     *
+     * @param  array{
+     *     chisel?: array{
+     *         files?: list<string>,
+     *         empty_dirs?: list<string>,
+     *     },
+     * }  $paths
+     */
+    function chiselCleanup(string $directory, array $paths): void
+    {
+        chiselCleanComposerPostCreate($directory);
+        chiselCleanPhpstanConfig($directory);
+
+        $chisel = Chisel::in($directory);
+        $chiselFiles = $paths['chisel']['files'] ?? [
+            'app/Console/Commands/InstallFeaturesCommand.php',
+            'chisel.php',
+            'chisel-paths.php',
+        ];
+
+        $chisel->files(...$chiselFiles)->delete();
+
+        chiselPruneEmptyDirectories($directory, $paths['chisel']['empty_dirs'] ?? [
+            'tests/Unit/Chisel',
+            'tests/Feature/Chisel',
+        ]);
+    }
+}
+
 /**
  * Framework-specific filenames and paths are supplied by chisel-paths.php.
  *
@@ -298,7 +332,7 @@ if (! function_exists('chiselValidateDependencies')) {
  *         types: string,
  *         composer_package: string,
  *         frontend_package: string,
- *         extra_lang_files?: list<string>,
+ *         extra_lang_files: list<string>,
  *         empty_dirs: list<string>,
  *     },
  *     notifications: array{
@@ -317,14 +351,20 @@ if (! function_exists('chiselValidateDependencies')) {
  *         components: list<string>,
  *         pages: list<string>,
  *         types: string,
- *         files?: list<string>,
+ *         files: list<string>,
  *         empty_dirs: list<string>,
  *     },
- *     dependencies?: array<string, list<string>>,
- *     cross_feature_tests?: list<array{features: list<string>, files: list<string>}>,
+ *     dependencies: array<string, list<string>>,
+ *     cross_feature_tests: list<array{features: list<string>, files: list<string>}>,
+ *     chisel: array{
+ *         files: list<string>,
+ *         empty_dirs: list<string>,
+ *     },
  * } $paths
  */
 $paths = require __DIR__.'/chisel-paths.php';
+
+$directory = __DIR__;
 
 $script = Chisel::script(__DIR__)
     ->questions([
@@ -379,7 +419,7 @@ $script = Chisel::script(__DIR__)
                 'app/Http/Controllers/UserController.php',
             )->removeSectionMarkers('registration');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'config/fortify.php',
                 'routes/web.php',
@@ -397,7 +437,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Actions/CreateUserTest.php',
             )->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), [
+            chiselPruneEmptyDirectories($directory, [
                 $paths['auth']['user_dir'],
             ]);
         },
@@ -419,7 +459,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Models/UserTest.php',
             )->removeSectionMarkers('email-verification');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('MustVerifyEmail');
 
@@ -447,7 +487,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Actions/CreateUserEmailVerificationNotificationTest.php',
             )->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), [
+            chiselPruneEmptyDirectories($directory, [
                 $paths['auth']['verify_email_dir'],
             ]);
         },
@@ -469,7 +509,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Models/UserTest.php',
             )->removeSectionMarkers('two-factor-authentication');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'config/fortify.php',
                 'routes/web.php',
@@ -492,7 +532,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Feature/Controllers/UserTwoFactorAuthenticationControllerTest.php',
             ])->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['auth']['two_factor_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['auth']['two_factor_dirs']);
         },
     )
     ->selected(
@@ -508,7 +548,7 @@ $script = Chisel::script(__DIR__)
                 $paths['auth']['auth_types'],
             )->removeSectionMarkers('roles-permissions');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'app/Models/User.php',
                 'app/Providers/AppServiceProvider.php',
@@ -532,9 +572,9 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/RoleTest.php',
             ])->delete();
 
-            chiselRemoveComposerPackages(chiselDirectory($chisel), $paths['authorization']['composer_package']);
+            chiselRemoveComposerPackages($directory, $paths['authorization']['composer_package']);
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['authorization']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['authorization']['empty_dirs']);
         },
     )
     ->selected(
@@ -549,7 +589,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/PermissionTest.php',
             )->removeSectionMarkers('settings');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'routes/web.php',
                 'app/Enums/Permission.php',
@@ -577,7 +617,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Feature/Settings/SettingsActionTest.php',
             ])->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['settings']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['settings']['empty_dirs']);
         },
     )
     ->selected(
@@ -597,7 +637,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/PermissionTest.php',
             )->removeSectionMarkers('user-management');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'app/Models/User.php',
@@ -647,7 +687,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Feature/Users/UpdateUserRolesRequestTest.php',
             ])->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['user_management']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['user_management']['empty_dirs']);
         },
     )
     ->selected(
@@ -668,7 +708,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Models/UserTest.php',
             )->removeSectionMarkers('localization');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('HasLocalePreference');
 
@@ -707,11 +747,10 @@ $script = Chisel::script(__DIR__)
                 'tests/Feature/Localization/TranslationFileTest.php',
             ])->delete();
 
-            $dir = chiselDirectory($chisel);
-            chiselRemoveComposerPackages($dir, $paths['localization']['composer_package']);
-            chiselRemoveFrontendPackages($dir, $chisel, $paths['localization']['frontend_package']);
+            chiselRemoveComposerPackages($directory, $paths['localization']['composer_package']);
+            chiselRemoveFrontendPackages($directory, $chisel, $paths['localization']['frontend_package']);
 
-            chiselPruneEmptyDirectories($dir, $paths['localization']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['localization']['empty_dirs']);
         },
     )
     ->selected(
@@ -732,7 +771,7 @@ $script = Chisel::script(__DIR__)
                 'resources/js/types/index.ts',
             )->removeSectionMarkers('notifications');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'app/Actions/UpdateUserPassword.php',
                 'app/Actions/Users/ActivateUserAction.php',
@@ -784,7 +823,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Actions/Notifications/DeleteReadNotificationsTest.php',
             ])->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['notifications']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['notifications']['empty_dirs']);
         },
     )
     ->selected(
@@ -806,7 +845,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/PermissionTest.php',
             )->removeSectionMarkers('audit-trails');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'app/Enums/Permission.php',
                 'app/Actions/Users/CreateUserAction.php',
@@ -844,7 +883,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/AuditEventEnumTest.php',
             ])->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['audit_trails']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['audit_trails']['empty_dirs']);
         },
     )
     ->selected(
@@ -859,7 +898,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/PermissionTest.php',
             )->removeSectionMarkers('reporting');
         },
-        else: function (Chisel $chisel) use ($paths): void {
+        else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->files(
                 'app/Enums/Permission.php',
                 'routes/web.php',
@@ -875,7 +914,7 @@ $script = Chisel::script(__DIR__)
                 $paths['reporting']['types'],
             ])->delete();
 
-            chiselPruneEmptyDirectories(chiselDirectory($chisel), $paths['reporting']['empty_dirs']);
+            chiselPruneEmptyDirectories($directory, $paths['reporting']['empty_dirs']);
         },
     );
 
@@ -895,37 +934,7 @@ return $script
         'optional_modules',
         ['user-management', 'reporting'],
         then: null,
-        else: function (Chisel $chisel): void {
-            chiselRemoveComposerPackages(chiselDirectory($chisel), 'spatie/laravel-data');
+        else: function (Chisel $chisel) use ($directory): void {
+            chiselRemoveComposerPackages($directory, 'spatie/laravel-data');
         },
-    )
-    ->apply(function (Chisel $chisel) use ($paths): void {
-        $directory = chiselDirectory($chisel);
-
-        chiselCleanComposerPostCreate($directory);
-
-        if (file_exists($directory.'/vendor/bin/pint')) {
-            chiselRun(['vendor/bin/pint', '--format', 'agent'], 'Format PHP Code', $directory);
-        }
-
-        if (file_exists($directory.'/artisan')) {
-            chiselRun([PHP_BINARY, 'artisan', 'wayfinder:generate', '--with-form', '--no-interaction'], 'Generate Wayfinder Resources', $directory);
-        }
-
-        if (! chiselSkipsNode()) {
-            $chisel->npm()->run('lint');
-        }
-
-        $chiselFiles = $paths['chisel']['files'] ?? [
-            'app/Console/Commands/InstallFeaturesCommand.php',
-            'chisel.php',
-            'chisel-paths.php',
-        ];
-
-        $chisel->files(...$chiselFiles)->delete();
-
-        chiselPruneEmptyDirectories($directory, $paths['chisel']['empty_dirs'] ?? [
-            'tests/Unit/Chisel',
-            'tests/Feature/Chisel',
-        ]);
-    });
+    );

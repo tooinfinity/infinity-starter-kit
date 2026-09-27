@@ -58,10 +58,7 @@ test('chiselRemoveFrontendPackages removes package and produces valid JSON', fun
 
     $chisel = Chisel::in($this->tempDir);
 
-    // Call chiselRemoveFrontendPackages with the tempDir override
-    $data = json_decode((string) file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
-    unset($data['dependencies']['@erag/lang-sync-inertia']);
-    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT)."\n");
+    chiselRemoveFrontendPackages($this->tempDir, $chisel, '@erag/lang-sync-inertia');
 
     $contents = (string) file_get_contents($file);
     $decoded = json_decode($contents, true);
@@ -69,7 +66,32 @@ test('chiselRemoveFrontendPackages removes package and produces valid JSON', fun
     expect($decoded)->toBeArray()
         ->and($decoded['dependencies'])->not->toHaveKey('@erag/lang-sync-inertia')
         ->and($decoded['dependencies'])->toHaveKey('react')
+        ->and($decoded['devDependencies'])->toHaveKey('typescript')
         ->and(json_last_error())->toBe(JSON_ERROR_NONE);
+});
+
+test('chiselRemoveFrontendPackages handles missing file gracefully', function (): void {
+    $chisel = Chisel::in($this->tempDir);
+
+    expect(fn () => chiselRemoveFrontendPackages($this->tempDir, $chisel, 'some-pkg'))
+        ->not->toThrow(Throwable::class);
+});
+
+test('chiselRemoveFrontendPackages is idempotent', function (): void {
+    $packageJson = [
+        'dependencies' => ['react' => '^19.0.0'],
+    ];
+
+    $file = $this->tempDir.'/package.json';
+    file_put_contents($file, json_encode($packageJson, JSON_PRETTY_PRINT));
+
+    $chisel = Chisel::in($this->tempDir);
+
+    chiselRemoveFrontendPackages($this->tempDir, $chisel, 'non-existent-package');
+    chiselRemoveFrontendPackages($this->tempDir, $chisel, 'non-existent-package');
+
+    $decoded = json_decode((string) file_get_contents($file), true);
+    expect($decoded['dependencies'])->toHaveKey('react');
 });
 
 test('chiselRemoveComposerPackages removes packages and produces valid JSON', function (): void {
@@ -97,7 +119,22 @@ test('chiselRemoveComposerPackages removes packages and produces valid JSON', fu
         ->and($decoded['require'])->not->toHaveKey('spatie/laravel-permission')
         ->and($decoded['require'])->not->toHaveKey('spatie/laravel-data')
         ->and($decoded['require'])->toHaveKey('php')
+        ->and($decoded['require-dev'])->toHaveKey('pestphp/pest')
         ->and(json_last_error())->toBe(JSON_ERROR_NONE);
+});
+
+test('chiselRemoveComposerPackages handles missing file and is idempotent', function (): void {
+    expect(fn () => chiselRemoveComposerPackages($this->tempDir, 'some/pkg'))
+        ->not->toThrow(Throwable::class);
+
+    $file = $this->tempDir.'/composer.json';
+    file_put_contents($file, json_encode(['require' => ['php' => '^8.5']], JSON_PRETTY_PRINT));
+
+    chiselRemoveComposerPackages($this->tempDir, 'unknown/package');
+    chiselRemoveComposerPackages($this->tempDir, 'unknown/package');
+
+    $decoded = json_decode((string) file_get_contents($file), true);
+    expect($decoded['require'])->toHaveKey('php');
 });
 
 test('chiselCleanComposerPostCreate removes chisel dependency and install:features script', function (): void {
@@ -129,4 +166,39 @@ test('chiselCleanComposerPostCreate removes chisel dependency and install:featur
             '@php artisan key:generate --ansi',
         ])
         ->and(json_last_error())->toBe(JSON_ERROR_NONE);
+});
+
+test('chiselCleanComposerPostCreate handles missing file and idempotent runs gracefully', function (): void {
+    expect(fn () => chiselCleanComposerPostCreate($this->tempDir))
+        ->not->toThrow(Throwable::class);
+
+    $file = $this->tempDir.'/composer.json';
+    file_put_contents($file, json_encode([
+        'scripts' => ['post-create-project-cmd' => ['@php artisan test']],
+    ], JSON_PRETTY_PRINT));
+
+    chiselCleanComposerPostCreate($this->tempDir);
+    chiselCleanComposerPostCreate($this->tempDir);
+
+    $decoded = json_decode((string) file_get_contents($file), true);
+    expect($decoded['scripts']['post-create-project-cmd'])->toBe(['@php artisan test']);
+});
+
+test('chiselCleanPhpstanConfig removes chisel.php from bootstrapFiles', function (): void {
+    $neon = <<<'NEON'
+parameters:
+    bootstrapFiles:
+        - chisel.php
+    paths:
+        - app
+NEON;
+
+    $file = $this->tempDir.'/phpstan.neon';
+    file_put_contents($file, $neon);
+
+    chiselCleanPhpstanConfig($this->tempDir);
+
+    $contents = (string) file_get_contents($file);
+    expect($contents)->not->toContain('chisel.php')
+        ->and($contents)->toContain('paths:');
 });

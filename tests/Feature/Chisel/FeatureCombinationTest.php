@@ -29,6 +29,10 @@ function runChiselSandbox(array $answers): array
     $script = require $tempDir.'/chisel.php';
     $script->chisel($answers);
 
+    /** @var array<string, mixed> $paths */
+    $paths = require $tempDir.'/chisel-paths.php';
+    chiselCleanup($tempDir, $paths);
+
     return [
         'dir' => $tempDir,
         'cleanup' => function () use ($tempDir): void {

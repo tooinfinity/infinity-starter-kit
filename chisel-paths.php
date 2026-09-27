@@ -235,6 +235,7 @@ return [
             'tests/Feature/Chisel/FeatureCombinationTest.php',
             'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
+            'tests/Feature/Chisel/RegistryIntegrityTest.php',
         ],
         'empty_dirs' => [
             'tests/Unit/Chisel',
