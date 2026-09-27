@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+/* @chisel-registration */
 use App\Actions\CreateUser;
+/* @end-chisel-registration */
 use App\Actions\DeleteUser;
+/* @chisel-registration */
 use App\Http\Requests\CreateUserRequest;
+/* @end-chisel-registration */
 use App\Http\Requests\DeleteUserRequest;
 use App\Models\User;
 use Illuminate\Container\Attributes\CurrentUser;

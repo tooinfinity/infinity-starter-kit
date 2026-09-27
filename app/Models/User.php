@@ -9,15 +9,21 @@ use App\Enums\Locale;
 /* @end-chisel-localization */
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
+/* @chisel-email-verification */
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+/* @end-chisel-email-verification */
+/* @chisel-localization */
 use Illuminate\Contracts\Translation\HasLocalePreference;
+/* @end-chisel-localization */
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+/* @chisel-two-factor-authentication */
 use Laravel\Fortify\TwoFactorAuthenticatable;
+/* @end-chisel-two-factor-authentication */
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
 
