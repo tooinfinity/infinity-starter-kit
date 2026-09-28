@@ -253,7 +253,15 @@ if (! function_exists('chiselCleanPhpstanConfig')) {
         }
 
         $content = (string) file_get_contents($neonPath);
-        $cleaned = preg_replace("/\n\s*bootstrapFiles:\s*\n\s*-\s*chisel\.php\s*/", '', $content);
+
+        // 1. Remove the chisel.php list item
+        $cleaned = preg_replace("/^[ \t]*-[ \t]*chisel\.php[ \t]*\r?\n/m", '', $content);
+
+        // 2. If bootstrapFiles: has no remaining list items, remove bootstrapFiles: line
+        if ($cleaned !== null) {
+            $cleaned = preg_replace("/^[ \t]*bootstrapFiles:[ \t]*\r?\n(?!(?:[ \t]*\r?\n)*[ \t]*-)/m", '', $cleaned);
+        }
+
         if ($cleaned !== null && $cleaned !== $content) {
             file_put_contents($neonPath, $cleaned);
         }

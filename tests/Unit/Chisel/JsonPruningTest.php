@@ -54,20 +54,26 @@ test('chiselRemoveFrontendPackages removes package and produces valid JSON', fun
     file_put_contents($file, json_encode($packageJson, JSON_PRETTY_PRINT));
 
     // Force no node mode for unit test
-    $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+    putenv('LARAVEL_INSTALLER_NO_NODE=true');
+    $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
 
-    $chisel = Chisel::in($this->tempDir);
+    try {
+        $chisel = Chisel::in($this->tempDir);
 
-    chiselRemoveFrontendPackages($this->tempDir, $chisel, '@erag/lang-sync-inertia');
+        chiselRemoveFrontendPackages($this->tempDir, $chisel, '@erag/lang-sync-inertia');
 
-    $contents = (string) file_get_contents($file);
-    $decoded = json_decode($contents, true);
+        $contents = (string) file_get_contents($file);
+        $decoded = json_decode($contents, true);
 
-    expect($decoded)->toBeArray()
-        ->and($decoded['dependencies'])->not->toHaveKey('@erag/lang-sync-inertia')
-        ->and($decoded['dependencies'])->toHaveKey('react')
-        ->and($decoded['devDependencies'])->toHaveKey('typescript')
-        ->and(json_last_error())->toBe(JSON_ERROR_NONE);
+        expect($decoded)->toBeArray()
+            ->and($decoded['dependencies'])->not->toHaveKey('@erag/lang-sync-inertia')
+            ->and($decoded['dependencies'])->toHaveKey('react')
+            ->and($decoded['devDependencies'])->toHaveKey('typescript')
+            ->and(json_last_error())->toBe(JSON_ERROR_NONE);
+    } finally {
+        putenv('LARAVEL_INSTALLER_NO_NODE');
+        unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
+    }
 });
 
 test('chiselRemoveFrontendPackages handles missing file gracefully', function (): void {
@@ -201,4 +207,25 @@ NEON;
     $contents = (string) file_get_contents($file);
     expect($contents)->not->toContain('chisel.php')
         ->and($contents)->toContain('paths:');
+});
+
+test('chiselCleanPhpstanConfig preserves other bootstrapFiles entries', function (): void {
+    $neon = <<<'NEON'
+parameters:
+    bootstrapFiles:
+        - chisel.php
+        - other-bootstrap.php
+    paths:
+        - app
+NEON;
+
+    $file = $this->tempDir.'/phpstan.neon';
+    file_put_contents($file, $neon);
+
+    chiselCleanPhpstanConfig($this->tempDir);
+
+    $contents = (string) file_get_contents($file);
+    expect($contents)->not->toContain('chisel.php')
+        ->and($contents)->toContain('other-bootstrap.php')
+        ->and($contents)->toContain('bootstrapFiles:');
 });

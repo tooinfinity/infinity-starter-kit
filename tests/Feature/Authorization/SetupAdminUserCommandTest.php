@@ -110,3 +110,34 @@ test('admin setup assigns super admin role to existing user directly when email 
 
     expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });
+
+test('admin setup does not create duplicate users on repeated execution', function (): void {
+    $this->artisan('admin:setup', [
+        '--name' => 'Dupe Admin',
+        '--email' => 'dupe-admin@example.com',
+        '--password' => 'secure-pass-1234',
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    // Run again with same email — should assign role to existing user, not create a duplicate
+    $this->artisan('admin:setup', [
+        '--email' => 'dupe-admin@example.com',
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    expect(User::query()->where('email', 'dupe-admin@example.com')->count())->toBe(1)
+        ->and(User::query()->where('email', 'dupe-admin@example.com')->first()->hasRole(Role::SuperAdmin->value))->toBeTrue();
+});
+
+test('admin setup is safe when existing user already has Super Admin role', function (): void {
+    $user = User::factory()->create(['email' => 'already-admin@example.com']);
+    $user->assignRole(Role::SuperAdmin->value);
+
+    $this->artisan('admin:setup', [
+        '--email' => 'already-admin@example.com',
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue()
+        ->and($user->fresh()->roles()->where('name', Role::SuperAdmin->value)->count())->toBe(1);
+});

@@ -168,6 +168,94 @@ test('admin setup fails installation if invalid credentials provided', function 
         ->assertFailed();
 });
 
+test('admin setup does not create duplicate users on repeated execution', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization'],
+        'admin' => [
+            'name' => 'Admin Twice',
+            'email' => 'twice@example.com',
+            'password' => 'password1234',
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+
+    // Re-bind and run again — second run should assign role to existing user, not duplicate
+    bindMockChiselScript();
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+
+    expect(User::query()->where('email', 'twice@example.com')->count())->toBe(1)
+        ->and(User::query()->where('email', 'twice@example.com')->first()->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+});
+
+test('admin setup assigns role to existing user already with Super Admin without error', function (): void {
+    $existing = User::factory()->create(['email' => 'already-super@example.com']);
+    $this->artisan('authorization:setup')->assertSuccessful();
+    $existing->assignRole(App\Enums\Role::SuperAdmin->value);
+
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization'],
+        'admin' => [
+            'email' => 'already-super@example.com',
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+
+    expect($existing->fresh()->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+});
+
+test('non-interactive mode with authorization enabled skips admin when no credentials provided', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization'],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+
+    expect(User::query()->count())->toBe(0);
+});
+
+test('command does not defer when LARAVEL_INSTALLER_DEFER_HOOKS is true but answers are provided', function (): void {
+    $cleanEnv = function (string $key): void {
+        putenv($key);
+        unset($GLOBALS['_ENV'][$key], $GLOBALS['_SERVER'][$key]);
+    };
+
+    putenv('LARAVEL_INSTALLER_DEFER_HOOKS=true');
+    $_ENV['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+    $_SERVER['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+
+    bindMockChiselScript();
+
+    try {
+        $answers = json_encode([
+            'auth_features' => ['registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        // If it deferred, no permissions would be created
+        expect(Permission::query()->count())->toBeGreaterThan(0);
+    } finally {
+        $cleanEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
+    }
+});
+
 function bindMockChiselScript(): Script
 {
     $script = Chisel::script(base_path())

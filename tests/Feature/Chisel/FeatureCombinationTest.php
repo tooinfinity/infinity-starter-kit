@@ -114,8 +114,16 @@ it('handles all features enabled', function (): void {
         expect(file_exists($dir.'/chisel.php'))->toBeFalse()
             ->and(file_exists($dir.'/chisel-paths.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Console/Commands/InstallFeaturesCommand.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Console/Commands/SetupAuthorizationCommand.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Console/Commands/SetupAdminUserCommand.php'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Feature/Chisel'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Unit/Chisel'))->toBeFalse();
+
+        // Verify composer.json cleanup
+        expect(isset($composer['require']['laravel/chisel']))->toBeFalse();
+        $postCreate = $composer['scripts']['post-create-project-cmd'] ?? [];
+        $installFeaturesInHook = array_filter($postCreate, fn ($cmd): bool => is_string($cmd) && str_contains($cmd, 'install:features'));
+        expect($installFeaturesInHook)->toBeEmpty();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);
@@ -151,6 +159,25 @@ it('handles all optional modules disabled and all auth features disabled', funct
 
         $packageJson = json_decode((string) file_get_contents($dir.'/package.json'), true);
         expect(isset($packageJson['dependencies']['@erag/lang-sync-inertia']))->toBeFalse();
+
+        // Verify installer cleanup
+        expect(file_exists($dir.'/chisel.php'))->toBeFalse()
+            ->and(file_exists($dir.'/chisel-paths.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Console/Commands/InstallFeaturesCommand.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Console/Commands/SetupAuthorizationCommand.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Console/Commands/SetupAdminUserCommand.php'))->toBeFalse();
+
+        // Verify composer.json cleanup
+        expect(isset($composer['require']['laravel/chisel']))->toBeFalse();
+        $postCreate = $composer['scripts']['post-create-project-cmd'] ?? [];
+        $installFeaturesInHook = array_filter($postCreate, fn ($cmd): bool => is_string($cmd) && str_contains($cmd, 'install:features'));
+        expect($installFeaturesInHook)->toBeEmpty();
+
+        // Verify PHPStan config no longer references chisel.php
+        if (file_exists($dir.'/phpstan.neon')) {
+            $neonContent = (string) file_get_contents($dir.'/phpstan.neon');
+            expect($neonContent)->not->toContain('chisel.php');
+        }
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

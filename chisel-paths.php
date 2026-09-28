@@ -227,6 +227,8 @@ return [
     'chisel' => [
         'files' => [
             'app/Console/Commands/InstallFeaturesCommand.php',
+            'app/Console/Commands/SetupAuthorizationCommand.php',
+            'app/Console/Commands/SetupAdminUserCommand.php',
             'chisel.php',
             'chisel-paths.php',
             'tests/Unit/Chisel/DirectoryPruningTest.php',
@@ -236,6 +238,7 @@ return [
             'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
             'tests/Feature/Chisel/RegistryIntegrityTest.php',
+            'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
         ],
         'empty_dirs' => [
             'tests/Unit/Chisel',
