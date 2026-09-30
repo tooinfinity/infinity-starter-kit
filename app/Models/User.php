@@ -18,7 +18,9 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+/* @chisel-notifications */
 use Illuminate\Database\Eloquent\Relations\HasMany;
+/* @end-chisel-notifications */
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 /* @chisel-two-factor-authentication */
@@ -60,11 +62,8 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
 
     /* @end-chisel-roles-permissions */
     use HasUuids;
-
-    /* @chisel-notifications */
     use Notifiable;
 
-    /* @end-chisel-notifications */
     /* @chisel-two-factor-authentication */
     use TwoFactorAuthenticatable;
 

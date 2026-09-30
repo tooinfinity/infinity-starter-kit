@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
+use Spatie\Permission\PermissionRegistrar;
 
 test('super admin bypasses all gate checks', function (): void {
     $user = User::factory()->create();
@@ -55,12 +56,26 @@ test('authorization setup command creates permissions and roles', function (): v
         ->and($superAdmin->permissions)->toHaveCount(count(Permission::cases()));
 });
 
-test('authorization setup command is idempotent', function (): void {
+test('authorization setup command is idempotent and keeps permission cache accurate', function (): void {
     $this->artisan('authorization:setup')->assertSuccessful();
     $this->artisan('authorization:setup')->assertSuccessful();
 
-    expect(PermissionModel::all())->toHaveCount(count(Permission::cases()));
-    expect(RoleModel::query()->where('name', Role::SuperAdmin->value)->count())->toBe(1);
+    expect(PermissionModel::all())->toHaveCount(count(Permission::cases()))
+        ->and(RoleModel::query()->where('name', Role::SuperAdmin->value)->count())->toBe(1);
+
+    $superAdmin = RoleModel::findByName(Role::SuperAdmin->value);
+    expect($superAdmin->permissions->pluck('name')->sort()->values()->toArray())
+        ->toBe(collect(Permission::values())->sort()->values()->all());
+
+    $cachedPermissions = resolve(PermissionRegistrar::class)
+        ->getPermissions()
+        ->pluck('name')
+        ->sort()
+        ->values()
+        ->toArray();
+
+    expect($cachedPermissions)
+        ->toBe(collect(Permission::values())->sort()->values()->all());
 });
 
 test('authorization setup command synchronizes permissions on super admin role', function (): void {

@@ -54,8 +54,10 @@ test('RecordAuditTrail automatically redacts sensitive fields from old and new v
             'password_confirmation' => 'secret123',
             'current_password' => 'old_secret',
             'remember_token' => 'random_token_string',
+            /* @chisel-two-factor-authentication */
             'two_factor_secret' => '2fa_secret_key',
             'two_factor_recovery_codes' => ['code1', 'code2'],
+            /* @end-chisel-two-factor-authentication */
             'api_key' => 'live_12345',
             'app_token' => 'token_xyz',
             'safe_field' => 'visible_value',
@@ -74,8 +76,10 @@ test('RecordAuditTrail automatically redacts sensitive fields from old and new v
         ->and($record->old_values['password_confirmation'])->toBe('[REDACTED]')
         ->and($record->old_values['current_password'])->toBe('[REDACTED]')
         ->and($record->old_values['remember_token'])->toBe('[REDACTED]')
+        /* @chisel-two-factor-authentication */
         ->and($record->old_values['two_factor_secret'])->toBe('[REDACTED]')
         ->and($record->old_values['two_factor_recovery_codes'])->toBe('[REDACTED]')
+        /* @end-chisel-two-factor-authentication */
         ->and($record->old_values['api_key'])->toBe('[REDACTED]')
         ->and($record->old_values['app_token'])->toBe('[REDACTED]')
         ->and($record->old_values['safe_field'])->toBe('visible_value')

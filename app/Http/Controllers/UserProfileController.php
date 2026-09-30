@@ -8,7 +8,9 @@ use App\Actions\UpdateUser;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Container\Attributes\CurrentUser;
+/* @chisel-email-verification */
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+/* @end-chisel-email-verification */
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +21,9 @@ final readonly class UserProfileController
     public function edit(Request $request): Response
     {
         return Inertia::render('user-profile/edit', [
+            /* @chisel-email-verification */
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            /* @end-chisel-email-verification */
             'status' => $request->session()->get('status'),
         ]);
     }

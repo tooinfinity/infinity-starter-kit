@@ -3,7 +3,9 @@ export type UserListItem = {
     name: string;
     email: string;
     is_active: boolean;
+    /* @chisel-email-verification */
     email_verified_at: string | null;
+    /* @end-chisel-email-verification */
     roles: string[];
     created_at: string;
     updated_at: string;

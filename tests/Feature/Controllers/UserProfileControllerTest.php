@@ -43,6 +43,7 @@ it('may update profile information', function (): void {
         ->and($user->email)->toBe('new@example.com');
 });
 
+/* @chisel-email-verification */
 it('resets email verification when email changes', function (): void {
     $user = User::factory()->create([
         'email' => 'old@example.com',
@@ -80,6 +81,7 @@ it('keeps email verification when email stays the same', function (): void {
 
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
+/* @end-chisel-email-verification */
 
 it('requires name', function (): void {
     $user = User::factory()->create();

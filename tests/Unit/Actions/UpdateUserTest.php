@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use App\Actions\UpdateUser;
 use App\Models\User;
+/* @chisel-email-verification */
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
+
+/* @end-chisel-email-verification */
 
 it('may update a user', function (): void {
     $user = User::factory()->create([
@@ -23,6 +26,7 @@ it('may update a user', function (): void {
         ->and($user->email)->toBe('old@email.com');
 });
 
+/* @chisel-email-verification */
 it('resets email verification and sends notification when email changes', function (): void {
     Notification::fake();
 
@@ -67,3 +71,4 @@ it('keeps email verification and does not send notification when email stays the
 
     Notification::assertNotSentTo($user, VerifyEmail::class);
 });
+/* @end-chisel-email-verification */
