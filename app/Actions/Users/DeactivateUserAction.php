@@ -7,13 +7,13 @@ namespace App\Actions\Users;
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
-use App\Enums\Role;
 /* @end-chisel-audit-trails */
+use App\Enums\Role;
 use App\Models\User;
-use App\Notifications\UserDeactivated;
 /* @chisel-notifications */
-use Illuminate\Support\Facades\DB;
+use App\Notifications\UserDeactivated;
 /* @end-chisel-notifications */
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Traits\HasRoles;
 

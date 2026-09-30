@@ -6,12 +6,12 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+/* @end-chisel-audit-trails */
 use App\Data\Users\UpdateUserData;
-/* @end-chisel-audit-trails */
-use App\Enums\AuditEvent;
 /* @chisel-audit-trails */
-use App\Enums\Role;
+use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;

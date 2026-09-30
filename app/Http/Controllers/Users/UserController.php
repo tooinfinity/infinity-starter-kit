@@ -36,7 +36,9 @@ final readonly class UserController
             'name' => $user->name,
             'email' => $user->email,
             'is_active' => $user->is_active,
+            /* @chisel-email-verification */
             'email_verified_at' => $user->email_verified_at?->toISOString(),
+            /* @end-chisel-email-verification */
             'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
             'created_at' => $user->created_at->toISOString(),
             'updated_at' => $user->updated_at->toISOString(),
@@ -76,7 +78,9 @@ final readonly class UserController
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_active' => $user->is_active,
+                /* @chisel-email-verification */
                 'email_verified_at' => $user->email_verified_at?->toISOString(),
+                /* @end-chisel-email-verification */
                 'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
                 'created_at' => $user->created_at->toISOString(),
                 'updated_at' => $user->updated_at->toISOString(),

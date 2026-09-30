@@ -6,12 +6,12 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+/* @end-chisel-audit-trails */
 use App\Data\Users\CreateUserData;
-/* @end-chisel-audit-trails */
-use App\Enums\AuditEvent;
 /* @chisel-audit-trails */
-use App\Models\User;
+use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
