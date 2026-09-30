@@ -15,7 +15,7 @@ function runChiselSandbox(array $answers): array
 
     $files = explode("\n", mb_trim((string) shell_exec('git ls-files')));
     foreach ($files as $file) {
-        if ($file === '') {
+        if ($file === '' || $file === 'composer.lock') {
             continue;
         }
 
@@ -26,12 +26,20 @@ function runChiselSandbox(array $answers): array
 
     @symlink(base_path('vendor'), $tempDir.'/vendor');
 
-    $script = require $tempDir.'/chisel.php';
-    $script->chisel($answers);
+    putenv('LARAVEL_INSTALLER_NO_NODE=true');
+    $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
 
-    /** @var array<string, mixed> $paths */
-    $paths = require $tempDir.'/chisel-paths.php';
-    chiselCleanup($tempDir, $paths);
+    try {
+        $script = require $tempDir.'/chisel.php';
+        $script->chisel($answers);
+
+        /** @var array<string, mixed> $paths */
+        $paths = require $tempDir.'/chisel-paths.php';
+        chiselCleanup($tempDir, $paths);
+    } finally {
+        putenv('LARAVEL_INSTALLER_NO_NODE');
+        unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
+    }
 
     return [
         'dir' => $tempDir,
@@ -64,7 +72,7 @@ function assertPhpSyntaxValid(string $directory): void
 }
 
 /**
- * Asserts no remaining @chisel or @end-chisel markers exist in source files.
+ * Asserts no remaining @chisel or @end-chisel markers exist in source or test files.
  */
 function assertNoOrphanedMarkersInSandbox(string $directory): void
 {
@@ -72,7 +80,7 @@ function assertNoOrphanedMarkersInSandbox(string $directory): void
     $filesWithMarkers = [];
 
     foreach ($rdi as $file) {
-        if ($file->isFile() && ! str_starts_with($file->getFilename(), '.') && ! str_contains($file->getPathname(), '/tests/') && $file->getFilename() !== 'README.md') {
+        if ($file->isFile() && ! str_starts_with($file->getFilename(), '.') && $file->getFilename() !== 'README.md') {
             $content = (string) file_get_contents($file->getPathname());
             if (str_contains($content, '@chisel-') || str_contains($content, '@end-chisel-')) {
                 $filesWithMarkers[] = str_replace($directory.'/', '', $file->getPathname());

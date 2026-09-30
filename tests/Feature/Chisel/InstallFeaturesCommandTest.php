@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Process;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
@@ -102,6 +105,7 @@ test('admin setup runs and creates administrator when credentials are provided i
     ], JSON_THROW_ON_ERROR);
 
     $this->artisan('install:features', ['--answers' => $answers])
+        ->doesntExpectOutputToContain('secret1234')
         ->assertSuccessful();
 
     $admin = User::query()->where('email', 'root@example.com')->first();
@@ -124,7 +128,9 @@ test('admin setup runs and creates administrator when credentials are provided v
         '--admin-name' => 'Option Admin',
         '--admin-email' => 'option@example.com',
         '--admin-password' => 'optionpassword123',
-    ])->assertSuccessful();
+    ])
+        ->doesntExpectOutputToContain('optionpassword123')
+        ->assertSuccessful();
 
     $admin = User::query()->where('email', 'option@example.com')->first();
     expect($admin)->not->toBeNull()
@@ -133,8 +139,11 @@ test('admin setup runs and creates administrator when credentials are provided v
         ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
 });
 
-test('admin setup safely handles existing user in non-interactive installation', function (): void {
-    $existing = User::factory()->create(['email' => 'existing-admin@example.com']);
+test('admin setup safely handles existing user in non-interactive installation without changing password', function (): void {
+    $existing = User::factory()->create([
+        'email' => 'existing-admin@example.com',
+        'password' => 'original-pass-1234',
+    ]);
     bindMockChiselScript();
 
     $answers = json_encode([
@@ -142,16 +151,19 @@ test('admin setup safely handles existing user in non-interactive installation',
         'optional_modules' => ['authorization'],
         'admin' => [
             'email' => 'existing-admin@example.com',
+            'password' => 'new-ignored-pass-9999',
         ],
     ], JSON_THROW_ON_ERROR);
 
     $this->artisan('install:features', ['--answers' => $answers])
         ->assertSuccessful();
 
-    expect($existing->fresh()->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+    $fresh = $existing->fresh();
+    expect($fresh->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue()
+        ->and(Hash::check('original-pass-1234', $fresh->password))->toBeTrue();
 });
 
-test('admin setup fails installation if invalid credentials provided', function (): void {
+test('admin setup fails installation if invalid credentials provided and never leaks password', function (): void {
     bindMockChiselScript();
 
     $answers = json_encode([
@@ -160,11 +172,31 @@ test('admin setup fails installation if invalid credentials provided', function 
         'admin' => [
             'name' => 'Bad Admin',
             'email' => 'bad@example.com',
-            'password' => 'short',
+            'password' => 'short7!',
         ],
     ], JSON_THROW_ON_ERROR);
 
     $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('Administrator setup failed.')
+        ->doesntExpectOutputToContain('short7!')
+        ->assertFailed();
+});
+
+test('admin setup fails installation when password is provided without email', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization'],
+        'admin' => [
+            'name' => 'No Email Admin',
+            'password' => 'valid-password-1234',
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('Administrator setup failed.')
+        ->doesntExpectOutputToContain('valid-password-1234')
         ->assertFailed();
 });
 
@@ -184,7 +216,6 @@ test('admin setup does not create duplicate users on repeated execution', functi
     $this->artisan('install:features', ['--answers' => $answers])
         ->assertSuccessful();
 
-    // Re-bind and run again — second run should assign role to existing user, not duplicate
     bindMockChiselScript();
     $this->artisan('install:features', ['--answers' => $answers])
         ->assertSuccessful();
@@ -249,15 +280,136 @@ test('command does not defer when LARAVEL_INSTALLER_DEFER_HOOKS is true but answ
         $this->artisan('install:features', ['--answers' => $answers])
             ->assertSuccessful();
 
-        // If it deferred, no permissions would be created
         expect(Permission::query()->count())->toBeGreaterThan(0);
     } finally {
         $cleanEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
     }
 });
 
-function bindMockChiselScript(): Script
+test('normal Node mode executes frontend install, build, and lint commands', function () use ($cleanEnv): void {
+    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+
+    Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'install']);
+    Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'run', 'build']);
+    Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'run', 'lint']);
+});
+
+test('LARAVEL_INSTALLER_NO_NODE mode skips all Node commands', function () use ($cleanEnv): void {
+    putenv('LARAVEL_INSTALLER_NO_NODE=true');
+    $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+    $_SERVER['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+    bindMockChiselScript();
+
+    try {
+        $answers = json_encode([
+            'auth_features' => ['registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        Process::assertNotRan(fn (PendingProcess $process): bool => is_array($process->command) && in_array($process->command[0] ?? '', ['bun', 'npm', 'pnpm', 'yarn'], true));
+    } finally {
+        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+    }
+});
+
+test('failed authorization setup returns non-zero exit status and does not claim success', function (): void {
+    bindMockChiselScript();
+
+    Artisan::command('authorization:setup', fn (): int => 1);
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization'],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('Authorization setup failed.')
+        ->assertFailed();
+});
+
+test('failed Wayfinder generation returns non-zero exit status and outputs error', function (): void {
+    bindMockChiselScript([
+        '*wayfinder:generate*' => Process::result(errorOutput: 'Wayfinder route generation failed.', exitCode: 1),
+    ]);
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('Wayfinder route generation failed.')
+        ->assertFailed();
+});
+
+test('failed frontend installation returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
+    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+    bindMockChiselScript([
+        '*bun*install*' => Process::result(errorOutput: 'bun install failed: network error.', exitCode: 1),
+    ]);
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('bun install failed: network error.')
+        ->assertFailed();
+});
+
+test('failed frontend build returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
+    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+    bindMockChiselScript([
+        '*bun*build*' => Process::result(errorOutput: 'Vite build failed: syntax error.', exitCode: 1),
+    ]);
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('Vite build failed: syntax error.')
+        ->assertFailed();
+});
+
+test('failed frontend lint returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
+    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+    bindMockChiselScript([
+        '*bun*lint*' => Process::result(errorOutput: 'Linting failed with 1 error.', exitCode: 1),
+    ]);
+
+    $answers = json_encode([
+        'auth_features' => ['registration'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->expectsOutputToContain('Linting failed with 1 error.')
+        ->assertFailed();
+});
+
+/**
+ * @param  array<string, mixed>  $processFakes
+ */
+function bindMockChiselScript(array $processFakes = []): Script
 {
+    Process::fake($processFakes === [] ? ['*' => Process::result()] : $processFakes + ['*' => Process::result()]);
+
     $script = Chisel::script(base_path())
         ->questions([
             Question::multiselect(

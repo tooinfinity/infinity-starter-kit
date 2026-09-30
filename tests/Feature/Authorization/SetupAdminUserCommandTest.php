@@ -141,3 +141,72 @@ test('admin setup is safe when existing user already has Super Admin role', func
     expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue()
         ->and($user->fresh()->roles()->where('name', Role::SuperAdmin->value)->count())->toBe(1);
 });
+
+test('admin setup does not modify an existing user password when run again', function (): void {
+    $user = User::factory()->create([
+        'email' => 'keep-pass@example.com',
+        'password' => 'original-password-1234',
+    ]);
+
+    $this->artisan('admin:setup', [
+        '--name' => 'Different Name',
+        '--email' => 'keep-pass@example.com',
+        '--password' => 'completely-different-password',
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    $fresh = $user->fresh();
+    expect($fresh->hasRole(Role::SuperAdmin->value))->toBeTrue()
+        ->and(Hash::check('original-password-1234', $fresh->password))->toBeTrue()
+        ->and(Hash::check('completely-different-password', $fresh->password))->toBeFalse();
+});
+
+test('admin setup fails in non-interactive mode when password or name is provided without email', function (): void {
+    $this->artisan('admin:setup', [
+        '--name' => 'Missing Email Admin',
+        '--password' => 'secure-pass-1234',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('A valid email address is required to create an administrator user.')
+        ->doesntExpectOutputToContain('secure-pass-1234')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(0);
+});
+
+test('admin setup never leaks administrator password in console output on success or failure', function (): void {
+    $secret = 'TopSecretAdminPass99!';
+
+    $this->artisan('admin:setup', [
+        '--name' => 'Secret Admin',
+        '--email' => 'secret@example.com',
+        '--password' => $secret,
+        '--no-interaction' => true,
+    ])
+        ->doesntExpectOutputToContain($secret)
+        ->assertSuccessful();
+
+    $shortSecret = 'Short7!';
+    $this->artisan('admin:setup', [
+        '--name' => 'Short Secret Admin',
+        '--email' => 'short-secret@example.com',
+        '--password' => $shortSecret,
+        '--no-interaction' => true,
+    ])
+        ->doesntExpectOutputToContain($shortSecret)
+        ->assertFailed();
+});
+
+test('admin setup fails when provided email option is not a valid email address', function (): void {
+    $this->artisan('admin:setup', [
+        '--name' => 'Invalid Email Admin',
+        '--email' => 'not-a-valid-email',
+        '--password' => 'secure-pass-1234',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('A valid email address is required to create an administrator user.')
+        ->doesntExpectOutputToContain('secure-pass-1234')
+        ->assertFailed();
+
+    expect(User::query()->count())->toBe(0);
+});

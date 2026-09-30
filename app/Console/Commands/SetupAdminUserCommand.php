@@ -28,17 +28,27 @@ final class SetupAdminUserCommand extends Command
         $optionEmail = $this->option('email');
         $optionPassword = $this->option('password');
 
+        $hasName = is_string($optionName) && mb_trim($optionName) !== '';
+        $hasEmail = is_string($optionEmail) && mb_trim($optionEmail) !== '';
+        $hasPassword = is_string($optionPassword) && $optionPassword !== '';
+
         $isInteractive = $this->input->isInteractive();
 
-        if (! $isInteractive && $optionEmail === null) {
+        if (! $isInteractive && ! $hasEmail) {
+            if ($optionEmail !== null || $hasName || $hasPassword) {
+                $this->components->error('A valid email address is required to create an administrator user.');
+
+                return self::FAILURE;
+            }
+
             $this->components->info('No administrator credentials provided in non-interactive mode; skipping administrator creation.');
 
             return self::SUCCESS;
         }
 
-        $name = is_string($optionName) && $optionName !== ''
-            ? $optionName
-            : ($optionEmail !== null
+        $name = $hasName
+            ? mb_trim((string) $optionName)
+            : ($hasEmail
                 ? 'Administrator'
                 : text(
                     label: 'Name',
@@ -46,20 +56,26 @@ final class SetupAdminUserCommand extends Command
                     validate: ['name' => ['required', 'string', 'max:255']],
                 ));
 
-        $email = is_string($optionEmail) && $optionEmail !== ''
-            ? $optionEmail
+        $email = $hasEmail
+            ? mb_trim((string) $optionEmail)
             : text(
                 label: 'Email',
                 required: true,
                 validate: ['email' => ['required', 'email', 'max:255']],
             );
 
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            $this->components->error('A valid email address is required to create an administrator user.');
+
+            return self::FAILURE;
+        }
+
         $existingUser = User::query()->where('email', $email)->first();
 
         if ($existingUser instanceof User) {
             $this->components->warn(sprintf('A user with email [%s] already exists.', $email));
 
-            if ($optionEmail === null && ! $this->components->confirm('Assign the Super Admin role to this existing user?')) {
+            if (! $hasEmail && ! $this->components->confirm('Assign the Super Admin role to this existing user?')) {
                 $this->components->info('Operation cancelled.');
 
                 return self::SUCCESS;
