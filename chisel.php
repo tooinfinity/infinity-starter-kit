@@ -6,6 +6,7 @@ if (! class_exists('Laravel\Chisel\Chisel')) {
     require getenv('LARAVEL_INSTALLER_AUTOLOADER') ?: __DIR__.'/vendor/autoload.php';
 }
 
+use Illuminate\Support\Facades\Process as ProcessFacade;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Question;
 use Laravel\Prompts\Support\Logger;
@@ -23,7 +24,9 @@ if (! function_exists('chiselRun')) {
     {
         $directory = $cwd ?? __DIR__;
 
-        if (defined('PHPUNIT_COMPOSER_INSTALL') || class_exists('PHPUnit\Framework\TestCase', false) || (function_exists('app') && method_exists(app(), 'runningUnitTests') && app()->runningUnitTests())) {
+        if (class_exists(ProcessFacade::class) && ProcessFacade::getFacadeRoot() !== null) {
+            ProcessFacade::path($directory)->forever()->run($command)->throw();
+
             return;
         }
 
@@ -36,6 +39,7 @@ if (! function_exists('chiselRun')) {
             keepSummary: true,
             callback: function (Logger $logger) use ($command, $directory) {
                 $process = new Process($command, $directory);
+                $process->setTimeout(null);
                 $process->run(function ($type, $line) use ($logger): void {
                     $logger->line($line);
                 });
@@ -55,7 +59,12 @@ if (! function_exists('chiselRun')) {
         );
 
         if (! $process->isSuccessful()) {
-            exit($process->getExitCode());
+            throw new RuntimeException(sprintf(
+                'Command "%s" failed with exit code %d: %s',
+                implode(' ', $command),
+                $process->getExitCode() ?? 1,
+                mb_trim($process->getErrorOutput() !== '' ? $process->getErrorOutput() : $process->getOutput()),
+            ));
         }
     }
 }
@@ -63,10 +72,6 @@ if (! function_exists('chiselRun')) {
 if (! function_exists('chiselSkipsNode')) {
     function chiselSkipsNode(): bool
     {
-        if (defined('PHPUNIT_COMPOSER_INSTALL') || class_exists('PHPUnit\Framework\TestCase', false) || (function_exists('app') && method_exists(app(), 'runningUnitTests') && app()->runningUnitTests())) {
-            return true;
-        }
-
         return filter_var(
             $_ENV['LARAVEL_INSTALLER_NO_NODE']
                 ?? $_SERVER['LARAVEL_INSTALLER_NO_NODE']
@@ -79,12 +84,6 @@ if (! function_exists('chiselSkipsNode')) {
 if (! function_exists('chiselRemoveFrontendPackages')) {
     function chiselRemoveFrontendPackages(string $directory, Chisel $c, string ...$packages): void
     {
-        if (! chiselSkipsNode()) {
-            $c->npm()->remove(...$packages);
-
-            return;
-        }
-
         $packageJsonPath = $directory.'/package.json';
         if (! file_exists($packageJsonPath)) {
             return;
@@ -93,7 +92,17 @@ if (! function_exists('chiselRemoveFrontendPackages')) {
         /** @var array<string, mixed> $packageData */
         $packageData = json_decode((string) file_get_contents($packageJsonPath), true, 512, JSON_THROW_ON_ERROR);
 
+        $hadAnyPackage = false;
         foreach ($packages as $package) {
+            if (
+                isset($packageData['dependencies'][$package])
+                || isset($packageData['devDependencies'][$package])
+                || isset($packageData['optionalDependencies'][$package])
+                || isset($packageData['peerDependencies'][$package])
+            ) {
+                $hadAnyPackage = true;
+            }
+
             unset(
                 $packageData['dependencies'][$package],
                 $packageData['devDependencies'][$package],
@@ -106,6 +115,21 @@ if (! function_exists('chiselRemoveFrontendPackages')) {
             $packageJsonPath,
             json_encode($packageData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n",
         );
+
+        if (! $hadAnyPackage || chiselSkipsNode()) {
+            return;
+        }
+
+        if (class_exists(ProcessFacade::class) && ProcessFacade::getFacadeRoot() !== null) {
+            ProcessFacade::path($directory)
+                ->forever()
+                ->run($c->npm()->packageManager()->removeCommand(...$packages))
+                ->throw();
+
+            return;
+        }
+
+        $c->npm()->remove(...$packages);
     }
 }
 
@@ -161,6 +185,89 @@ if (! function_exists('chiselCleanComposerPostCreate')) {
             $composerJsonPath,
             json_encode($composerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n",
         );
+    }
+}
+
+if (! function_exists('chiselSyncComposerLock')) {
+    function chiselSyncComposerLock(string $directory): void
+    {
+        $composerJsonPath = $directory.'/composer.json';
+        $composerLockPath = $directory.'/composer.lock';
+
+        if (! file_exists($composerJsonPath) || ! file_exists($composerLockPath)) {
+            return;
+        }
+
+        /** @var array{require?: array<string, string>, require-dev?: array<string, string>} $composerData */
+        $composerData = json_decode((string) file_get_contents($composerJsonPath), true, 512, JSON_THROW_ON_ERROR);
+        /** @var array{packages?: list<array{name?: string}>, packages-dev?: list<array{name?: string}>} $lockData */
+        $lockData = json_decode((string) file_get_contents($composerLockPath), true, 512, JSON_THROW_ON_ERROR);
+
+        $lockedPackages = [];
+        foreach (array_merge($lockData['packages'] ?? [], $lockData['packages-dev'] ?? []) as $pkg) {
+            if (isset($pkg['name']) && is_string($pkg['name'])) {
+                $lockedPackages[$pkg['name']] = true;
+            }
+        }
+
+        $candidates = [
+            'laravel/chisel',
+            'spatie/laravel-permission',
+            'erag/laravel-lang-sync-inertia',
+            'spatie/laravel-data',
+        ];
+
+        $removedPackages = [];
+        foreach ($candidates as $candidate) {
+            $inJson = isset($composerData['require'][$candidate]) || isset($composerData['require-dev'][$candidate]);
+            if (! $inJson && isset($lockedPackages[$candidate])) {
+                $removedPackages[] = $candidate;
+            }
+        }
+
+        if ($removedPackages === []) {
+            return;
+        }
+
+        $vendorPath = $directory.'/vendor';
+        $hasRealVendor = is_dir($vendorPath) && ! is_link($vendorPath);
+
+        $command = [
+            'composer',
+            'update',
+            ...$removedPackages,
+            '--with-all-dependencies',
+            '--no-scripts',
+            '--no-audit',
+            '--no-security-blocking',
+            '--no-interaction',
+        ];
+
+        if (! $hasRealVendor) {
+            $command[] = '--no-install';
+            $command[] = '--no-autoloader';
+        }
+
+        $process = new Process($command, $directory);
+        $process->setTimeout(null);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            throw new RuntimeException(sprintf(
+                'Failed to synchronize composer.lock: %s',
+                mb_trim($process->getErrorOutput() !== '' ? $process->getErrorOutput() : $process->getOutput()),
+            ));
+        }
+
+        if ($hasRealVendor) {
+            @unlink($directory.'/bootstrap/cache/packages.php');
+            @unlink($directory.'/bootstrap/cache/services.php');
+
+            if (file_exists($directory.'/artisan')) {
+                $discover = new Process([PHP_BINARY, 'artisan', 'package:discover', '--ansi'], $directory);
+                $discover->run();
+            }
+        }
     }
 }
 
@@ -244,8 +351,80 @@ if (! function_exists('chiselValidateDependencies')) {
     }
 }
 
+if (! function_exists('chiselRemoveNeonListSectionItem')) {
+    /**
+     * @param  list<string>  $lines
+     * @param  list<string>  $itemsToRemove
+     * @return list<string>
+     */
+    function chiselRemoveNeonListSectionItem(array $lines, string $sectionKey, array $itemsToRemove): array
+    {
+        $result = [];
+        $count = count($lines);
+        $i = 0;
+
+        while ($i < $count) {
+            $line = $lines[$i];
+
+            if (preg_match('/^([ \t]*)'.preg_quote($sectionKey, '/').':[ \t]*$/', $line) === 1) {
+                $headerLine = $line;
+                $i++;
+
+                $keptItems = [];
+                $trailingBlanks = [];
+
+                while ($i < $count) {
+                    $subLine = $lines[$i];
+
+                    if (preg_match('/^[ \t]*$/', $subLine) === 1) {
+                        $trailingBlanks[] = $subLine;
+                        $i++;
+
+                        continue;
+                    }
+
+                    if (preg_match('/^[ \t]*-[ \t]*(.+?)[ \t]*$/', $subLine, $itemMatch) === 1) {
+                        $rawValue = mb_trim($itemMatch[1], " \t'\"");
+                        if (! in_array($rawValue, $itemsToRemove, true)) {
+                            foreach ($trailingBlanks as $blank) {
+                                $keptItems[] = $blank;
+                            }
+                            $trailingBlanks = [];
+                            $keptItems[] = $subLine;
+                        } else {
+                            $trailingBlanks = [];
+                        }
+                        $i++;
+
+                        continue;
+                    }
+
+                    break;
+                }
+
+                if ($keptItems !== []) {
+                    $result[] = $headerLine;
+                    foreach ($keptItems as $kept) {
+                        $result[] = $kept;
+                    }
+                    foreach ($trailingBlanks as $blank) {
+                        $result[] = $blank;
+                    }
+                }
+
+                continue;
+            }
+
+            $result[] = $line;
+            $i++;
+        }
+
+        return $result;
+    }
+}
+
 if (! function_exists('chiselCleanPhpstanConfig')) {
-    function chiselCleanPhpstanConfig(string $directory): void
+    function chiselCleanPhpstanConfig(string $directory, bool $removePermissionMigrationExclude = false): void
     {
         $neonPath = $directory.'/phpstan.neon';
         if (! file_exists($neonPath)) {
@@ -253,17 +432,51 @@ if (! function_exists('chiselCleanPhpstanConfig')) {
         }
 
         $content = (string) file_get_contents($neonPath);
+        $eol = str_contains($content, "\r\n") ? "\r\n" : "\n";
+        $lines = preg_split("/\r\n|\n/", $content);
+        if ($lines === false) {
+            return;
+        }
 
-        // 1. Remove the chisel.php list item
-        $cleaned = preg_replace("/^[ \t]*-[ \t]*chisel\.php[ \t]*\r?\n/m", '', $content);
+        $lines = chiselRemoveNeonListSectionItem($lines, 'bootstrapFiles', ['chisel.php', './chisel.php']);
 
-        // 2. If bootstrapFiles: has no remaining list items, remove bootstrapFiles: line
+        if ($removePermissionMigrationExclude) {
+            $lines = chiselRemoveNeonListSectionItem($lines, 'excludePaths', ['database/migrations/*_create_permission_tables.php']);
+        }
+
+        $cleaned = implode($eol, $lines);
+
+        if ($cleaned !== $content) {
+            file_put_contents($neonPath, $cleaned);
+        }
+    }
+}
+
+if (! function_exists('chiselCleanPhpunitConfig')) {
+    function chiselCleanPhpunitConfig(string $directory): void
+    {
+        $phpunitPath = $directory.'/phpunit.xml';
+        if (! file_exists($phpunitPath)) {
+            return;
+        }
+
+        $content = (string) file_get_contents($phpunitPath);
+        $cleaned = preg_replace(
+            '/[ \t]*<file>app\/Console\/Commands\/InstallFeaturesCommand\.php<\/file>\r?\n?/',
+            '',
+            $content,
+        );
+
         if ($cleaned !== null) {
-            $cleaned = preg_replace("/^[ \t]*bootstrapFiles:[ \t]*\r?\n(?!(?:[ \t]*\r?\n)*[ \t]*-)/m", '', $cleaned);
+            $cleaned = preg_replace(
+                '/[ \t]*<exclude>[ \t\r\n]*<\/exclude>\r?\n?/',
+                '',
+                $cleaned,
+            );
         }
 
         if ($cleaned !== null && $cleaned !== $content) {
-            file_put_contents($neonPath, $cleaned);
+            file_put_contents($phpunitPath, $cleaned);
         }
     }
 }
@@ -281,12 +494,11 @@ if (! function_exists('chiselCleanup')) {
      */
     function chiselCleanup(string $directory, array $paths): void
     {
-        chiselCleanComposerPostCreate($directory);
-        chiselCleanPhpstanConfig($directory);
-
         $chisel = Chisel::in($directory);
         $chiselFiles = $paths['chisel']['files'] ?? [
             'app/Console/Commands/InstallFeaturesCommand.php',
+            'app/Console/Commands/SetupAuthorizationCommand.php',
+            'app/Console/Commands/SetupAdminUserCommand.php',
             'chisel.php',
             'chisel-paths.php',
         ];
@@ -297,6 +509,11 @@ if (! function_exists('chiselCleanup')) {
             'tests/Unit/Chisel',
             'tests/Feature/Chisel',
         ]);
+
+        chiselCleanPhpunitConfig($directory);
+        chiselCleanPhpstanConfig($directory);
+        chiselCleanComposerPostCreate($directory);
+        chiselSyncComposerLock($directory);
     }
 }
 
@@ -458,31 +675,52 @@ $script = Chisel::script(__DIR__)
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                'app/Http/Controllers/UserProfileController.php',
+                'app/Actions/UpdateUser.php',
                 $paths['auth']['profile'],
                 $paths['auth']['auth_types'],
                 'app/Models/User.php',
                 'app/Actions/Users/UpdateUserAction.php',
+                'app/Http/Controllers/Users/UserController.php',
+                'resources/js/types/users.ts',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'tests/Unit/Models/UserTest.php',
+                'tests/Unit/Actions/UpdateUserTest.php',
+                'tests/Feature/Controllers/UserProfileControllerTest.php',
             )->removeSectionMarkers('email-verification');
         },
         else: function (Chisel $chisel) use ($paths, $directory): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('MustVerifyEmail');
 
+            $chisel->file('app/Models/User.php')
+                ->removeLinesContaining('@property-read CarbonInterface|null $email_verified_at');
+
             $chisel->files(
                 'config/fortify.php',
                 'routes/web.php',
                 'app/Providers/FortifyServiceProvider.php',
+                'app/Http/Controllers/UserProfileController.php',
+                'app/Actions/UpdateUser.php',
                 $paths['auth']['profile'],
                 $paths['auth']['auth_types'],
                 'app/Models/User.php',
                 'app/Actions/Users/UpdateUserAction.php',
+                'app/Http/Controllers/Users/UserController.php',
+                'resources/js/types/users.ts',
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'tests/Unit/Models/UserTest.php',
+                'tests/Unit/Actions/UpdateUserTest.php',
+                'tests/Feature/Controllers/UserProfileControllerTest.php',
             )->removeSection('email-verification');
+
+            $chisel->file($paths['auth']['profile'])
+                ->replace(
+                    "import { Form, Head, Link, usePage } from '@inertiajs/react';",
+                    "import { Form, Head, usePage } from '@inertiajs/react';",
+                );
 
             $chisel->files(
                 'app/Actions/CreateUserEmailVerificationNotification.php',
@@ -515,9 +753,21 @@ $script = Chisel::script(__DIR__)
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'tests/Unit/Models/UserTest.php',
+                'tests/Feature/Controllers/SessionControllerTest.php',
+                'tests/Feature/Users/InactiveUserAuthTest.php',
+                'tests/Feature/AuditTrails/RecordAuditTrailTest.php',
             )->removeSectionMarkers('two-factor-authentication');
         },
         else: function (Chisel $chisel) use ($paths, $directory): void {
+            $chisel->file('app/Models/User.php')
+                ->removeLinesContaining(
+                    '@property-read string|null $two_factor_secret',
+                    '@property-read string|null $two_factor_recovery_codes',
+                    '@property-read CarbonInterface|null $two_factor_confirmed_at',
+                    "'two_factor_secret',",
+                    "'two_factor_recovery_codes',",
+                );
+
             $chisel->files(
                 'config/fortify.php',
                 'routes/web.php',
@@ -529,6 +779,9 @@ $script = Chisel::script(__DIR__)
                 'database/factories/UserFactory.php',
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'tests/Unit/Models/UserTest.php',
+                'tests/Feature/Controllers/SessionControllerTest.php',
+                'tests/Feature/Users/InactiveUserAuthTest.php',
+                'tests/Feature/AuditTrails/RecordAuditTrailTest.php',
             )->removeSection('two-factor-authentication');
 
             $chisel->files(...[
@@ -580,6 +833,7 @@ $script = Chisel::script(__DIR__)
                 'tests/Unit/Enums/RoleTest.php',
             ])->delete();
 
+            chiselCleanPhpstanConfig($directory, removePermissionMigrationExclude: true);
             chiselRemoveComposerPackages($directory, $paths['authorization']['composer_package']);
 
             chiselPruneEmptyDirectories($directory, $paths['authorization']['empty_dirs']);
@@ -635,6 +889,7 @@ $script = Chisel::script(__DIR__)
             $chisel->files(
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'app/Models/User.php',
+                'app/Http/Requests/CreateSessionRequest.php',
                 'database/factories/UserFactory.php',
                 'app/Enums/Permission.php',
                 'bootstrap/app.php',
@@ -646,9 +901,13 @@ $script = Chisel::script(__DIR__)
             )->removeSectionMarkers('user-management');
         },
         else: function (Chisel $chisel) use ($paths, $directory): void {
+            $chisel->file('app/Models/User.php')
+                ->removeLinesContaining('@property-read bool $is_active');
+
             $chisel->files(
                 'database/migrations/0001_01_01_000000_create_users_table.php',
                 'app/Models/User.php',
+                'app/Http/Requests/CreateSessionRequest.php',
                 'database/factories/UserFactory.php',
                 'app/Enums/Permission.php',
                 'bootstrap/app.php',
@@ -943,6 +1202,10 @@ return $script
         ['user-management', 'reporting'],
         then: null,
         else: function (Chisel $chisel) use ($directory): void {
+            $chisel->file('config/data.php')->delete();
             chiselRemoveComposerPackages($directory, 'spatie/laravel-data');
         },
-    );
+    )
+    ->apply(function () use ($directory): void {
+        chiselSyncComposerLock($directory);
+    });

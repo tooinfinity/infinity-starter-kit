@@ -235,6 +235,7 @@ return [
             'tests/Unit/Chisel/JsonPruningTest.php',
             'tests/Feature/Chisel/DependencyValidationTest.php',
             'tests/Feature/Chisel/FeatureCombinationTest.php',
+            'tests/Feature/Chisel/GeneratedProjectLifecycleTest.php',
             'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
             'tests/Feature/Chisel/RegistryIntegrityTest.php',
