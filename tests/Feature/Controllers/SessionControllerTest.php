@@ -19,7 +19,7 @@ it('renders login page', function (): void {
 });
 
 it('may create a session', function (): void {
-    $user = User::factory()->withoutTwoFactor()->create([
+    $user = User::factory()/* @chisel-two-factor-authentication */ ->withoutTwoFactor()/* @end-chisel-two-factor-authentication */ ->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
     ]);
@@ -36,7 +36,7 @@ it('may create a session', function (): void {
 });
 
 it('may create a session with remember me', function (): void {
-    $user = User::factory()->withoutTwoFactor()->create([
+    $user = User::factory()/* @chisel-two-factor-authentication */ ->withoutTwoFactor()/* @end-chisel-two-factor-authentication */ ->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
     ]);
@@ -53,6 +53,7 @@ it('may create a session with remember me', function (): void {
     $this->assertAuthenticatedAs($user);
 });
 
+/* @chisel-two-factor-authentication */
 it('redirects to two-factor challenge when enabled', function (): void {
     $user = User::factory()->create([
         'email' => 'test@example.com',
@@ -72,6 +73,7 @@ it('redirects to two-factor challenge when enabled', function (): void {
 
     $this->assertGuest();
 });
+/* @end-chisel-two-factor-authentication */
 
 it('fails with invalid credentials', function (): void {
     User::factory()->create([
@@ -163,7 +165,7 @@ it('throttles login attempts after too many failures', function (): void {
 });
 
 it('clears rate limit after successful login', function (): void {
-    $user = User::factory()->withoutTwoFactor()->create([
+    $user = User::factory()/* @chisel-two-factor-authentication */ ->withoutTwoFactor()/* @end-chisel-two-factor-authentication */ ->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
     ]);

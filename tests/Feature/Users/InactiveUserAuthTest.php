@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 
 it('denies authentication for inactive users', function (): void {
-    $inactiveUser = User::factory()->withoutTwoFactor()->inactive()->create([
+    $inactiveUser = User::factory()/* @chisel-two-factor-authentication */ ->withoutTwoFactor()/* @end-chisel-two-factor-authentication */ ->inactive()->create([
         'email' => 'inactive@example.com',
         'password' => 'password123',
     ]);
@@ -20,7 +20,7 @@ it('denies authentication for inactive users', function (): void {
 });
 
 it('allows authentication for active users', function (): void {
-    $activeUser = User::factory()->withoutTwoFactor()->active()->create([
+    $activeUser = User::factory()/* @chisel-two-factor-authentication */ ->withoutTwoFactor()/* @end-chisel-two-factor-authentication */ ->active()->create([
         'email' => 'active@example.com',
         'password' => 'password123',
     ]);
@@ -35,7 +35,7 @@ it('allows authentication for active users', function (): void {
 });
 
 it('logs out logged-in user when account becomes inactive', function (): void {
-    $user = User::factory()->withoutTwoFactor()->active()->create();
+    $user = User::factory()/* @chisel-two-factor-authentication */ ->withoutTwoFactor()/* @end-chisel-two-factor-authentication */ ->active()->create();
 
     $this->actingAs($user);
 
