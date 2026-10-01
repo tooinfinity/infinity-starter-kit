@@ -55,9 +55,16 @@ final class InstallFeaturesCommand extends Command
         /** @var Script $script */
         $script = $isMockedScript ? resolve(Script::class) : require base_path('chisel.php');
 
-        $providedAnswers = $this->option('answers') === null
+        $rawAnswers = $this->option('answers');
+        if (! is_string($rawAnswers) || $rawAnswers === '') {
+            $envAnswers = Env::get('CHISEL_ANSWERS', Request::server('CHISEL_ANSWERS') ?? getenv('CHISEL_ANSWERS'))
+                ?? Env::get('LARAVEL_INSTALLER_ANSWERS', Request::server('LARAVEL_INSTALLER_ANSWERS') ?? getenv('LARAVEL_INSTALLER_ANSWERS'));
+            $rawAnswers = is_string($envAnswers) ? $envAnswers : null;
+        }
+
+        $providedAnswers = ($rawAnswers === null || $rawAnswers === '')
             ? []
-            : json_decode((string) $this->option('answers'), true, 512, JSON_THROW_ON_ERROR);
+            : json_decode($rawAnswers, true, 512, JSON_THROW_ON_ERROR);
 
         throw_unless(is_array($providedAnswers), RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
@@ -155,9 +162,12 @@ final class InstallFeaturesCommand extends Command
      */
     private function setupAdminUser(array $providedAnswers): int
     {
-        $adminName = $this->option('admin-name');
-        $adminEmail = $this->option('admin-email');
-        $adminPassword = $this->option('admin-password');
+        $adminName = $this->option('admin-name')
+            ?? Env::get('CHISEL_ADMIN_NAME', Request::server('CHISEL_ADMIN_NAME') ?? getenv('CHISEL_ADMIN_NAME'));
+        $adminEmail = $this->option('admin-email')
+            ?? Env::get('CHISEL_ADMIN_EMAIL', Request::server('CHISEL_ADMIN_EMAIL') ?? getenv('CHISEL_ADMIN_EMAIL'));
+        $adminPassword = $this->option('admin-password')
+            ?? Env::get('CHISEL_ADMIN_PASSWORD', Request::server('CHISEL_ADMIN_PASSWORD') ?? getenv('CHISEL_ADMIN_PASSWORD'));
 
         /** @var array<string, mixed> $adminData */
         $adminData = is_array($providedAnswers['admin'] ?? null) ? $providedAnswers['admin'] : [];
@@ -185,14 +195,14 @@ final class InstallFeaturesCommand extends Command
         }
 
         if ($adminEmail !== null || $adminName !== null || $adminPassword !== null || $adminData !== []) {
-            if ($this->option('answers') !== null || ! $this->input->isInteractive()) {
+            if ($this->option('answers') !== null || ! $this->input->isInteractive() || $this->hasEnvironmentAnswers()) {
                 $adminParams['--no-interaction'] = true;
             }
 
             return $this->call('admin:setup', $adminParams);
         }
 
-        if ($this->option('answers') === null && $this->input->isInteractive()) {
+        if ($this->option('answers') === null && ! $this->hasEnvironmentAnswers() && $this->input->isInteractive()) {
             return $this->call('admin:setup', $adminParams);
         }
 
@@ -203,11 +213,19 @@ final class InstallFeaturesCommand extends Command
 
     private function shouldDeferInstallerHooks(): bool
     {
-        if ($this->option('answers') !== null) {
+        if ($this->option('answers') !== null || $this->hasEnvironmentAnswers()) {
             return false;
         }
 
         return $this->installerFlag('LARAVEL_INSTALLER_DEFER_HOOKS');
+    }
+
+    private function hasEnvironmentAnswers(): bool
+    {
+        $raw = Env::get('CHISEL_ANSWERS', Request::server('CHISEL_ANSWERS') ?? getenv('CHISEL_ANSWERS'))
+            ?? Env::get('LARAVEL_INSTALLER_ANSWERS', Request::server('LARAVEL_INSTALLER_ANSWERS') ?? getenv('LARAVEL_INSTALLER_ANSWERS'));
+
+        return is_string($raw) && mb_trim($raw) !== '';
     }
 
     private function shouldSkipNode(): bool
@@ -491,6 +509,11 @@ final class InstallFeaturesCommand extends Command
         $optionPassword = $this->option('admin-password');
         if (is_string($optionPassword) && $optionPassword !== '') {
             $secrets[] = $optionPassword;
+        }
+
+        $envPassword = Env::get('CHISEL_ADMIN_PASSWORD', Request::server('CHISEL_ADMIN_PASSWORD') ?? getenv('CHISEL_ADMIN_PASSWORD'));
+        if (is_string($envPassword) && $envPassword !== '') {
+            $secrets[] = $envPassword;
         }
 
         if (is_array($providedAnswers['admin'] ?? null) && is_string($providedAnswers['admin']['password'] ?? null) && $providedAnswers['admin']['password'] !== '') {
