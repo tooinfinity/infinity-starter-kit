@@ -198,6 +198,11 @@ return [
         ],
     ],
 
+    'data' => [
+        'config' => 'config/data.php',
+        'composer_package' => 'spatie/laravel-data',
+    ],
+
     'dependencies' => [
         'reporting' => ['audit-trails', 'user-management', 'authorization'],
         'audit-trails' => ['authorization'],
@@ -236,6 +241,7 @@ return [
             'tests/Feature/Chisel/DependencyValidationTest.php',
             'tests/Feature/Chisel/FeatureCombinationTest.php',
             'tests/Feature/Chisel/GeneratedProjectLifecycleTest.php',
+            'tests/Feature/Chisel/ComposerCreateProjectLifecycleTest.php',
             'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
             'tests/Feature/Chisel/RegistryIntegrityTest.php',

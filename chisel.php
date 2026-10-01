@@ -189,7 +189,10 @@ if (! function_exists('chiselCleanComposerPostCreate')) {
 }
 
 if (! function_exists('chiselSyncComposerLock')) {
-    function chiselSyncComposerLock(string $directory): void
+    /**
+     * @param  array<string, mixed>|null  $paths
+     */
+    function chiselSyncComposerLock(string $directory, ?array $paths = null): void
     {
         $composerJsonPath = $directory.'/composer.json';
         $composerLockPath = $directory.'/composer.lock';
@@ -210,12 +213,33 @@ if (! function_exists('chiselSyncComposerLock')) {
             }
         }
 
-        $candidates = [
-            'laravel/chisel',
-            'spatie/laravel-permission',
-            'erag/laravel-lang-sync-inertia',
-            'spatie/laravel-data',
-        ];
+        if ($paths === null) {
+            $pathsFile = $directory.'/chisel-paths.php';
+            $paths = file_exists($pathsFile) ? (require $pathsFile) : [];
+        }
+
+        $candidates = ['laravel/chisel'];
+        if (is_array($paths)) {
+            foreach ($paths as $feature => $data) {
+                if (! is_array($data)) {
+                    continue;
+                }
+
+                if (isset($data['composer_package']) && is_string($data['composer_package'])) {
+                    $candidates[] = $data['composer_package'];
+                }
+
+                if (isset($data['composer_packages']) && is_array($data['composer_packages'])) {
+                    foreach ($data['composer_packages'] as $pkg) {
+                        if (is_string($pkg)) {
+                            $candidates[] = $pkg;
+                        }
+                    }
+                }
+            }
+        }
+
+        $candidates = array_values(array_unique($candidates));
 
         $removedPackages = [];
         foreach ($candidates as $candidate) {
@@ -513,7 +537,7 @@ if (! function_exists('chiselCleanup')) {
         chiselCleanPhpunitConfig($directory);
         chiselCleanPhpstanConfig($directory);
         chiselCleanComposerPostCreate($directory);
-        chiselSyncComposerLock($directory);
+        chiselSyncComposerLock($directory, $paths);
     }
 }
 
@@ -1206,6 +1230,6 @@ return $script
             chiselRemoveComposerPackages($directory, 'spatie/laravel-data');
         },
     )
-    ->apply(function () use ($directory): void {
-        chiselSyncComposerLock($directory);
+    ->apply(function () use ($directory, $paths): void {
+        chiselSyncComposerLock($directory, $paths);
     });
