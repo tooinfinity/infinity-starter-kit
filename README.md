@@ -295,21 +295,28 @@ Upon finishing execution, Chisel automatically cleans up the repository:
 
 ---
 
+### 🏛️ Installer Architecture & Responsibilities
+
+The starter kit separates installer concerns into data, behavior, and orchestration:
+
+- **Feature Metadata (`App\Chisel\FeatureRegistry`)** — The authoritative single source of truth for all feature definitions (`FeatureDefinition`), paths, dependencies, Composer packages, and npm packages.
+- **Dependency Validation (`App\Chisel\Installer\DependencyValidator`)** — Pre-mutation validation that verifies required module dependencies and fails fast before mutations occur.
+- **Composer & Lock Synchronization (`App\Chisel\Installer\ComposerSynchronizer`)** — Modifies `composer.json` requirements and synchronizes `composer.lock` via dynamic candidate discovery.
+- **Directory & Frontend Pruning (`App\Chisel\Installer\DirectoryPruner`, `App\Chisel\Installer\FrontendPackagePruner`, `App\Chisel\Installer\FeaturePruner`)** — Handles safe directory pruning respecting protected directories and npm package pruning supporting `LARAVEL_INSTALLER_NO_NODE`.
+- **Config & Infrastructure Cleanup (`App\Chisel\Installer\ConfigCleaner`, `App\Chisel\Installer\Cleanup`)** — Cleans PHPStan NEON, PHPUnit XML, strips installer files, and ensures zero runtime installer overhead.
+- **Chisel Orchestration (`chisel.php`)** — Pure orchestration layer defining CLI prompts, life cycle, and feature delegation.
+- **Chisel Paths (`chisel-paths.php`)** — Framework-specific path configuration sourced authoritatively from `FeatureRegistry`.
+
+---
+
 ### ➕ Developer Checklist: Adding a New Scaffolding Feature
 
-Adding a new optional module or feature in `chisel.php` is simple and declarative:
+Adding a new optional module or feature is simple and declarative:
 
-1. **Add Question Option**:
-   Add the feature identifier and label to the `optional_modules` question in `chisel.php`.
-2. **Register Selected Handler**:
-   Use `->selected('optional_modules', '<feature>', then: fn(Chisel $c) => ..., else: fn(Chisel $c) => ...)`:
-   - In `then`: use `$c->files(...)->removeSectionMarkers('<tag>')` to strip markers when kept.
-   - In `else`:
-     - AST mutations via `$c->php('...')->removeImport(...)->removeTrait(...)`
-     - Strip sections via `$c->files(...)->removeSection('<tag>')`
-     - Delete exclusive files via `$c->files(...)->delete()`
-     - Prune exclusive packages via `$c->file('composer.json')->removeLinesContaining(...)`
-     - Prune empty directories using `chiselPruneEmptyDirectories(__DIR__, [...])`
+1. **Register Feature in `FeatureRegistry`**:
+   Add a `FeatureDefinition` to `App\Chisel\FeatureRegistry::optionalModules()` defining its `key`, `label`, `sectionMarker`, `markerFiles`, `exclusiveFiles`, `emptyDirectories`, `composerPackages`, `frontendPackages`, and `dependencies`.
+2. **Wire in `chisel.php`**:
+   The questions and dependency validation automatically discover features from `FeatureRegistry`. Wire the feature handler via `->selected('optional_modules', '<key>', then: fn($c) => FeaturePruner::applySelected($c, $feature), else: fn($c) => FeaturePruner::pruneUnselected($directory, $c, $feature))`.
 3. **Handle Shared Packages**:
    Use `->selectedAny('optional_modules', ['<feature1>', '<feature2>'], else: ...)` for packages shared across multiple features.
 4. **Wrap Shared Code in Markers**:
