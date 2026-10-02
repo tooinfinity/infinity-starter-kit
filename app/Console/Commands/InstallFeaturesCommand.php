@@ -150,6 +150,8 @@ final class InstallFeaturesCommand extends Command
             return self::FAILURE;
         }
 
+        $this->injectTestFailureIfRequested();
+
         $this->performFinalValidation();
         $didCleanup = $this->cleanupInstaller($paths, $isMockedScript);
         $this->performPostCleanupValidation($answers, $paths, $didCleanup);
@@ -238,6 +240,31 @@ final class InstallFeaturesCommand extends Command
         return filter_var(
             Env::get($name, Request::server($name) ?? getenv($name)),
             FILTER_VALIDATE_BOOL,
+        );
+    }
+
+    /**
+     * Test-only failure injection point.
+     *
+     * When CHISEL_TEST_FAIL_STAGE is set, the installer throws a RuntimeException
+     * at a deterministic point after chisel mutations but before cleanup.
+     * This cannot be accidentally activated in normal installations.
+     */
+    private function injectTestFailureIfRequested(): void
+    {
+        $raw = Env::get(
+            'CHISEL_TEST_FAIL_STAGE',
+            Request::server('CHISEL_TEST_FAIL_STAGE') ?? getenv('CHISEL_TEST_FAIL_STAGE'),
+        );
+
+        $stage = is_string($raw) ? $raw : '';
+
+        if ($stage === '') {
+            return;
+        }
+
+        throw new RuntimeException(
+            'CHISEL_TEST_FAIL_STAGE: deterministic test failure injected at stage ['.$stage.'].'
         );
     }
 
