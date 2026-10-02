@@ -115,3 +115,59 @@ jobs:
           name: browser-screenshots
           path: tests/Browser/Screenshots
           if-no-files-found: ignore
+
+  installer-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+          ini-values: zend.assertions=1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          run-install: false
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Cache Bun Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Install Bun Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Assets
+        run: bun run build
+
+      - name: Installer E2E Tests
+        run: vendor/bin/pest tests/Feature/Chisel/ComposerCreateProjectLifecycleTest.php tests/Feature/Chisel/GeneratedProjectLifecycleTest.php --compact
