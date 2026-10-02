@@ -95,7 +95,7 @@ final class ComposerSynchronizer
 
         $candidates = ['laravel/chisel'];
         if (is_array($paths)) {
-            foreach ($paths as $feature => $data) {
+            foreach ($paths as $data) {
                 if (! is_array($data)) {
                     continue;
                 }

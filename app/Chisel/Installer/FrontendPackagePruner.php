@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Chisel\Installer;
 
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Process as ProcessFacade;
+use Illuminate\Support\Facades\Request;
 use Laravel\Chisel\Chisel;
 
 /**
@@ -15,9 +17,8 @@ final class FrontendPackagePruner
     public static function skipsNode(): bool
     {
         return filter_var(
-            $_ENV['LARAVEL_INSTALLER_NO_NODE']
-                ?? $_SERVER['LARAVEL_INSTALLER_NO_NODE']
-                ?? getenv('LARAVEL_INSTALLER_NO_NODE'),
+            Env::get('LARAVEL_INSTALLER_NO_NODE', Request::server('LARAVEL_INSTALLER_NO_NODE')
+            ?? getenv('LARAVEL_INSTALLER_NO_NODE')),
             FILTER_VALIDATE_BOOL,
         );
     }

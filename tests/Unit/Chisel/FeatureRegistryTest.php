@@ -36,7 +36,7 @@ test('feature registry get returns correct feature definition or throws on unkno
         ->and($reporting->label)->toBe('Reporting')
         ->and($reporting->sectionMarker)->toBe('reporting');
 
-    expect(fn () => FeatureRegistry::get('unknown-module'))->toThrow(InvalidArgumentException::class);
+    expect(fn (): FeatureDefinition => FeatureRegistry::get('unknown-module'))->toThrow(InvalidArgumentException::class);
 });
 
 test('feature registry returns correct composer packages and npm packages', function (): void {

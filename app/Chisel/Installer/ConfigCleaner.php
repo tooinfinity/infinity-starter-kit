@@ -46,11 +46,13 @@ final class ConfigCleaner
                             foreach ($trailingBlanks as $blank) {
                                 $keptItems[] = $blank;
                             }
+
                             $trailingBlanks = [];
                             $keptItems[] = $subLine;
                         } else {
                             $trailingBlanks = [];
                         }
+
                         $i++;
 
                         continue;
@@ -64,6 +66,7 @@ final class ConfigCleaner
                     foreach ($keptItems as $kept) {
                         $result[] = $kept;
                     }
+
                     foreach ($trailingBlanks as $blank) {
                         $result[] = $blank;
                     }
