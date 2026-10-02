@@ -481,4 +481,131 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             removeComposerTestDirectory($baseTempDir);
         }
     });
+
+    it('executes Scenario C: authorization enabled without admin credentials results in zero users and Super Admin role', function (): void {
+        $baseTempDir = sys_get_temp_dir().'/composer_scenario_c_'.uniqid();
+        mkdir($baseTempDir, 0755, true);
+
+        $sourceDir = createComposerGitRepositorySource($baseTempDir);
+        $targetDir = $baseTempDir.'/target';
+
+        $answers = [
+            'auth_features' => [
+                'registration',
+                'email-verification',
+                'two-factor-authentication',
+            ],
+            'optional_modules' => [
+                'authorization',
+                'settings',
+                'user-management',
+            ],
+        ];
+
+        try {
+            $createProcess = runComposerCreateProject($sourceDir, $targetDir, $answers);
+
+            expect($createProcess->getExitCode())
+                ->toBe(0, "composer create-project failed:\nSTDOUT:\n".$createProcess->getOutput()."\nSTDERR:\n".$createProcess->getErrorOutput());
+
+            // Verify cleanup of all installer artifacts
+            assertCreatedProjectCleanOfInstallerArtifacts($targetDir);
+
+            // Verify authorization is configured but zero users exist
+            $verifyAuthProcess = runInCreatedProject($targetDir, [
+                PHP_BINARY,
+                '-r',
+                'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                    .('$role = '.Role::class.'::where("name", '.RoleEnum::class.'::SuperAdmin->value)->first(); ')
+                    .('$permCount = '.Permission::class.'::count(); ')
+                    .('$userCount = '.User::class.'::count(); ')
+                    .'echo json_encode(["role" => (bool) $role, "permCount" => $permCount, "userCount" => $userCount]);',
+            ]);
+
+            expect($verifyAuthProcess->getExitCode())->toBe(0, $verifyAuthProcess->getErrorOutput());
+            $authData = json_decode($verifyAuthProcess->getOutput(), true);
+            expect($authData)->toBeArray()
+                ->and($authData['role'])->toBeTrue('Super Admin role must exist even without admin credentials.')
+                ->and($authData['permCount'])->toBeGreaterThan(0)
+                ->and($authData['userCount'])->toBe(0, 'Zero users must exist when no admin credentials were supplied.');
+
+            // Verify composer validate and install
+            $composerValidate = runInCreatedProject($targetDir, ['composer', 'validate', '--no-check-publish']);
+            expect($composerValidate->getExitCode())->toBe(0, $composerValidate->getOutput()."\n".$composerValidate->getErrorOutput());
+
+            $composerInstall = runInCreatedProject($targetDir, ['composer', 'install', '--no-interaction', '--no-scripts']);
+            expect($composerInstall->getExitCode())->toBe(0, $composerInstall->getOutput()."\n".$composerInstall->getErrorOutput());
+
+            // Verify artisan boots
+            $artisanVersion = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', '--version']);
+            expect($artisanVersion->getExitCode())->toBe(0, $artisanVersion->getOutput()."\n".$artisanVersion->getErrorOutput());
+
+            // Verify frontend install, build, and lint
+            $pm = detectFrontendPackageManager($targetDir);
+            $feInstall = runInCreatedProject($targetDir, $pm['install']);
+            expect($feInstall->getExitCode())->toBe(0, $feInstall->getOutput()."\n".$feInstall->getErrorOutput());
+
+            $feBuild = runInCreatedProject($targetDir, $pm['build']);
+            expect($feBuild->getExitCode())->toBe(0, $feBuild->getOutput()."\n".$feBuild->getErrorOutput());
+
+            $feLint = runInCreatedProject($targetDir, $pm['lint']);
+            expect($feLint->getExitCode())->toBe(0, $feLint->getOutput()."\n".$feLint->getErrorOutput());
+        } finally {
+            removeComposerTestDirectory($baseTempDir);
+        }
+    });
+
+    it('executes Scenario D: intentional installer failure produces non-zero exit and preserves installer artifacts', function (): void {
+        $baseTempDir = sys_get_temp_dir().'/composer_scenario_d_'.uniqid();
+        mkdir($baseTempDir, 0755, true);
+
+        $sourceDir = createComposerGitRepositorySource($baseTempDir);
+        $targetDir = $baseTempDir.'/target';
+
+        $answers = [
+            'auth_features' => ['registration'],
+            'optional_modules' => ['authorization'],
+        ];
+
+        try {
+            // Inject a deterministic failure via CHISEL_TEST_FAIL_STAGE environment variable.
+            // This causes InstallFeaturesCommand to throw after chisel mutations but before cleanup.
+            $createProcess = runComposerCreateProject(
+                $sourceDir,
+                $targetDir,
+                $answers,
+                ['CHISEL_TEST_FAIL_STAGE' => 'post_chisel'],
+            );
+
+            // The installer must report failure with a non-zero exit code
+            expect($createProcess->getExitCode())
+                ->not->toBe(0, 'Installer must fail when CHISEL_TEST_FAIL_STAGE is set.');
+
+            // The failure output must be observable
+            $combinedOutput = $createProcess->getOutput().$createProcess->getErrorOutput();
+            expect($combinedOutput)->toContain('CHISEL_TEST_FAIL_STAGE');
+
+            // Installer artifacts must NOT have been cleaned up on failure — they remain for diagnosis
+            // The chisel.php file should still exist because cleanup only runs on success
+            expect(file_exists($targetDir.'/chisel.php'))->toBeTrue(
+                'chisel.php must remain after installer failure for diagnosis.'
+            );
+            expect(file_exists($targetDir.'/chisel-paths.php'))->toBeTrue(
+                'chisel-paths.php must remain after installer failure for diagnosis.'
+            );
+            expect(file_exists($targetDir.'/app/Console/Commands/InstallFeaturesCommand.php'))->toBeTrue(
+                'InstallFeaturesCommand must remain after installer failure for diagnosis.'
+            );
+
+            // The installer must not claim successful completion in output
+            expect($combinedOutput)->not->toContain('Admin setup complete.');
+
+            // Composer post-create-project-cmd and package references must NOT have been removed on failure
+            $failedComposerJson = (string) file_get_contents($targetDir.'/composer.json');
+            expect($failedComposerJson)->toContain('install:features')
+                ->and($failedComposerJson)->toContain('laravel/chisel');
+        } finally {
+            removeComposerTestDirectory($baseTempDir);
+        }
+    });
 });

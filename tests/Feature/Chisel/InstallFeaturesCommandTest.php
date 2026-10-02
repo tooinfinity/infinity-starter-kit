@@ -403,6 +403,24 @@ test('failed frontend lint returns non-zero exit status and outputs error', func
         ->assertFailed();
 });
 
+test('CHISEL_TEST_FAIL_STAGE causes deterministic failure after chisel mutations', function () use ($cleanEnv): void {
+    putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+    $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+    bindMockChiselScript();
+
+    try {
+        $answers = json_encode([
+            'auth_features' => ['registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers]);
+    } finally {
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+    }
+})->throws(RuntimeException::class, 'CHISEL_TEST_FAIL_STAGE');
+
 /**
  * @param  array<string, mixed>  $processFakes
  */
