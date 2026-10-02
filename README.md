@@ -289,7 +289,9 @@ Upon finishing execution, Chisel automatically cleans up the repository:
 1. Strips `@php artisan install:features --ansi` and `"laravel/chisel"` from `composer.json`.
 2. Formats all PHP code using Laravel Pint (`vendor/bin/pint --format agent`).
 3. Re-generates Wayfinder typed routes and actions (`php artisan wayfinder:generate --with-form --no-interaction`).
-4. Deletes `chisel.php`, `app/Console/Commands/InstallFeaturesCommand.php`, and Chisel installer tests.
+4. Deletes `chisel.php`, `chisel-paths.php`, `app/Console/Commands/InstallFeaturesCommand.php`, `app/Console/Commands/SetupAuthorizationCommand.php`, `app/Console/Commands/SetupAdminUserCommand.php`, and Chisel installer tests.
+
+> **Note:** `InstallFeaturesCommand`, `SetupAuthorizationCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files.
 
 ---
 
@@ -344,9 +346,9 @@ composer run lint
 ├── app/
 │   ├── Actions/                  # Reusable business logic actions
 │   ├── Console/Commands/         # Artisan commands
-│   │   ├── InstallFeaturesCommand.php
-│   │   ├── SetupAuthorizationCommand.php
-│   │   └── SetupAdminUserCommand.php
+│   │   ├── InstallFeaturesCommand.php    # ⚙️ Installer-only (removed after install)
+│   │   ├── SetupAuthorizationCommand.php # ⚙️ Installer-only (removed after install)
+│   │   └── SetupAdminUserCommand.php     # ⚙️ Installer-only (removed after install)
 │   ├── Data/                     # Spatie Data transfer objects
 │   │   └── Reporting/            # Report summary, series, and breakdown DTOs
 │   ├── Enums/                    # PHP string-backed enums
@@ -368,7 +370,7 @@ composer run lint
 │   │   ├── Reporting/            # UserReportQuery, AuditReportQuery, CSV streams
 │   │   └── Users/
 │   └── Providers/                # AppServiceProvider (Gate::before)
-├── chisel.php                    # Feature pruning configuration
+├── chisel.php                    # ⚙️ Installer-only feature pruning (removed after install)
 ├── config/
 │   ├── fortify.php
 │   └── permission.php            # Spatie Permission config
