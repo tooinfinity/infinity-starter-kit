@@ -30,7 +30,7 @@ final class FeaturePruner
         }
 
         if ($feature->composerPackages !== []) {
-            ComposerSynchronizer::removePackages($directory, ...$feature->composerPackages);
+            ComposerManifestPruner::removePackages($directory, ...$feature->composerPackages);
         }
 
         if ($feature->frontendPackages !== []) {

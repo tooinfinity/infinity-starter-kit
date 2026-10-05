@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Chisel\Installer\InstallerContext;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -47,13 +48,44 @@ final class InstallFeaturesCommand extends Command
             return self::SUCCESS;
         }
 
-        /** @var array<string, mixed> $paths */
-        $paths = require base_path('chisel-paths.php');
-
         $isMockedScript = app()->bound(Script::class);
 
         /** @var Script $script */
         $script = $isMockedScript ? resolve(Script::class) : require base_path('chisel.php');
+
+        $context = $this->resolveContext($script, $isMockedScript);
+
+        $this->validateDependencies($context);
+
+        if (! $this->runChisel($script, $context)) {
+            return self::FAILURE;
+        }
+
+        $configStatus = $this->configureApplication($context);
+        if ($configStatus !== self::SUCCESS) {
+            return $configStatus;
+        }
+
+        if (! $this->runPostScaffoldingTools($context)) {
+            return self::FAILURE;
+        }
+
+        $this->injectTestFailureIfRequested();
+
+        $this->performFinalValidation();
+        $didCleanup = $this->cleanupInstaller($context);
+        $this->performPostCleanupValidation($context, $didCleanup);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @throws JsonException
+     */
+    private function resolveContext(Script $script, bool $isMockedScript): InstallerContext
+    {
+        /** @var array<string, mixed> $paths */
+        $paths = require base_path('chisel-paths.php');
 
         $rawAnswers = $this->option('answers');
         if (! is_string($rawAnswers) || $rawAnswers === '') {
@@ -83,87 +115,14 @@ final class InstallFeaturesCommand extends Command
 
         $answers = $pendingAnswers->toArray();
 
-        /** @var array<string, list<string>> $dependencyMap */
-        $dependencyMap = $paths['dependencies'] ?? [];
-        chiselValidateDependencies($answers, $dependencyMap);
+        $rawModules = (array) ($answers['optional_modules'] ?? []);
+        $selectedModules = array_values(array_filter($rawModules, is_string(...)));
 
-        try {
-            $script->chisel($answers);
-        } catch (ProcessFailedException|RuntimeException $e) {
-            $this->components->error($this->redactSecrets($e->getMessage(), $providedAnswers));
+        $rawAuth = (array) ($answers['auth_features'] ?? []);
+        $selectedAuthFeatures = array_values(array_filter($rawAuth, is_string(...)));
 
-            return self::FAILURE;
-        }
-
-        $selectedModules = (array) ($answers['optional_modules'] ?? []);
         $hasAuthorization = in_array('authorization', $selectedModules, true);
 
-        if ($hasAuthorization) {
-            try {
-                $authStatus = $this->call('authorization:setup');
-            } catch (Throwable $e) {
-                $this->components->error('Authorization setup failed: '.$this->redactSecrets($e->getMessage(), $providedAnswers));
-
-                return self::FAILURE;
-            }
-
-            if ($authStatus !== self::SUCCESS) {
-                $this->components->error('Authorization setup failed.');
-
-                return $authStatus;
-            }
-
-            try {
-                $adminStatus = $this->setupAdminUser($providedAnswers);
-            } catch (Throwable $e) {
-                $this->components->error('Administrator setup failed: '.$this->redactSecrets($e->getMessage(), $providedAnswers));
-
-                return self::FAILURE;
-            }
-
-            if ($adminStatus !== self::SUCCESS) {
-                $this->components->error('Administrator setup failed.');
-
-                return $adminStatus;
-            }
-        }
-
-        try {
-            if (file_exists(base_path('vendor/bin/pint'))) {
-                chiselRun(['vendor/bin/pint', '--format', 'agent'], 'Format PHP Code', base_path());
-            }
-
-            if (file_exists(base_path('artisan'))) {
-                chiselRun([PHP_BINARY, 'artisan', 'wayfinder:generate', '--with-form', '--no-interaction'], 'Generate Wayfinder Resources', base_path());
-            }
-
-            $skipNode = $this->shouldSkipNode();
-
-            if (! $skipNode) {
-                $this->installFrontendDependencies();
-                $this->buildAssets();
-                $this->lintAssets();
-            }
-        } catch (ProcessFailedException|RuntimeException $e) {
-            $this->components->error($this->redactSecrets($e->getMessage(), $providedAnswers));
-
-            return self::FAILURE;
-        }
-
-        $this->injectTestFailureIfRequested();
-
-        $this->performFinalValidation();
-        $didCleanup = $this->cleanupInstaller($paths, $isMockedScript);
-        $this->performPostCleanupValidation($answers, $paths, $didCleanup);
-
-        return self::SUCCESS;
-    }
-
-    /**
-     * @param  array<string, mixed>  $providedAnswers
-     */
-    private function setupAdminUser(array $providedAnswers): int
-    {
         $adminName = $this->option('admin-name')
             ?? Env::get('CHISEL_ADMIN_NAME', Request::server('CHISEL_ADMIN_NAME') ?? getenv('CHISEL_ADMIN_NAME'));
         $adminEmail = $this->option('admin-email')
@@ -183,34 +142,142 @@ final class InstallFeaturesCommand extends Command
             ? $adminPassword
             : (is_string($adminData['password'] ?? null) ? $adminData['password'] : (is_string($providedAnswers['admin_password'] ?? null) ? $providedAnswers['admin_password'] : null));
 
+        $isNonInteractive = $this->option('answers') !== null || ! $this->input->isInteractive() || $this->hasEnvironmentAnswers();
+        $skipNode = $this->shouldSkipNode();
+
+        return new InstallerContext(
+            providedAnswers: $providedAnswers,
+            answers: $answers,
+            paths: $paths,
+            selectedModules: $selectedModules,
+            selectedAuthFeatures: $selectedAuthFeatures,
+            hasAuthorization: $hasAuthorization,
+            adminName: $adminName,
+            adminEmail: $adminEmail,
+            adminPassword: $adminPassword,
+            isNonInteractive: $isNonInteractive,
+            skipNode: $skipNode,
+            isMockedScript: $isMockedScript,
+        );
+    }
+
+    private function validateDependencies(InstallerContext $context): void
+    {
+        /** @var array<string, list<string>> $dependencyMap */
+        $dependencyMap = $context->paths['dependencies'] ?? [];
+        chiselValidateDependencies($context->answers, $dependencyMap);
+    }
+
+    private function runChisel(Script $script, InstallerContext $context): bool
+    {
+        try {
+            $script->chisel($context->answers);
+
+            return true;
+        } catch (ProcessFailedException|RuntimeException $e) {
+            $this->components->error($this->redactSecrets($e->getMessage(), $context));
+
+            return false;
+        }
+    }
+
+    private function configureApplication(InstallerContext $context): int
+    {
+        if (! $context->hasAuthorization) {
+            return self::SUCCESS;
+        }
+
+        try {
+            $authStatus = $this->call('authorization:setup');
+        } catch (Throwable $throwable) {
+            $this->components->error('Authorization setup failed: '.$this->redactSecrets($throwable->getMessage(), $context));
+
+            return self::FAILURE;
+        }
+
+        if ($authStatus !== self::SUCCESS) {
+            $this->components->error('Authorization setup failed.');
+
+            return $authStatus;
+        }
+
+        try {
+            $adminStatus = $this->setupAdminUser($context);
+        } catch (Throwable $throwable) {
+            $this->components->error('Administrator setup failed: '.$this->redactSecrets($throwable->getMessage(), $context));
+
+            return self::FAILURE;
+        }
+
+        if ($adminStatus !== self::SUCCESS) {
+            $this->components->error('Administrator setup failed.');
+
+            return $adminStatus;
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function setupAdminUser(InstallerContext $context): int
+    {
         $adminParams = [];
-        if ($adminName !== null) {
-            $adminParams['--name'] = $adminName;
+        if ($context->adminName !== null) {
+            $adminParams['--name'] = $context->adminName;
         }
 
-        if ($adminEmail !== null) {
-            $adminParams['--email'] = $adminEmail;
+        if ($context->adminEmail !== null) {
+            $adminParams['--email'] = $context->adminEmail;
         }
 
-        if ($adminPassword !== null) {
-            $adminParams['--password'] = $adminPassword;
+        if ($context->adminPassword !== null) {
+            $adminParams['--password'] = $context->adminPassword;
         }
 
-        if ($adminEmail !== null || $adminName !== null || $adminPassword !== null || $adminData !== []) {
-            if ($this->option('answers') !== null || ! $this->input->isInteractive() || $this->hasEnvironmentAnswers()) {
+        $hasExplicitCredentials = $context->adminEmail !== null
+            || $context->adminName !== null
+            || $context->adminPassword !== null
+            || (is_array($context->providedAnswers['admin'] ?? null) && $context->providedAnswers['admin'] !== []);
+
+        if ($hasExplicitCredentials) {
+            if ($context->isNonInteractive) {
                 $adminParams['--no-interaction'] = true;
             }
 
             return $this->call('admin:setup', $adminParams);
         }
 
-        if ($this->option('answers') === null && ! $this->hasEnvironmentAnswers() && $this->input->isInteractive()) {
+        if (! $context->isNonInteractive) {
             return $this->call('admin:setup', $adminParams);
         }
 
         $this->components->info('No administrator credentials provided in non-interactive mode; skipping administrator creation.');
 
         return self::SUCCESS;
+    }
+
+    private function runPostScaffoldingTools(InstallerContext $context): bool
+    {
+        try {
+            if (file_exists(base_path('vendor/bin/pint'))) {
+                chiselRun(['vendor/bin/pint', '--format', 'agent'], 'Format PHP Code', base_path());
+            }
+
+            if (file_exists(base_path('artisan'))) {
+                chiselRun([PHP_BINARY, 'artisan', 'wayfinder:generate', '--with-form', '--no-interaction'], 'Generate Wayfinder Resources', base_path());
+            }
+
+            if (! $context->skipNode) {
+                $this->installFrontendDependencies();
+                $this->buildAssets();
+                $this->lintAssets();
+            }
+
+            return true;
+        } catch (ProcessFailedException|RuntimeException $e) {
+            $this->components->error($this->redactSecrets($e->getMessage(), $context));
+
+            return false;
+        }
     }
 
     private function shouldDeferInstallerHooks(): bool
@@ -335,28 +402,23 @@ final class InstallFeaturesCommand extends Command
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $paths
-     */
-    private function cleanupInstaller(array $paths, bool $isMockedScript): bool
+    private function cleanupInstaller(InstallerContext $context): bool
     {
-        if ($isMockedScript && ! $this->installerFlag('CHISEL_RUN_CLEANUP')) {
+        if ($context->isMockedScript && ! $this->installerFlag('CHISEL_RUN_CLEANUP')) {
             return false;
         }
 
         /** @var array{chisel?: array{files?: list<string>, empty_dirs?: list<string>}} $paths */
+        $paths = $context->paths;
         chiselCleanup(base_path(), $paths);
 
         return true;
     }
 
     /**
-     * @param  array<string, mixed>  $answers
-     * @param  array<string, mixed>  $paths
-     *
      * @throws JsonException
      */
-    private function performPostCleanupValidation(array $answers, array $paths, bool $cleanedUp): void
+    private function performPostCleanupValidation(InstallerContext $context, bool $cleanedUp): void
     {
         $this->performFinalValidation();
 
@@ -419,7 +481,7 @@ final class InstallFeaturesCommand extends Command
             return;
         }
 
-        $chiselConfig = is_array($paths['chisel'] ?? null) ? $paths['chisel'] : [];
+        $chiselConfig = is_array($context->paths['chisel'] ?? null) ? $context->paths['chisel'] : [];
         $rawChiselFiles = is_array($chiselConfig['files'] ?? null) ? $chiselConfig['files'] : [
             'app/Console/Commands/InstallFeaturesCommand.php',
             'app/Console/Commands/SetupAuthorizationCommand.php',
@@ -458,8 +520,7 @@ final class InstallFeaturesCommand extends Command
             'Post-cleanup validation failed: composer.json still references install:features.',
         );
 
-        $selectedModules = (array) ($answers['optional_modules'] ?? []);
-        if (! in_array('authorization', $selectedModules, true)) {
+        if (! in_array('authorization', $context->selectedModules, true)) {
             throw_if(
                 isset($composerRequire['spatie/laravel-permission']),
                 RuntimeException::class,
@@ -467,7 +528,7 @@ final class InstallFeaturesCommand extends Command
             );
         }
 
-        if (! in_array('localization', $selectedModules, true)) {
+        if (! in_array('localization', $context->selectedModules, true)) {
             throw_if(
                 isset($composerRequire['erag/laravel-lang-sync-inertia']),
                 RuntimeException::class,
@@ -526,16 +587,12 @@ final class InstallFeaturesCommand extends Command
         }
     }
 
-    /**
-     * @param  array<string, mixed>  $providedAnswers
-     */
-    private function redactSecrets(string $message, array $providedAnswers): string
+    private function redactSecrets(string $message, InstallerContext $context): string
     {
         $secrets = [];
 
-        $optionPassword = $this->option('admin-password');
-        if (is_string($optionPassword) && $optionPassword !== '') {
-            $secrets[] = $optionPassword;
+        if ($context->adminPassword !== null && $context->adminPassword !== '') {
+            $secrets[] = $context->adminPassword;
         }
 
         $envPassword = Env::get('CHISEL_ADMIN_PASSWORD', Request::server('CHISEL_ADMIN_PASSWORD') ?? getenv('CHISEL_ADMIN_PASSWORD'));
@@ -543,12 +600,12 @@ final class InstallFeaturesCommand extends Command
             $secrets[] = $envPassword;
         }
 
-        if (is_array($providedAnswers['admin'] ?? null) && is_string($providedAnswers['admin']['password'] ?? null) && $providedAnswers['admin']['password'] !== '') {
-            $secrets[] = $providedAnswers['admin']['password'];
+        if (is_array($context->providedAnswers['admin'] ?? null) && is_string($context->providedAnswers['admin']['password'] ?? null) && $context->providedAnswers['admin']['password'] !== '') {
+            $secrets[] = $context->providedAnswers['admin']['password'];
         }
 
-        if (is_string($providedAnswers['admin_password'] ?? null) && $providedAnswers['admin_password'] !== '') {
-            $secrets[] = $providedAnswers['admin_password'];
+        if (is_string($context->providedAnswers['admin_password'] ?? null) && $context->providedAnswers['admin_password'] !== '') {
+            $secrets[] = $context->providedAnswers['admin_password'];
         }
 
         foreach ($secrets as $secret) {

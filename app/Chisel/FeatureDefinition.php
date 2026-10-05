@@ -16,7 +16,6 @@ final readonly class FeatureDefinition
      * @param  list<string>  $composerPackages
      * @param  list<string>  $frontendPackages
      * @param  list<string>  $dependencies
-     * @param  array<string, mixed>  $metadata
      */
     public function __construct(
         public string $key,
@@ -28,6 +27,5 @@ final readonly class FeatureDefinition
         public array $composerPackages = [],
         public array $frontendPackages = [],
         public array $dependencies = [],
-        public array $metadata = [],
     ) {}
 }

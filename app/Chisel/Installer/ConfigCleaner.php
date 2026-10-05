@@ -91,10 +91,7 @@ final class ConfigCleaner
 
         $content = (string) file_get_contents($neonPath);
         $eol = str_contains($content, "\r\n") ? "\r\n" : "\n";
-        $lines = preg_split("/\r\n|\n/", $content);
-        if ($lines === false) {
-            return;
-        }
+        $lines = explode($eol, $content);
 
         $lines = self::removeNeonListSectionItem($lines, 'bootstrapFiles', ['chisel.php', './chisel.php']);
 

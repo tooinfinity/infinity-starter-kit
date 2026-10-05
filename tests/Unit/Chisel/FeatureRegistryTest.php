@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
+use App\Chisel\Features\AuthFeatures;
+use App\Chisel\Features\OptionalModules;
 
 test('all expected features are registered in feature registry', function (): void {
     $auth = FeatureRegistry::authFeatures();
@@ -21,6 +23,54 @@ test('all expected features are registered in feature registry', function (): vo
             'reporting',
         ])
         ->and(count($all))->toBe(count($auth) + count($optional));
+});
+
+test('auth features and optional modules are grouped in dedicated classes', function (): void {
+    $auth = AuthFeatures::all();
+    $optional = OptionalModules::all();
+
+    expect($auth)->toHaveKeys(['registration', 'email-verification', 'two-factor-authentication'])
+        ->and($optional)->toHaveKeys([
+            'authorization',
+            'settings',
+            'user-management',
+            'localization',
+            'notifications',
+            'audit-trails',
+            'reporting',
+        ]);
+
+    foreach ($auth as $definition) {
+        expect($definition)->toBeInstanceOf(FeatureDefinition::class);
+    }
+
+    foreach ($optional as $definition) {
+        expect($definition)->toBeInstanceOf(FeatureDefinition::class);
+    }
+});
+
+test('feature definition constructor sets all typed properties', function (): void {
+    $def = new FeatureDefinition(
+        key: 'sample',
+        label: 'Sample Feature',
+        sectionMarker: 'sample',
+        markerFiles: ['sample.php'],
+        exclusiveFiles: ['SampleExclusive.php'],
+        emptyDirectories: ['sample-dir'],
+        composerPackages: ['vendor/sample'],
+        frontendPackages: ['sample-npm'],
+        dependencies: ['dep1'],
+    );
+
+    expect($def->key)->toBe('sample')
+        ->and($def->label)->toBe('Sample Feature')
+        ->and($def->sectionMarker)->toBe('sample')
+        ->and($def->markerFiles)->toBe(['sample.php'])
+        ->and($def->exclusiveFiles)->toBe(['SampleExclusive.php'])
+        ->and($def->emptyDirectories)->toBe(['sample-dir'])
+        ->and($def->composerPackages)->toBe(['vendor/sample'])
+        ->and($def->frontendPackages)->toBe(['sample-npm'])
+        ->and($def->dependencies)->toBe(['dep1']);
 });
 
 test('feature keys in registry are unique and match their definition key', function (): void {
@@ -77,4 +127,13 @@ test('toPathsArray produces structure matching chisel-paths specification', func
         'cross_feature_tests',
         'chisel',
     ]);
+});
+
+test('cleanup files and directories contain all chisel infrastructure including split feature classes', function (): void {
+    $files = FeatureRegistry::cleanupFiles();
+    $dirs = FeatureRegistry::cleanupDirectories();
+
+    expect($files)->toContain('app/Chisel/Features/AuthFeatures.php')
+        ->and($files)->toContain('app/Chisel/Features/OptionalModules.php')
+        ->and($dirs)->toContain('app/Chisel/Features');
 });

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Chisel\Installer\ConfigCleaner;
+use App\Chisel\Installer\FrontendPackagePruner;
+use Illuminate\Process\Factory;
+use Illuminate\Support\Facades\Facade;
 use Laravel\Chisel\Chisel;
 use Symfony\Component\Yaml\Yaml;
 
@@ -375,4 +379,91 @@ XML;
     expect($contents)->not->toContain('InstallFeaturesCommand.php')
         ->and($contents)->not->toContain('<exclude>')
         ->and($xml)->not->toBeFalse();
+});
+
+test('chiselCleanPhpstanConfig handles missing phpstan.neon gracefully', function (): void {
+    expect(fn () => chiselCleanPhpstanConfig($this->tempDir))->not->toThrow(Throwable::class);
+});
+
+test('chiselCleanPhpunitConfig handles missing phpunit.xml gracefully', function (): void {
+    expect(fn () => chiselCleanPhpunitConfig($this->tempDir))->not->toThrow(Throwable::class);
+});
+
+test('ConfigCleaner cleanPhpstan can remove permission migration exclude path', function (): void {
+    $neon = <<<'NEON'
+parameters:
+    excludePaths:
+        - database/migrations/*_create_permission_tables.php
+        - other/path.php
+    level: max
+NEON;
+    $file = $this->tempDir.'/phpstan.neon';
+    file_put_contents($file, $neon);
+
+    ConfigCleaner::cleanPhpstan($this->tempDir, removePermissionMigrationExclude: true);
+
+    $contents = (string) file_get_contents($file);
+    expect($contents)->not->toContain('create_permission_tables')
+        ->and($contents)->toContain('other/path.php');
+});
+
+test('ConfigCleaner handles blank lines between kept items and trailing blank lines in section', function (): void {
+    $neon = <<<'NEON'
+parameters:
+    bootstrapFiles:
+        - chisel.php
+
+        - keep-first.php
+
+        - keep-second.php
+
+    level: max
+NEON;
+    $file = $this->tempDir.'/phpstan.neon';
+    file_put_contents($file, $neon);
+
+    ConfigCleaner::cleanPhpstan($this->tempDir);
+
+    $contents = (string) file_get_contents($file);
+    expect($contents)->not->toContain('chisel.php')
+        ->and($contents)->toContain('keep-first.php')
+        ->and($contents)->toContain('keep-second.php');
+});
+
+test('FrontendPackagePruner removes packages when ProcessFacade root is null', function (): void {
+    $binDir = $this->tempDir.'/bin';
+    mkdir($binDir, 0777, true);
+    file_put_contents($binDir.'/npm', "#!/bin/sh\nexit 0\n");
+    chmod($binDir.'/npm', 0755);
+
+    $origPath = getenv('PATH') ?: '';
+    $newPath = $binDir.':'.$origPath;
+    putenv('PATH='.$newPath);
+    $_ENV['PATH'] = $newPath;
+    $_SERVER['PATH'] = $newPath;
+
+    $packageJson = [
+        'dependencies' => [
+            'test-pkg' => '^1.0.0',
+        ],
+    ];
+    file_put_contents($this->tempDir.'/package.json', json_encode($packageJson));
+
+    $app = Facade::getFacadeApplication();
+    Facade::setFacadeApplication(null);
+    Facade::clearResolvedInstance(Factory::class);
+
+    try {
+        $chisel = Chisel::in($this->tempDir);
+        FrontendPackagePruner::removePackages($this->tempDir, $chisel, 'test-pkg');
+
+        $data = json_decode((string) file_get_contents($this->tempDir.'/package.json'), true);
+        expect($data['dependencies'] ?? [])->not->toHaveKey('test-pkg');
+    } finally {
+        Facade::setFacadeApplication($app);
+        Facade::clearResolvedInstance(Factory::class);
+        putenv('PATH='.$origPath);
+        $_ENV['PATH'] = $origPath;
+        $_SERVER['PATH'] = $origPath;
+    }
 });

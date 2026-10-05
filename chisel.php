@@ -8,7 +8,8 @@ if (! class_exists('Laravel\Chisel\Chisel')) {
 
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\Cleanup;
-use App\Chisel\Installer\ComposerSynchronizer;
+use App\Chisel\Installer\ComposerLockSynchronizer;
+use App\Chisel\Installer\ComposerManifestPruner;
 use App\Chisel\Installer\ConfigCleaner;
 use App\Chisel\Installer\DependencyValidator;
 use App\Chisel\Installer\DirectoryPruner;
@@ -94,14 +95,14 @@ if (! function_exists('chiselRemoveFrontendPackages')) {
 if (! function_exists('chiselRemoveComposerPackages')) {
     function chiselRemoveComposerPackages(string $directory, string ...$packages): void
     {
-        ComposerSynchronizer::removePackages($directory, ...$packages);
+        ComposerManifestPruner::removePackages($directory, ...$packages);
     }
 }
 
 if (! function_exists('chiselCleanComposerPostCreate')) {
     function chiselCleanComposerPostCreate(string $directory): void
     {
-        ComposerSynchronizer::cleanPostCreate($directory);
+        ComposerManifestPruner::cleanPostCreate($directory);
     }
 }
 
@@ -111,7 +112,7 @@ if (! function_exists('chiselSyncComposerLock')) {
      */
     function chiselSyncComposerLock(string $directory, ?array $paths = null): void
     {
-        ComposerSynchronizer::syncLock($directory, $paths);
+        ComposerLockSynchronizer::sync($directory, $paths);
     }
 }
 

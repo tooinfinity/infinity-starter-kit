@@ -111,3 +111,18 @@ test('never deletes project root directory or protected top-level directories', 
         expect(is_dir($this->tempDir.'/'.$dir))->toBeTrue();
     }
 });
+
+test('does not prune directory that points outside project base root via symlink', function (): void {
+    $outsideDir = sys_get_temp_dir().'/chisel_outside_'.bin2hex(random_bytes(6));
+    mkdir($outsideDir, 0777, true);
+    mkdir($this->tempDir.'/app', 0777, true);
+    symlink($outsideDir, $this->tempDir.'/app/OutsideSymlink');
+
+    try {
+        chiselPruneEmptyDirectories($this->tempDir, ['app/OutsideSymlink/empty']);
+        expect(is_dir($outsideDir))->toBeTrue();
+    } finally {
+        @unlink($this->tempDir.'/app/OutsideSymlink');
+        @rmdir($outsideDir);
+    }
+});

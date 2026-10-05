@@ -301,7 +301,7 @@ The starter kit separates installer concerns into data, behavior, and orchestrat
 
 - **Feature Metadata (`App\Chisel\FeatureRegistry`)** — The authoritative single source of truth for all feature definitions (`FeatureDefinition`), paths, dependencies, Composer packages, and npm packages.
 - **Dependency Validation (`App\Chisel\Installer\DependencyValidator`)** — Pre-mutation validation that verifies required module dependencies and fails fast before mutations occur.
-- **Composer & Lock Synchronization (`App\Chisel\Installer\ComposerSynchronizer`)** — Modifies `composer.json` requirements and synchronizes `composer.lock` via dynamic candidate discovery.
+- **Composer Manifest & Lock Synchronization (`App\Chisel\Installer\ComposerManifestPruner`, `App\Chisel\Installer\ComposerLockSynchronizer`)** — Modifies `composer.json` requirements and synchronizes `composer.lock` via dynamic candidate discovery.
 - **Directory & Frontend Pruning (`App\Chisel\Installer\DirectoryPruner`, `App\Chisel\Installer\FrontendPackagePruner`, `App\Chisel\Installer\FeaturePruner`)** — Handles safe directory pruning respecting protected directories and npm package pruning supporting `LARAVEL_INSTALLER_NO_NODE`.
 - **Config & Infrastructure Cleanup (`App\Chisel\Installer\ConfigCleaner`, `App\Chisel\Installer\Cleanup`)** — Cleans PHPStan NEON, PHPUnit XML, strips installer files, and ensures zero runtime installer overhead.
 - **Chisel Orchestration (`chisel.php`)** — Pure orchestration layer defining CLI prompts, life cycle, and feature delegation.
