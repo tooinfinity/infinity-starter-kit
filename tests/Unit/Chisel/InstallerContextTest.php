@@ -33,3 +33,23 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         ->and($context->skipNode)->toBeFalse()
         ->and($context->isMockedScript)->toBeTrue();
 });
+
+test('installer context redacts admin secrets from messages', function (): void {
+    $context = new InstallerContext(
+        providedAnswers: ['admin' => ['password' => 'inner-secret']],
+        answers: [],
+        paths: [],
+        selectedModules: [],
+        selectedAuthFeatures: [],
+        hasAuthorization: false,
+        adminName: null,
+        adminEmail: null,
+        adminPassword: 'direct-secret',
+        isNonInteractive: true,
+        skipNode: false,
+        isMockedScript: false,
+    );
+
+    $redacted = $context->redact('Error: direct-secret failed with inner-secret');
+    expect($redacted)->toBe('Error: [REDACTED] failed with [REDACTED]');
+});

@@ -6,7 +6,9 @@ namespace App\Chisel;
 
 use App\Chisel\Features\AuthFeatures;
 use App\Chisel\Features\OptionalModules;
+use App\Chisel\Installer\Cleanup;
 use InvalidArgumentException;
+use Tests\Support\CrossFeatureTests;
 
 /**
  * Authoritative registry composing all starter kit features, dependencies, and installer metadata.
@@ -49,19 +51,6 @@ final class FeatureRegistry
     }
 
     /**
-     * @return array<string, list<string>>
-     */
-    public static function dependencies(): array
-    {
-        return [
-            'reporting' => ['audit-trails', 'user-management', 'authorization'],
-            'audit-trails' => ['authorization'],
-            'user-management' => ['authorization'],
-            'settings' => ['authorization'],
-        ];
-    }
-
-    /**
      * @return list<string>
      */
     public static function allComposerPackages(): array
@@ -89,89 +78,6 @@ final class FeatureRegistry
         }
 
         return array_values(array_unique($packages));
-    }
-
-    /**
-     * @return list<array{features: list<string>, files: list<string>}>
-     */
-    public static function crossFeatureTests(): array
-    {
-        return [
-            [
-                'features' => ['audit-trails', 'settings'],
-                'files' => ['tests/Feature/AuditTrails/SettingsAuditingTest.php'],
-            ],
-            [
-                'features' => ['audit-trails', 'user-management'],
-                'files' => ['tests/Feature/AuditTrails/UserAuditingTest.php'],
-            ],
-            [
-                'features' => ['notifications', 'localization'],
-                'files' => ['tests/Feature/Notifications/NotificationLocalizationTest.php'],
-            ],
-            [
-                'features' => ['reporting', 'localization'],
-                'files' => ['tests/Feature/Reporting/ReportingLocalizationTest.php'],
-            ],
-        ];
-    }
-
-    /**
-     * @return list<string>
-     */
-    public static function cleanupFiles(): array
-    {
-        return [
-            'app/Console/Commands/InstallFeaturesCommand.php',
-            'app/Console/Commands/SetupAuthorizationCommand.php',
-            'app/Console/Commands/SetupAdminUserCommand.php',
-            'chisel.php',
-            'chisel-paths.php',
-            'app/Chisel/FeatureDefinition.php',
-            'app/Chisel/FeatureRegistry.php',
-            'app/Chisel/Features/AuthFeatures.php',
-            'app/Chisel/Features/OptionalModules.php',
-            'app/Chisel/Installer/DependencyValidator.php',
-            'app/Chisel/Installer/InstallerContext.php',
-            'app/Chisel/Installer/ComposerManifestPruner.php',
-            'app/Chisel/Installer/ComposerLockSynchronizer.php',
-            'app/Chisel/Installer/FrontendPackagePruner.php',
-            'app/Chisel/Installer/DirectoryPruner.php',
-            'app/Chisel/Installer/ConfigCleaner.php',
-            'app/Chisel/Installer/Cleanup.php',
-            'app/Chisel/Installer/FeaturePruner.php',
-            'tests/Unit/Chisel/DirectoryPruningTest.php',
-            'tests/Unit/Chisel/JsonPruningTest.php',
-            'tests/Unit/Chisel/FeatureRegistryTest.php',
-            'tests/Unit/Chisel/DependencyValidatorTest.php',
-            'tests/Unit/Chisel/InstallerContextTest.php',
-            'tests/Unit/Chisel/FeaturePrunerTest.php',
-            'tests/Unit/Chisel/CleanupTest.php',
-            'tests/Unit/Chisel/ComposerManifestPrunerTest.php',
-            'tests/Unit/Chisel/ComposerLockSynchronizerTest.php',
-            'tests/Feature/Chisel/DependencyValidationTest.php',
-            'tests/Feature/Chisel/FeatureCombinationTest.php',
-            'tests/Feature/Chisel/GeneratedProjectLifecycleTest.php',
-            'tests/Feature/Chisel/ComposerCreateProjectLifecycleTest.php',
-            'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
-            'tests/Feature/Chisel/MarkerIntegrityTest.php',
-            'tests/Feature/Chisel/RegistryIntegrityTest.php',
-            'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
-        ];
-    }
-
-    /**
-     * @return list<string>
-     */
-    public static function cleanupDirectories(): array
-    {
-        return [
-            'app/Chisel/Installer',
-            'app/Chisel/Features',
-            'app/Chisel',
-            'tests/Unit/Chisel',
-            'tests/Feature/Chisel',
-        ];
     }
 
     /**
@@ -379,13 +285,35 @@ final class FeatureRegistry
                 'composer_package' => 'spatie/laravel-data',
             ],
 
-            'dependencies' => self::dependencies(),
+            'dependencies' => (function (): array {
+                $deps = [];
+                foreach (self::optionalModules() as $key => $feature) {
+                    if ($feature->dependencies !== []) {
+                        $deps[$key] = $feature->dependencies;
+                    }
+                }
 
-            'cross_feature_tests' => self::crossFeatureTests(),
+                uksort($deps, function (string $a, string $b) use ($deps): int {
+                    $countDiff = count($deps[$b]) <=> count($deps[$a]);
+                    if ($countDiff !== 0) {
+                        return $countDiff;
+                    }
+
+                    $order = ['audit-trails' => 1, 'user-management' => 2, 'settings' => 3];
+
+                    return ($order[$a] ?? 99) <=> ($order[$b] ?? 99);
+                });
+
+                return $deps;
+            })(),
+
+            'cross_feature_tests' => class_exists(CrossFeatureTests::class)
+                ? CrossFeatureTests::all()
+                : [],
 
             'chisel' => [
-                'files' => self::cleanupFiles(),
-                'empty_dirs' => self::cleanupDirectories(),
+                'files' => Cleanup::files(),
+                'empty_dirs' => Cleanup::directories(),
             ],
         ];
     }

@@ -129,9 +129,9 @@ if (! function_exists('chiselPruneEmptyDirectories')) {
 if (! function_exists('chiselValidateDependencies')) {
     /**
      * @param  array<string, mixed>  $answers
-     * @param  array<string, list<string>>  $dependencyMap
+     * @param  array<string, mixed>|null  $dependencyMap
      */
-    function chiselValidateDependencies(array $answers, array $dependencyMap): void
+    function chiselValidateDependencies(array $answers, ?array $dependencyMap = null): void
     {
         DependencyValidator::validate($answers, $dependencyMap);
     }
@@ -222,8 +222,8 @@ $script = Chisel::script(__DIR__)
             hint: 'Use space to select, enter to confirm.',
         ),
     ])
-    ->apply(function (Chisel $chisel, array $answers) use ($paths): void {
-        chiselValidateDependencies($answers, $paths['dependencies'] ?? []);
+    ->apply(function (Chisel $chisel, array $answers): void {
+        chiselValidateDependencies($answers);
     })
     ->selected(
         'auth_features',
@@ -244,7 +244,7 @@ $script = Chisel::script(__DIR__)
             // Marker: 'email-verification'
             FeaturePruner::applySelected($chisel, $authFeatures['email-verification']);
         },
-        else: function (Chisel $chisel) use ($authFeatures, $directory, $paths): void {
+        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('MustVerifyEmail');
 
@@ -254,11 +254,7 @@ $script = Chisel::script(__DIR__)
             // Marker: 'email-verification'
             FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['email-verification']);
 
-            $profilePath = is_array($paths['auth'] ?? null) && is_string($paths['auth']['profile'] ?? null)
-                ? $paths['auth']['profile']
-                : 'resources/js/pages/user-profile/edit.tsx';
-
-            $chisel->file($profilePath)
+            $chisel->file('resources/js/pages/user-profile/edit.tsx')
                 ->replace(
                     "import { Form, Head, Link, usePage } from '@inertiajs/react';",
                     "import { Form, Head, usePage } from '@inertiajs/react';",

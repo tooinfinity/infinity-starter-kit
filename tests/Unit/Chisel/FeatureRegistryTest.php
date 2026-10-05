@@ -6,6 +6,7 @@ use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Features\AuthFeatures;
 use App\Chisel\Features\OptionalModules;
+use App\Chisel\Installer\Cleanup;
 
 test('all expected features are registered in feature registry', function (): void {
     $auth = FeatureRegistry::authFeatures();
@@ -99,15 +100,14 @@ test('feature registry returns correct composer packages and npm packages', func
     expect($frontendPackages)->toContain('@erag/lang-sync-inertia');
 });
 
-test('feature registry dependencies match expected dependency graph', function (): void {
-    $deps = FeatureRegistry::dependencies();
-
-    expect($deps)->toBe([
-        'reporting' => ['audit-trails', 'user-management', 'authorization'],
-        'audit-trails' => ['authorization'],
-        'user-management' => ['authorization'],
-        'settings' => ['authorization'],
-    ]);
+test('registered feature definitions declare expected dependencies', function (): void {
+    expect(FeatureRegistry::get('reporting')->dependencies)->toBe(['audit-trails', 'user-management', 'authorization'])
+        ->and(FeatureRegistry::get('audit-trails')->dependencies)->toBe(['authorization'])
+        ->and(FeatureRegistry::get('user-management')->dependencies)->toBe(['authorization'])
+        ->and(FeatureRegistry::get('settings')->dependencies)->toBe(['authorization'])
+        ->and(FeatureRegistry::get('authorization')->dependencies)->toBe([])
+        ->and(FeatureRegistry::get('localization')->dependencies)->toBe([])
+        ->and(FeatureRegistry::get('notifications')->dependencies)->toBe([]);
 });
 
 test('toPathsArray produces structure matching chisel-paths specification', function (): void {
@@ -129,11 +129,20 @@ test('toPathsArray produces structure matching chisel-paths specification', func
     ]);
 });
 
-test('cleanup files and directories contain all chisel infrastructure including split feature classes', function (): void {
-    $files = FeatureRegistry::cleanupFiles();
-    $dirs = FeatureRegistry::cleanupDirectories();
+test('cleanup files and directories are owned by Cleanup class', function (): void {
+    $files = Cleanup::files();
+    $dirs = Cleanup::directories();
 
     expect($files)->toContain('app/Chisel/Features/AuthFeatures.php')
         ->and($files)->toContain('app/Chisel/Features/OptionalModules.php')
         ->and($dirs)->toContain('app/Chisel/Features');
+});
+
+test('feature registry does not expose cleanup or test metadata methods', function (): void {
+    $reflection = new ReflectionClass(FeatureRegistry::class);
+
+    expect($reflection->hasMethod('cleanupFiles'))->toBeFalse()
+        ->and($reflection->hasMethod('cleanupDirectories'))->toBeFalse()
+        ->and($reflection->hasMethod('crossFeatureTests'))->toBeFalse()
+        ->and($reflection->hasMethod('dependencies'))->toBeFalse();
 });
