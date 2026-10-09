@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Chisel\Installer\InstallerContextResolver;
+use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Console\OutputStyle;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Question;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -12,7 +14,7 @@ use Symfony\Component\Console\Output\BufferedOutput;
 $cleanEnv = function (string ...$keys): void {
     foreach ($keys as $key) {
         putenv($key);
-        unset($_ENV[$key], $_SERVER[$key]);
+        unset($GLOBALS['_ENV'][$key], $GLOBALS['_SERVER'][$key]);
     }
 };
 
@@ -35,12 +37,10 @@ test('hasEnvironmentAnswers returns true for LARAVEL_INSTALLER_ANSWERS when CHIS
 test('resolve obtains answers from CHISEL_ANSWERS and LARAVEL_INSTALLER_ANSWERS environment variables', function () use ($cleanEnv): void {
     $cleanEnv('CHISEL_ANSWERS', 'LARAVEL_INSTALLER_ANSWERS');
 
-    $command = new class extends Command
-    {
-        protected $signature = 'test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}';
-    };
+    $command = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
     $command->setInput(new ArrayInput([], $command->getDefinition()));
-    $command->setOutput(new Illuminate\Console\OutputStyle(new ArrayInput([], $command->getDefinition()), new BufferedOutput));
+    $command->setOutput(new OutputStyle(new ArrayInput([], $command->getDefinition()), new BufferedOutput));
 
     $script = Chisel::script(base_path())
         ->questions([
@@ -79,12 +79,10 @@ test('resolve obtains answers from CHISEL_ANSWERS and LARAVEL_INSTALLER_ANSWERS 
 });
 
 test('resolve handles null and empty answers cleanly with default questions', function (): void {
-    $command = new class extends Command
-    {
-        protected $signature = 'test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}';
-    };
+    $command = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
     $command->setInput(new ArrayInput([], $command->getDefinition()));
-    $command->setOutput(new Illuminate\Console\OutputStyle(new ArrayInput([], $command->getDefinition()), new BufferedOutput));
+    $command->setOutput(new OutputStyle(new ArrayInput([], $command->getDefinition()), new BufferedOutput));
 
     $script = Chisel::script(base_path())
         ->questions([
@@ -107,12 +105,10 @@ test('resolve extracts admin credentials from answers flat fields and environmen
     putenv('CHISEL_ADMIN_PASSWORD=envpass');
     $_ENV['CHISEL_ADMIN_PASSWORD'] = 'envpass';
 
-    $command = new class extends Command
-    {
-        protected $signature = 'test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}';
-    };
+    $command = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
     $command->setInput(new ArrayInput([], $command->getDefinition()));
-    $command->setOutput(new Illuminate\Console\OutputStyle(new ArrayInput([], $command->getDefinition()), new BufferedOutput));
+    $command->setOutput(new OutputStyle(new ArrayInput([], $command->getDefinition()), new BufferedOutput));
 
     $script = Chisel::script(base_path())
         ->questions([
@@ -130,17 +126,15 @@ test('resolve extracts admin credentials from answers flat fields and environmen
     }
 
     // Flat fields in providedAnswers
-    $commandWithAnswers = new class extends Command
-    {
-        protected $signature = 'test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}';
-    };
+    $commandWithAnswers = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
     $answers = json_encode([
         'admin_name' => 'FlatName',
         'admin_email' => 'flat@example.com',
         'admin_password' => 'flatpass',
     ], JSON_THROW_ON_ERROR);
     $commandWithAnswers->setInput(new ArrayInput(['--answers' => $answers], $commandWithAnswers->getDefinition()));
-    $commandWithAnswers->setOutput(new Illuminate\Console\OutputStyle(new ArrayInput([], $commandWithAnswers->getDefinition()), new BufferedOutput));
+    $commandWithAnswers->setOutput(new OutputStyle(new ArrayInput([], $commandWithAnswers->getDefinition()), new BufferedOutput));
 
     $contextFlat = InstallerContextResolver::resolve($commandWithAnswers, $script, isMockedScript: true, isInteractive: false);
     expect($contextFlat->adminName)->toBe('FlatName')
@@ -151,10 +145,8 @@ test('resolve extracts admin credentials from answers flat fields and environmen
 test('shouldDeferInstallerHooks returns true only when LARAVEL_INSTALLER_DEFER_HOOKS is true and no answers present', function () use ($cleanEnv): void {
     $cleanEnv('LARAVEL_INSTALLER_DEFER_HOOKS', 'CHISEL_ANSWERS', 'LARAVEL_INSTALLER_ANSWERS');
 
-    $commandWithoutAnswers = new class extends Command
-    {
-        protected $signature = 'test:defer {--answers=}';
-    };
+    $commandWithoutAnswers = new #[Signature('test:defer {--answers=}')]
+    class extends Command {};
     $commandWithoutAnswers->setInput(new ArrayInput([], $commandWithoutAnswers->getDefinition()));
 
     expect(InstallerContextResolver::shouldDeferInstallerHooks($commandWithoutAnswers))->toBeFalse();
@@ -166,10 +158,8 @@ test('shouldDeferInstallerHooks returns true only when LARAVEL_INSTALLER_DEFER_H
     try {
         expect(InstallerContextResolver::shouldDeferInstallerHooks($commandWithoutAnswers))->toBeTrue();
 
-        $commandWithOption = new class extends Command
-        {
-            protected $signature = 'test:defer {--answers=}';
-        };
+        $commandWithOption = new #[Signature('test:defer {--answers=}')]
+        class extends Command {};
         $commandWithOption->setInput(new ArrayInput(['--answers' => '{}'], $commandWithOption->getDefinition()));
         expect(InstallerContextResolver::shouldDeferInstallerHooks($commandWithOption))->toBeFalse();
 

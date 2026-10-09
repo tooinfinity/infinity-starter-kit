@@ -78,6 +78,6 @@ test('installer context redacts secrets from CHISEL_ADMIN_PASSWORD env and flat 
         expect($redacted)->toBe('Failed [REDACTED] and [REDACTED]');
     } finally {
         putenv('CHISEL_ADMIN_PASSWORD');
-        unset($_ENV['CHISEL_ADMIN_PASSWORD'], $_SERVER['CHISEL_ADMIN_PASSWORD']);
+        unset($GLOBALS['_ENV']['CHISEL_ADMIN_PASSWORD'], $GLOBALS['_SERVER']['CHISEL_ADMIN_PASSWORD']);
     }
 });

@@ -274,7 +274,7 @@ test('validatePostCleanup detects unhandled chisel markers and stale installer t
         $context = makeContext(paths: ['chisel' => ['files' => []]]);
 
         // Unhandled chisel marker
-        File::put($tempDir.'/app/marked_file.php', '<?php // @chisel-auth');
+        File::put($tempDir.'/app/marked_file.php', '<?php // '.'@'.'chisel-auth');
         expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir))
             ->toThrow(RuntimeException::class, 'unhandled chisel marker in [app/marked_file.php].');
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Chisel\Installer\GeneratedApplicationConfigurator;
 use App\Chisel\Installer\InstallerContext;
 use Illuminate\Console\Command;
+use Illuminate\Console\OutputStyle;
 use Illuminate\Console\View\Components\Factory;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -52,7 +53,7 @@ test('configure handles authorization:setup exception with and without component
         }
     };
     $output = new BufferedOutput;
-    $components = new Factory(new Illuminate\Console\OutputStyle(new ArrayInput([]), $output));
+    $components = new Factory(new OutputStyle(new ArrayInput([]), $output));
 
     expect(GeneratedApplicationConfigurator::configure($failingCommand, $context, $components))->toBe(Command::FAILURE);
 
@@ -72,7 +73,7 @@ test('configure handles authorization:setup exception with and without component
         }
     };
 
-    expect(GeneratedApplicationConfigurator::configure($commandWithoutComponents, $context, null))->toBe(Command::FAILURE)
+    expect(GeneratedApplicationConfigurator::configure($commandWithoutComponents, $context))->toBe(Command::FAILURE)
         ->and($commandWithoutComponents->errors)->not->toBeEmpty();
 });
 
@@ -94,7 +95,7 @@ test('configure handles authorization:setup non-zero exit without components', f
         }
     };
 
-    expect(GeneratedApplicationConfigurator::configure($command, $context, null))->toBe(2)
+    expect(GeneratedApplicationConfigurator::configure($command, $context))->toBe(2)
         ->and($command->errors)->toContain('Authorization setup failed.');
 });
 
@@ -113,11 +114,12 @@ test('configure handles setupAdminUser exception with and without components', f
             if ($command === 'authorization:setup') {
                 return Command::SUCCESS;
             }
+
             throw new RuntimeException('Admin role assignment failed');
         }
     };
     $output = new BufferedOutput;
-    $components = new Factory(new Illuminate\Console\OutputStyle(new ArrayInput([]), $output));
+    $components = new Factory(new OutputStyle(new ArrayInput([]), $output));
 
     expect(GeneratedApplicationConfigurator::configure($command, $context, $components))->toBe(Command::FAILURE);
 
@@ -131,6 +133,7 @@ test('configure handles setupAdminUser exception with and without components', f
             if ($command === 'authorization:setup') {
                 return Command::SUCCESS;
             }
+
             throw new RuntimeException('Admin role assignment failed direct');
         }
 
@@ -140,7 +143,7 @@ test('configure handles setupAdminUser exception with and without components', f
         }
     };
 
-    expect(GeneratedApplicationConfigurator::configure($commandWithoutComponents, $context, null))->toBe(Command::FAILURE)
+    expect(GeneratedApplicationConfigurator::configure($commandWithoutComponents, $context))->toBe(Command::FAILURE)
         ->and($commandWithoutComponents->errors)->not->toBeEmpty();
 });
 
@@ -170,7 +173,7 @@ test('configure handles admin:setup non-zero exit without components', function 
         }
     };
 
-    expect(GeneratedApplicationConfigurator::configure($command, $context, null))->toBe(3)
+    expect(GeneratedApplicationConfigurator::configure($command, $context))->toBe(3)
         ->and($command->errors)->toContain('Administrator setup failed.');
 });
 
@@ -211,7 +214,7 @@ test('setupAdminUser skips admin in non-interactive mode with info logged withou
         }
     };
 
-    expect(GeneratedApplicationConfigurator::configure($command, $context, null))->toBe(Command::SUCCESS)
+    expect(GeneratedApplicationConfigurator::configure($command, $context))->toBe(Command::SUCCESS)
         ->and($command->infos)->toContain('No administrator credentials provided in non-interactive mode; skipping administrator creation.');
 });
 
@@ -226,7 +229,7 @@ test('configure handles authorization:setup non-zero exit with components', func
         }
     };
     $output = new BufferedOutput;
-    $components = new Factory(new Illuminate\Console\OutputStyle(new ArrayInput([]), $output));
+    $components = new Factory(new OutputStyle(new ArrayInput([]), $output));
 
     expect(GeneratedApplicationConfigurator::configure($command, $context, $components))->toBe(4)
         ->and($output->fetch())->toContain('Authorization setup failed.');
@@ -251,7 +254,7 @@ test('configure handles admin:setup non-zero exit with components', function ():
         }
     };
     $output = new BufferedOutput;
-    $components = new Factory(new Illuminate\Console\OutputStyle(new ArrayInput([]), $output));
+    $components = new Factory(new OutputStyle(new ArrayInput([]), $output));
 
     expect(GeneratedApplicationConfigurator::configure($command, $context, $components))->toBe(5)
         ->and($output->fetch())->toContain('Administrator setup failed.');
@@ -300,7 +303,7 @@ test('setupAdminUser skips admin in non-interactive mode with info logged to com
         }
     };
     $output = new BufferedOutput;
-    $components = new Factory(new Illuminate\Console\OutputStyle(new ArrayInput([]), $output));
+    $components = new Factory(new OutputStyle(new ArrayInput([]), $output));
 
     expect(GeneratedApplicationConfigurator::configure($command, $context, $components))->toBe(Command::SUCCESS)
         ->and($output->fetch())->toContain('No administrator credentials provided in non-interactive mode; skipping administrator creation.');
