@@ -195,3 +195,82 @@ test('composer lock synchronizer cleans bootstrap caches and triggers package di
         $_ENV['PATH'] = $originalPath;
     }
 });
+
+test('composer lock synchronizer discovers feature packages from FeatureRegistry even with empty paths array', function (): void {
+    $binDir = $this->tempDir.'/bin';
+    mkdir($binDir, 0777, true);
+    $capturedArgsFile = $this->tempDir.'/composer_args.txt';
+    $mockComposer = $binDir.'/composer';
+    file_put_contents($mockComposer, "#!/bin/sh\necho \"$@\" > ".escapeshellarg($capturedArgsFile)."\nexit 0\n");
+    chmod($mockComposer, 0755);
+
+    $composerJson = [
+        'name' => 'test/project',
+        'require' => ['php' => '^8.5.0'],
+    ];
+
+    $composerLock = [
+        'packages' => [
+            ['name' => 'spatie/laravel-permission'],
+            ['name' => 'unrelated/package'],
+        ],
+    ];
+
+    file_put_contents($this->tempDir.'/composer.json', json_encode($composerJson));
+    file_put_contents($this->tempDir.'/composer.lock', json_encode($composerLock));
+
+    $originalPath = getenv('PATH') ?: '';
+    putenv('PATH='.$binDir.':'.$originalPath);
+    $_SERVER['PATH'] = $binDir.':'.$originalPath;
+    $_ENV['PATH'] = $binDir.':'.$originalPath;
+
+    try {
+        // Pass empty paths array; candidate should still be discovered from FeatureRegistry::allComposerPackages()
+        ComposerLockSynchronizer::sync($this->tempDir, []);
+
+        expect(file_exists($capturedArgsFile))->toBeTrue();
+        $capturedArgs = (string) file_get_contents($capturedArgsFile);
+        expect($capturedArgs)->toContain('spatie/laravel-permission')
+            ->and($capturedArgs)->not->toContain('unrelated/package');
+    } finally {
+        putenv('PATH='.$originalPath);
+        $_SERVER['PATH'] = $originalPath;
+        $_ENV['PATH'] = $originalPath;
+    }
+});
+
+test('composer lock synchronizer formats exception from standard output when error output is empty', function (): void {
+    $binDir = $this->tempDir.'/bin';
+    mkdir($binDir, 0777, true);
+    $mockComposer = $binDir.'/composer';
+    file_put_contents($mockComposer, "#!/bin/sh\necho \"stdout error details\"\nexit 1\n");
+    chmod($mockComposer, 0755);
+
+    $composerJson = [
+        'name' => 'test/project',
+        'require' => ['php' => '^8.5.0'],
+    ];
+
+    $composerLock = [
+        'packages' => [
+            ['name' => 'spatie/laravel-permission'],
+        ],
+    ];
+
+    file_put_contents($this->tempDir.'/composer.json', json_encode($composerJson));
+    file_put_contents($this->tempDir.'/composer.lock', json_encode($composerLock));
+
+    $originalPath = getenv('PATH') ?: '';
+    putenv('PATH='.$binDir.':'.$originalPath);
+    $_SERVER['PATH'] = $binDir.':'.$originalPath;
+    $_ENV['PATH'] = $binDir.':'.$originalPath;
+
+    try {
+        expect(fn () => ComposerLockSynchronizer::sync($this->tempDir))
+            ->toThrow(RuntimeException::class, 'Failed to synchronize composer.lock: stdout error details');
+    } finally {
+        putenv('PATH='.$originalPath);
+        $_SERVER['PATH'] = $originalPath;
+        $_ENV['PATH'] = $originalPath;
+    }
+});

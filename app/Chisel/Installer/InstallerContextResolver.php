@@ -36,10 +36,25 @@ final class InstallerContextResolver
      */
     public static function hasEnvironmentAnswers(): bool
     {
-        $raw = Env::get('CHISEL_ANSWERS', Request::server('CHISEL_ANSWERS') ?? getenv('CHISEL_ANSWERS'))
-            ?? Env::get('LARAVEL_INSTALLER_ANSWERS', Request::server('LARAVEL_INSTALLER_ANSWERS') ?? getenv('LARAVEL_INSTALLER_ANSWERS'));
+        return self::environmentAnswers() !== null;
+    }
 
-        return is_string($raw) && mb_trim($raw) !== '';
+    /**
+     * Retrieves answers supplied through environment variables if available.
+     */
+    public static function environmentAnswers(): ?string
+    {
+        $chisel = Env::get('CHISEL_ANSWERS', Request::server('CHISEL_ANSWERS') ?? (getenv('CHISEL_ANSWERS') ?: null));
+        if (is_string($chisel) && mb_trim($chisel) !== '') {
+            return $chisel;
+        }
+
+        $installer = Env::get('LARAVEL_INSTALLER_ANSWERS', Request::server('LARAVEL_INSTALLER_ANSWERS') ?? (getenv('LARAVEL_INSTALLER_ANSWERS') ?: null));
+        if (is_string($installer) && mb_trim($installer) !== '') {
+            return $installer;
+        }
+
+        return null;
     }
 
     /**
@@ -73,9 +88,7 @@ final class InstallerContextResolver
 
         $rawAnswers = $command->option('answers');
         if (! is_string($rawAnswers) || $rawAnswers === '') {
-            $envAnswers = Env::get('CHISEL_ANSWERS', Request::server('CHISEL_ANSWERS') ?? getenv('CHISEL_ANSWERS'))
-                ?? Env::get('LARAVEL_INSTALLER_ANSWERS', Request::server('LARAVEL_INSTALLER_ANSWERS') ?? getenv('LARAVEL_INSTALLER_ANSWERS'));
-            $rawAnswers = is_string($envAnswers) ? $envAnswers : null;
+            $rawAnswers = self::environmentAnswers();
         }
 
         $providedAnswers = ($rawAnswers === null || $rawAnswers === '')

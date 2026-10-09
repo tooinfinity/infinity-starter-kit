@@ -63,6 +63,10 @@ final class ComposerLockSynchronizer
             }
         }
 
+        foreach (FeatureRegistry::allComposerPackages() as $pkg) {
+            $candidates[] = $pkg;
+        }
+
         $candidates = array_values(array_unique($candidates));
 
         $removedPackages = [];

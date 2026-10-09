@@ -146,3 +146,84 @@ test('feature registry does not expose cleanup or test metadata methods', functi
         ->and($reflection->hasMethod('crossFeatureTests'))->toBeFalse()
         ->and($reflection->hasMethod('dependencies'))->toBeFalse();
 });
+
+test('toPathsArray composer packages match feature definition composer packages', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    $optionalModules = FeatureRegistry::optionalModules();
+
+    $featureToPathsKey = [
+        'authorization' => 'authorization',
+        'localization' => 'localization',
+    ];
+
+    foreach ($featureToPathsKey as $featureKey => $pathsKey) {
+        $definition = $optionalModules[$featureKey];
+        $pathData = $paths[$pathsKey];
+
+        if (isset($definition->composerPackages[0])) {
+            expect($pathData['composer_package'] ?? null)
+                ->toBe($definition->composerPackages[0], "Composer package for [{$featureKey}] diverges between FeatureDefinition and toPathsArray().");
+        }
+    }
+
+    foreach ($optionalModules as $key => $definition) {
+        if ($definition->composerPackages === []) {
+            $pathsKey = str_replace('-', '_', $key);
+            if (isset($paths[$pathsKey])) {
+                expect(isset($paths[$pathsKey]['composer_package']))
+                    ->toBeFalse("Feature [{$key}] has no composer packages in definition but toPathsArray declares one.");
+            }
+        }
+    }
+});
+
+test('toPathsArray frontend packages match feature definition frontend packages', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    $optionalModules = FeatureRegistry::optionalModules();
+
+    foreach ($optionalModules as $key => $definition) {
+        $pathsKey = str_replace('-', '_', $key);
+        if (! isset($paths[$pathsKey]) || ! is_array($paths[$pathsKey])) {
+            continue;
+        }
+
+        $pathData = $paths[$pathsKey];
+
+        if (isset($definition->frontendPackages[0])) {
+            expect($pathData['frontend_package'] ?? null)
+                ->toBe($definition->frontendPackages[0], "Frontend package for [{$key}] diverges between FeatureDefinition and toPathsArray().");
+        } else {
+            expect(isset($pathData['frontend_package']))
+                ->toBeFalse("Feature [{$key}] has no frontend packages in definition but toPathsArray declares one.");
+        }
+    }
+});
+
+test('toPathsArray empty directories match feature definition empty directories for optional modules', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    $optionalModules = FeatureRegistry::optionalModules();
+
+    foreach ($optionalModules as $key => $definition) {
+        $pathsKey = str_replace('-', '_', $key);
+        if (! isset($paths[$pathsKey]) || ! is_array($paths[$pathsKey])) {
+            continue;
+        }
+
+        $pathData = $paths[$pathsKey];
+
+        if ($definition->emptyDirectories !== []) {
+            expect($pathData['empty_dirs'] ?? null)
+                ->toBe($definition->emptyDirectories, "Empty directories for [{$key}] diverge between FeatureDefinition and toPathsArray().");
+        }
+    }
+});
+
+test('allComposerPackages includes every package from all feature definitions', function (): void {
+    $allPackages = FeatureRegistry::allComposerPackages();
+
+    foreach (FeatureRegistry::all() as $definition) {
+        foreach ($definition->composerPackages as $pkg) {
+            expect($allPackages)->toContain($pkg);
+        }
+    }
+});

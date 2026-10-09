@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\DependencyValidator;
 use App\Chisel\Installer\GeneratedApplicationConfigurator;
 use App\Chisel\Installer\GeneratedApplicationValidator;
@@ -106,7 +107,7 @@ final class InstallFeaturesCommand extends Command
 
         /** @var array{chisel?: array{files?: list<string>, empty_dirs?: list<string>}} $paths */
         $paths = $context->paths;
-        chiselCleanup(base_path(), $paths);
+        Cleanup::clean(base_path(), $paths);
 
         return true;
     }

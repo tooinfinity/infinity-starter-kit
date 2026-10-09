@@ -87,6 +87,14 @@ final class FeatureRegistry
      */
     public static function toPathsArray(): array
     {
+        $authorization = self::optionalModules()['authorization'];
+        $settings = self::optionalModules()['settings'];
+        $userManagement = self::optionalModules()['user-management'];
+        $localization = self::optionalModules()['localization'];
+        $notifications = self::optionalModules()['notifications'];
+        $auditTrails = self::optionalModules()['audit-trails'];
+        $reporting = self::optionalModules()['reporting'];
+
         return [
             'auth' => [
                 'login' => 'resources/js/pages/session/create.tsx',
@@ -116,10 +124,8 @@ final class FeatureRegistry
                     'resources/js/components/can.tsx',
                     'resources/js/hooks/use-authorization.ts',
                 ],
-                'composer_package' => 'spatie/laravel-permission',
-                'empty_dirs' => [
-                    'tests/Feature/Authorization',
-                ],
+                ...self::derivedPackageKeys($authorization),
+                'empty_dirs' => $authorization->emptyDirectories,
             ],
 
             'settings' => [
@@ -127,10 +133,7 @@ final class FeatureRegistry
                     'resources/js/pages/settings/application/edit.tsx',
                 ],
                 'types' => 'resources/js/types/settings.ts',
-                'empty_dirs' => [
-                    'resources/js/pages/settings/application',
-                    'tests/Feature/Settings',
-                ],
+                'empty_dirs' => $settings->emptyDirectories,
             ],
 
             'user_management' => [
@@ -143,16 +146,7 @@ final class FeatureRegistry
                     'resources/js/pages/users/edit.tsx',
                 ],
                 'types' => 'resources/js/types/users.ts',
-                'empty_dirs' => [
-                    'app/Actions/Users',
-                    'app/Data/Users',
-                    'app/Http/Controllers/Users',
-                    'app/Http/Requests/Users',
-                    'app/Queries/Users',
-                    'resources/js/components/users',
-                    'resources/js/pages/users',
-                    'tests/Feature/Users',
-                ],
+                'empty_dirs' => $userManagement->emptyDirectories,
             ],
 
             'localization' => [
@@ -160,8 +154,7 @@ final class FeatureRegistry
                     'resources/js/components/language-selector.tsx',
                 ],
                 'types' => 'resources/js/types/localization.ts',
-                'composer_package' => 'erag/laravel-lang-sync-inertia',
-                'frontend_package' => '@erag/lang-sync-inertia',
+                ...self::derivedPackageKeys($localization),
                 'extra_lang_files' => [
                     'lang/fr/common.php',
                     'lang/fr/localization.php',
@@ -174,11 +167,7 @@ final class FeatureRegistry
                     'lang/ar/reports.php',
                     'lang/ar/audit.php',
                 ],
-                'empty_dirs' => [
-                    'tests/Feature/Localization',
-                    'lang/fr',
-                    'lang/ar',
-                ],
+                'empty_dirs' => $localization->emptyDirectories,
             ],
 
             'notifications' => [
@@ -193,17 +182,7 @@ final class FeatureRegistry
                     'resources/js/pages/settings/notifications/edit.tsx',
                 ],
                 'types' => 'resources/js/types/notifications.ts',
-                'empty_dirs' => [
-                    'app/Actions/Notifications',
-                    'app/Http/Requests/Notifications',
-                    'app/Notifications',
-                    'resources/js/components/notifications',
-                    'resources/js/pages/notifications',
-                    'resources/js/pages/settings/notifications',
-                    'tests/Feature/Notifications',
-                    'tests/Unit/Actions/Notifications',
-                    'tests/Unit/Notifications',
-                ],
+                'empty_dirs' => $notifications->emptyDirectories,
             ],
 
             'audit_trails' => [
@@ -214,15 +193,7 @@ final class FeatureRegistry
                     'resources/js/pages/audit-trails/index.tsx',
                 ],
                 'types' => 'resources/js/types/audit-trails.ts',
-                'empty_dirs' => [
-                    'app/Actions/AuditTrails',
-                    'app/Http/Controllers/AuditTrails',
-                    'app/Http/Requests/AuditTrails',
-                    'app/Queries/AuditTrails',
-                    'resources/js/components/audit-trails',
-                    'resources/js/pages/audit-trails',
-                    'tests/Feature/AuditTrails',
-                ],
+                'empty_dirs' => $auditTrails->emptyDirectories,
             ],
 
             'reporting' => [
@@ -237,47 +208,8 @@ final class FeatureRegistry
                     'resources/js/pages/reports/audit.tsx',
                 ],
                 'types' => 'resources/js/types/reports.ts',
-                'files' => [
-                    'app/Enums/ReportCategory.php',
-                    'app/Enums/ReportType.php',
-                    'app/Data/Reporting/ReportSummaryCardData.php',
-                    'app/Data/Reporting/ReportTimeSeriesPointData.php',
-                    'app/Data/Reporting/ReportBreakdownItemData.php',
-                    'app/Data/Reporting/ReportMetadataData.php',
-                    'app/Queries/Reporting/UserReportQuery.php',
-                    'app/Queries/Reporting/AuditReportQuery.php',
-                    'app/Queries/Reporting/ExportUserReportStream.php',
-                    'app/Queries/Reporting/ExportAuditReportStream.php',
-                    'app/Http/Requests/Reporting/UserReportRequest.php',
-                    'app/Http/Requests/Reporting/AuditReportRequest.php',
-                    'app/Http/Requests/Reporting/ExportReportRequest.php',
-                    'app/Http/Controllers/Reporting/ReportIndexController.php',
-                    'app/Http/Controllers/Reporting/UserReportController.php',
-                    'app/Http/Controllers/Reporting/ExportUserReportController.php',
-                    'app/Http/Controllers/Reporting/AuditReportController.php',
-                    'app/Http/Controllers/Reporting/ExportAuditReportController.php',
-                    'lang/en/reports.php',
-                    'lang/fr/reports.php',
-                    'lang/ar/reports.php',
-                    'tests/Unit/Reporting/ReportTypeTest.php',
-                    'tests/Unit/Reporting/ReportCategoryTest.php',
-                    'tests/Feature/Reporting/UserReportQueryTest.php',
-                    'tests/Feature/Reporting/AuditReportQueryTest.php',
-                    'tests/Feature/Reporting/ReportIndexControllerTest.php',
-                    'tests/Feature/Reporting/UserReportControllerTest.php',
-                    'tests/Feature/Reporting/AuditReportControllerTest.php',
-                    'tests/Feature/Reporting/ReportingLocalizationTest.php',
-                ],
-                'empty_dirs' => [
-                    'app/Data/Reporting',
-                    'app/Queries/Reporting',
-                    'app/Http/Requests/Reporting',
-                    'app/Http/Controllers/Reporting',
-                    'resources/js/components/reports',
-                    'resources/js/pages/reports',
-                    'tests/Unit/Reporting',
-                    'tests/Feature/Reporting',
-                ],
+                'files' => $reporting->exclusiveFiles,
+                'empty_dirs' => $reporting->emptyDirectories,
             ],
 
             'data' => [
@@ -316,5 +248,24 @@ final class FeatureRegistry
                 'empty_dirs' => Cleanup::directories(),
             ],
         ];
+    }
+
+    /**
+     * Derives the legacy composer_package(s) and frontend_package keys from a FeatureDefinition.
+     *
+     * @return array<string, string|list<string>>
+     */
+    private static function derivedPackageKeys(FeatureDefinition $feature): array
+    {
+        $keys = [];
+        if (isset($feature->composerPackages[0])) {
+            $keys['composer_package'] = $feature->composerPackages[0];
+        }
+
+        if (isset($feature->frontendPackages[0])) {
+            $keys['frontend_package'] = $feature->frontendPackages[0];
+        }
+
+        return $keys;
     }
 }
