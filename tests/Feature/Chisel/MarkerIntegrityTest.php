@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 test('all chisel markers in repository are well-formed and properly paired', function (): void {
-    $command = 'git ls-files';
+    $command = 'git ls-files -c -o --exclude-standard';
     $output = shell_exec($command);
     expect($output)->not->toBeNull();
 
@@ -73,7 +73,7 @@ test('all chisel markers in repository are well-formed and properly paired', fun
 });
 
 test('all marker tags have corresponding handlers in chisel.php', function (): void {
-    $command = 'git ls-files';
+    $command = 'git ls-files -c -o --exclude-standard';
     $output = shell_exec($command);
     $files = array_filter(explode("\n", mb_trim((string) $output)));
 

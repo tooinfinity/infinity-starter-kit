@@ -184,6 +184,7 @@ final class OptionalModules
                     'app/Http/Requests/ChangeLocaleRequest.php',
                     'resources/js/components/language-selector.tsx',
                     'resources/js/types/localization.ts',
+                    'lang/en/localization.php',
                     'lang/fr/common.php',
                     'lang/fr/localization.php',
                     'lang/fr/notifications.php',
@@ -381,7 +382,6 @@ final class OptionalModules
                     'tests/Feature/Reporting/ReportIndexControllerTest.php',
                     'tests/Feature/Reporting/UserReportControllerTest.php',
                     'tests/Feature/Reporting/AuditReportControllerTest.php',
-                    'tests/Feature/Reporting/ReportingLocalizationTest.php',
                 ],
                 emptyDirectories: [
                     'app/Data/Reporting',

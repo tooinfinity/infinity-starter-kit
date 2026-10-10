@@ -21,7 +21,7 @@ function createRealGeneratedProjectFixture(): string
     mkdir($tempDir.'/.git', 0755, true);
 
     $root = base_path();
-    $filesOutput = shell_exec('git -C '.escapeshellarg($root).' ls-files') ?: '';
+    $filesOutput = shell_exec('git -C '.escapeshellarg($root).' ls-files -c -o --exclude-standard') ?: '';
     $files = array_filter(explode("\n", mb_trim($filesOutput)));
 
     foreach ($files as $file) {
@@ -121,6 +121,8 @@ function assertGeneratedProjectCleanOfInstallerArtifacts(string $tempDir): void
         'app/Console/Commands/InstallFeaturesCommand.php',
         'app/Console/Commands/SetupAuthorizationCommand.php',
         'app/Console/Commands/SetupAdminUserCommand.php',
+        'app/Chisel',
+        'tests/Support',
         'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
         'tests/Feature/Chisel',
         'tests/Unit/Chisel',

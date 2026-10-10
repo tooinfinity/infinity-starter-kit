@@ -6,14 +6,15 @@ declare(strict_types=1);
  * Creates an isolated sandbox of git-tracked files, executes chisel.php, and yields sandbox directory.
  *
  * @param  array<string, mixed>  $answers
+ * @param  (Closure(string): void)|null  $beforeRun
  * @return array{dir: string, cleanup: Closure(): void}
  */
-function runChiselSandbox(array $answers): array
+function runChiselSandbox(array $answers, ?Closure $beforeRun = null): array
 {
     $tempDir = sys_get_temp_dir().'/chisel_comb_'.uniqid();
     mkdir($tempDir, 0777, true);
 
-    $files = explode("\n", mb_trim((string) shell_exec('git ls-files')));
+    $files = explode("\n", mb_trim((string) shell_exec('git ls-files -c -o --exclude-standard')));
     foreach ($files as $file) {
         if ($file === '' || $file === 'composer.lock') {
             continue;
@@ -25,6 +26,10 @@ function runChiselSandbox(array $answers): array
     }
 
     @symlink(base_path('vendor'), $tempDir.'/vendor');
+
+    if ($beforeRun instanceof Closure) {
+        $beforeRun($tempDir);
+    }
 
     putenv('LARAVEL_INSTALLER_NO_NODE=true');
     $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
@@ -406,4 +411,106 @@ it('rejects invalid combinations with detailed exception', function (): void {
             'optional_modules' => ['reporting'], // missing audit-trails, user-management, authorization
         ]);
     })->toThrow(RuntimeException::class, 'The "reporting" module requires the following module(s):');
+});
+
+it('handles cross-feature tests: audit-trails ON with settings ON vs OFF', function (): void {
+    $withSettings = runChiselSandbox([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization', 'settings', 'audit-trails'],
+    ]);
+
+    try {
+        expect(file_exists($withSettings['dir'].'/tests/Feature/AuditTrails/SettingsAuditingTest.php'))->toBeTrue();
+    } finally {
+        ($withSettings['cleanup'])();
+    }
+
+    $withoutSettings = runChiselSandbox([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization', 'audit-trails'],
+    ]);
+
+    try {
+        expect(file_exists($withoutSettings['dir'].'/tests/Feature/AuditTrails/SettingsAuditingTest.php'))->toBeFalse();
+    } finally {
+        ($withoutSettings['cleanup'])();
+    }
+});
+
+it('handles cross-feature tests: notifications ON with localization ON vs OFF', function (): void {
+    $withLocalization = runChiselSandbox([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['notifications', 'localization'],
+    ]);
+
+    try {
+        expect(file_exists($withLocalization['dir'].'/tests/Feature/Notifications/NotificationLocalizationTest.php'))->toBeTrue()
+            ->and(file_exists($withLocalization['dir'].'/lang/en/localization.php'))->toBeTrue();
+    } finally {
+        ($withLocalization['cleanup'])();
+    }
+
+    $withoutLocalization = runChiselSandbox([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['notifications'],
+    ]);
+
+    try {
+        expect(file_exists($withoutLocalization['dir'].'/tests/Feature/Notifications/NotificationLocalizationTest.php'))->toBeFalse()
+            ->and(file_exists($withoutLocalization['dir'].'/lang/en/localization.php'))->toBeFalse()
+            ->and(is_dir($withoutLocalization['dir'].'/lang/fr'))->toBeFalse()
+            ->and(is_dir($withoutLocalization['dir'].'/lang/ar'))->toBeFalse()
+            ->and(file_exists($withoutLocalization['dir'].'/app/Http/Controllers/NotificationController.php'))->toBeTrue();
+    } finally {
+        ($withoutLocalization['cleanup'])();
+    }
+});
+
+it('handles cross-feature tests: reporting ON with localization ON vs OFF', function (): void {
+    $withLocalization = runChiselSandbox([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'reporting', 'localization'],
+    ]);
+
+    try {
+        expect(file_exists($withLocalization['dir'].'/tests/Feature/Reporting/ReportingLocalizationTest.php'))->toBeTrue();
+    } finally {
+        ($withLocalization['cleanup'])();
+    }
+
+    $withoutLocalization = runChiselSandbox([
+        'auth_features' => ['registration'],
+        'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'reporting'],
+    ]);
+
+    try {
+        expect(file_exists($withoutLocalization['dir'].'/tests/Feature/Reporting/ReportingLocalizationTest.php'))->toBeFalse()
+            ->and(file_exists($withoutLocalization['dir'].'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeTrue();
+    } finally {
+        ($withoutLocalization['cleanup'])();
+    }
+});
+
+it('correctly prunes unselected cross-feature tests when test-support classes are unavailable', function (): void {
+    $sandbox = runChiselSandbox(
+        answers: [
+            'auth_features' => ['registration'],
+            'optional_modules' => ['authorization', 'audit-trails'], // settings is OFF
+        ],
+        beforeRun: function (string $tempDir): void {
+            // Simulate missing/unavailable test-support code
+            exec('rm -rf '.escapeshellarg($tempDir.'/tests/Support'));
+        },
+    );
+
+    try {
+        $dir = $sandbox['dir'];
+        expect(file_exists($dir.'/tests/Feature/AuditTrails/SettingsAuditingTest.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
 });

@@ -20,7 +20,7 @@ function createComposerGitRepositorySource(string $baseTempDir): string
     new Process(['git', 'config', 'user.email', 'integration-test@example.com'], $sourceDir)->mustRun();
     new Process(['git', 'config', 'user.name', 'Integration Test Runner'], $sourceDir)->mustRun();
 
-    $filesOutput = new Process(['git', '-C', $root, 'ls-files'], $root)->mustRun()->getOutput();
+    $filesOutput = new Process(['git', '-C', $root, 'ls-files', '-c', '-o', '--exclude-standard'], $root)->mustRun()->getOutput();
     $files = array_filter(explode("\n", mb_trim($filesOutput)));
 
     foreach ($files as $file) {
@@ -180,6 +180,8 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir): void
         'app/Console/Commands/InstallFeaturesCommand.php',
         'app/Console/Commands/SetupAuthorizationCommand.php',
         'app/Console/Commands/SetupAdminUserCommand.php',
+        'app/Chisel',
+        'tests/Support',
         'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
         'tests/Feature/Chisel',
         'tests/Unit/Chisel',

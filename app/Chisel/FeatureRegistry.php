@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Chisel;
 
 use App\Chisel\Features\AuthFeatures;
+use App\Chisel\Features\CrossFeatureTests;
 use App\Chisel\Features\OptionalModules;
 use App\Chisel\Installer\Cleanup;
 use InvalidArgumentException;
-use Tests\Support\CrossFeatureTests;
 
 /**
  * Authoritative registry composing all starter kit features, dependencies, and installer metadata.
@@ -155,18 +155,10 @@ final class FeatureRegistry
                 ],
                 'types' => 'resources/js/types/localization.ts',
                 ...self::derivedPackageKeys($localization),
-                'extra_lang_files' => [
-                    'lang/fr/common.php',
-                    'lang/fr/localization.php',
-                    'lang/fr/notifications.php',
-                    'lang/fr/reports.php',
-                    'lang/fr/audit.php',
-                    'lang/ar/common.php',
-                    'lang/ar/localization.php',
-                    'lang/ar/notifications.php',
-                    'lang/ar/reports.php',
-                    'lang/ar/audit.php',
-                ],
+                'extra_lang_files' => array_values(array_filter(
+                    $localization->exclusiveFiles,
+                    fn (string $file): bool => str_starts_with($file, 'lang/fr/') || str_starts_with($file, 'lang/ar/'),
+                )),
                 'empty_dirs' => $localization->emptyDirectories,
             ],
 
@@ -239,9 +231,7 @@ final class FeatureRegistry
                 return $deps;
             })(),
 
-            'cross_feature_tests' => class_exists(CrossFeatureTests::class)
-                ? CrossFeatureTests::all()
-                : [],
+            'cross_feature_tests' => CrossFeatureTests::all(),
 
             'chisel' => [
                 'files' => Cleanup::files(),

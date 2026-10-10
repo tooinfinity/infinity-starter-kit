@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Features\AuthFeatures;
+use App\Chisel\Features\CrossFeatureTests;
 use App\Chisel\Features\OptionalModules;
 use App\Chisel\Installer\Cleanup;
 
@@ -135,6 +136,7 @@ test('cleanup files and directories are owned by Cleanup class', function (): vo
 
     expect($files)->toContain('app/Chisel/Features/AuthFeatures.php')
         ->and($files)->toContain('app/Chisel/Features/OptionalModules.php')
+        ->and($files)->toContain('app/Chisel/Features/CrossFeatureTests.php')
         ->and($dirs)->toContain('app/Chisel/Features');
 });
 
@@ -225,5 +227,58 @@ test('allComposerPackages includes every package from all feature definitions', 
         foreach ($definition->composerPackages as $pkg) {
             expect($allPackages)->toContain($pkg);
         }
+    }
+});
+
+test('cross-feature test definitions are owned by production CrossFeatureTests class', function (): void {
+    $crossTests = CrossFeatureTests::all();
+    expect($crossTests)->not->toBeEmpty();
+
+    foreach ($crossTests as $entry) {
+        expect($entry)->toHaveKeys(['features', 'files'])
+            ->and($entry['features'])->toBeArray()
+            ->and($entry['files'])->toBeArray();
+    }
+
+    expect(Tests\Support\CrossFeatureTests::all())->toBe($crossTests);
+});
+
+test('FeatureRegistry toPathsArray cross_feature_tests is sourced from production CrossFeatureTests', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    expect($paths['cross_feature_tests'])->toBe(CrossFeatureTests::all());
+});
+
+test('FeatureRegistry does not import or depend on Tests namespace', function (): void {
+    $file = (string) file_get_contents(app_path('Chisel/FeatureRegistry.php'));
+    expect($file)->not->toContain('Tests\\');
+});
+
+test('toPathsArray extra_lang_files matches localization non-default language exclusive files', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    $localization = FeatureRegistry::optionalModules()['localization'];
+
+    $expected = array_values(array_filter(
+        $localization->exclusiveFiles,
+        fn (string $file): bool => str_starts_with($file, 'lang/fr/') || str_starts_with($file, 'lang/ar/'),
+    ));
+
+    expect($paths['localization']['extra_lang_files'])->toBe($expected)
+        ->and($paths['localization']['extra_lang_files'])->toContain('lang/fr/localization.php')
+        ->and($paths['localization']['extra_lang_files'])->toContain('lang/ar/localization.php')
+        ->and($paths['localization']['extra_lang_files'])->not->toContain('lang/en/localization.php');
+});
+
+test('toPathsArray dependencies match declared dependencies in FeatureDefinitions', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    $expected = [];
+    foreach (FeatureRegistry::optionalModules() as $key => $feature) {
+        if ($feature->dependencies !== []) {
+            $expected[$key] = $feature->dependencies;
+        }
+    }
+
+    expect(array_keys($paths['dependencies']))->toHaveCount(count($expected));
+    foreach ($expected as $key => $deps) {
+        expect($paths['dependencies'][$key])->toBe($deps);
     }
 });

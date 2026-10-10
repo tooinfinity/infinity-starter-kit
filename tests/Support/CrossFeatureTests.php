@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Chisel\Features\CrossFeatureTests as ProductionCrossFeatureTests;
+
 /**
- * Declares test files that span multiple optional features and must be pruned
- * if any of their required features are omitted from the project.
+ * Backward-compatible proxy to the authoritative production cross-feature metadata.
  */
 final class CrossFeatureTests
 {
@@ -15,23 +16,6 @@ final class CrossFeatureTests
      */
     public static function all(): array
     {
-        return [
-            [
-                'features' => ['audit-trails', 'settings'],
-                'files' => ['tests/Feature/AuditTrails/SettingsAuditingTest.php'],
-            ],
-            [
-                'features' => ['audit-trails', 'user-management'],
-                'files' => ['tests/Feature/AuditTrails/UserAuditingTest.php'],
-            ],
-            [
-                'features' => ['notifications', 'localization'],
-                'files' => ['tests/Feature/Notifications/NotificationLocalizationTest.php'],
-            ],
-            [
-                'features' => ['reporting', 'localization'],
-                'files' => ['tests/Feature/Reporting/ReportingLocalizationTest.php'],
-            ],
-        ];
+        return ProductionCrossFeatureTests::all();
     }
 }

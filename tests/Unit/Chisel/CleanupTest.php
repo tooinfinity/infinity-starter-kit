@@ -70,3 +70,14 @@ test('cleanup clean removes declared installer files, directories, and syncs con
         ->and((string) file_get_contents($phpunitXml))->not->toContain('InstallFeaturesCommand')
         ->and((string) file_get_contents($phpstanNeon))->not->toContain('chisel.php');
 });
+
+test('cleanup clean succeeds idempotently when declared files and directories are already absent', function (): void {
+    $paths = [
+        'chisel' => [
+            'files' => ['already-missing-file.php', 'another-missing.php'],
+            'empty_dirs' => ['app/AlreadyMissingDir', 'tests/MissingDir'],
+        ],
+    ];
+
+    expect(fn () => Cleanup::clean($this->tempDir, $paths))->not->toThrow(Throwable::class);
+});

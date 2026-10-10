@@ -26,6 +26,7 @@ final class Cleanup
             'app/Chisel/FeatureRegistry.php',
             'app/Chisel/Features/AuthFeatures.php',
             'app/Chisel/Features/OptionalModules.php',
+            'app/Chisel/Features/CrossFeatureTests.php',
             'app/Chisel/Installer/DependencyValidator.php',
             'app/Chisel/Installer/InstallerContext.php',
             'app/Chisel/Installer/InstallerContextResolver.php',
