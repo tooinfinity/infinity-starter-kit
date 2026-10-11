@@ -578,3 +578,84 @@ test('FrontendPackagePruner removes packages when ProcessFacade root is null', f
         $_SERVER['PATH'] = $origPath;
     }
 });
+
+test('FrontendPackagePruner handles non-object bun.lock and non-array package-lock gracefully', function (): void {
+    file_put_contents($this->tempDir.'/bun.lock', '[1, 2, 3]');
+    file_put_contents($this->tempDir.'/package-lock.json', 'not-valid-json');
+
+    expect(fn () => FrontendPackagePruner::pruneLockfiles($this->tempDir, 'some-pkg'))
+        ->not->toThrow(Throwable::class);
+});
+
+test('FrontendPackagePruner skips non-object workspaces in bun.lock', function (): void {
+    $bunLock = [
+        'workspaces' => [
+            'invalid-workspace' => 'string-instead-of-object',
+            'valid-workspace' => [
+                'dependencies' => [
+                    'pkg-to-remove' => '^1.0.0',
+                    'pkg-to-keep' => '^2.0.0',
+                ],
+            ],
+        ],
+    ];
+    file_put_contents($this->tempDir.'/bun.lock', json_encode($bunLock, JSON_PRETTY_PRINT));
+
+    FrontendPackagePruner::pruneLockfiles($this->tempDir, 'pkg-to-remove');
+
+    $decoded = json_decode((string) file_get_contents($this->tempDir.'/bun.lock'), true);
+    expect($decoded['workspaces']['valid-workspace']['dependencies'])->not->toHaveKey('pkg-to-remove')
+        ->and($decoded['workspaces']['valid-workspace']['dependencies'])->toHaveKey('pkg-to-keep');
+});
+
+test('FrontendPackagePruner handles PCRE regex failure when cleaning bun.lock', function (): void {
+    file_put_contents($this->tempDir.'/bun.lock', ','.str_repeat(' ', 10).'a');
+
+    $oldJit = ini_get('pcre.jit');
+    $oldBacktrack = ini_get('pcre.backtrack_limit');
+    ini_set('pcre.jit', '0');
+    ini_set('pcre.backtrack_limit', '1');
+
+    try {
+        expect(fn () => FrontendPackagePruner::pruneLockfiles($this->tempDir, 'some-pkg'))
+            ->not->toThrow(Throwable::class);
+    } finally {
+        if ($oldJit !== false) {
+            ini_set('pcre.jit', $oldJit);
+        }
+
+        if ($oldBacktrack !== false) {
+            ini_set('pcre.backtrack_limit', $oldBacktrack);
+        }
+    }
+});
+
+test('FrontendPackagePruner prunes devDependencies and vue packages in package-lock.json', function (): void {
+    $packageLock = [
+        'name' => 'test-project',
+        'lockfileVersion' => 3,
+        'dependencies' => [
+            'pkg-dev' => ['version' => '1.0.0'],
+        ],
+        'packages' => [
+            '' => [
+                'dependencies' => [
+                    'pkg-prod' => '^1.0.0',
+                ],
+                'devDependencies' => [
+                    'pkg-dev' => '^1.0.0',
+                ],
+            ],
+            'node_modules/pkg-dev' => ['version' => '1.0.0'],
+            'node_modules/@vue/compiler-sfc' => ['version' => '3.5.0'],
+        ],
+    ];
+    file_put_contents($this->tempDir.'/package-lock.json', json_encode($packageLock, JSON_PRETTY_PRINT));
+
+    FrontendPackagePruner::pruneLockfiles($this->tempDir, 'pkg-dev', '@erag/lang-sync-inertia');
+
+    $decoded = json_decode((string) file_get_contents($this->tempDir.'/package-lock.json'), true);
+    expect($decoded['packages']['']['devDependencies'])->not->toHaveKey('pkg-dev')
+        ->and($decoded['packages'])->not->toHaveKey('node_modules/pkg-dev')
+        ->and($decoded['packages'])->not->toHaveKey('node_modules/@vue/compiler-sfc');
+});
