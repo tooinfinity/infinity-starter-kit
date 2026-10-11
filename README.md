@@ -44,8 +44,14 @@ Which authentication features would you like to enable?
  [x] Email verification
  [x] Two-factor authentication
 
-Which authorization features would you like to enable?
- [x] Spatie Roles & Permissions (spatie/laravel-permission)
+Which optional modules should be installed?
+ [x] Authorization
+ [x] Settings
+ [x] User Management
+ [x] Localization
+ [x] Notifications
+ [x] Audit Trails
+ [x] Reporting
 ```
 
 Select the features you want using `Space`, then press `Enter`.

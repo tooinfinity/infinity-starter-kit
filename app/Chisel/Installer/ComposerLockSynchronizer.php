@@ -90,8 +90,6 @@ final class ComposerLockSynchronizer
             ...$removedPackages,
             '--with-all-dependencies',
             '--no-scripts',
-            '--no-audit',
-            '--no-security-blocking',
             '--no-interaction',
         ];
 

@@ -231,7 +231,14 @@ test('composer lock synchronizer discovers feature packages from FeatureRegistry
         expect(file_exists($capturedArgsFile))->toBeTrue();
         $capturedArgs = (string) file_get_contents($capturedArgsFile);
         expect($capturedArgs)->toContain('spatie/laravel-permission')
-            ->and($capturedArgs)->not->toContain('unrelated/package');
+            ->and($capturedArgs)->not->toContain('unrelated/package')
+            ->and($capturedArgs)->toContain('--with-all-dependencies')
+            ->and($capturedArgs)->toContain('--no-scripts')
+            ->and($capturedArgs)->toContain('--no-interaction')
+            ->and($capturedArgs)->toContain('--no-install')
+            ->and($capturedArgs)->toContain('--no-autoloader')
+            ->and($capturedArgs)->not->toContain('--no-audit')
+            ->and($capturedArgs)->not->toContain('--no-security-blocking');
     } finally {
         putenv('PATH='.$originalPath);
         $_SERVER['PATH'] = $originalPath;

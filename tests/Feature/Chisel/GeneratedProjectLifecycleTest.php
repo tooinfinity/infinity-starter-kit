@@ -426,10 +426,13 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             expect(is_file($tempDir.'/app/Models/DatabaseNotification.php'))->toBeFalse()
                 ->and(is_file($tempDir.'/app/Http/Middleware/SetLocale.php'))->toBeFalse();
 
-            // package.json must be valid and have disabled feature packages removed even in NO_NODE mode
+            // package.json and bun.lock must be valid, consistent, and have disabled feature packages removed in NO_NODE mode
             $packageJson = json_decode((string) file_get_contents($tempDir.'/package.json'), true);
             expect($packageJson)->toBeArray()
                 ->and($packageJson['dependencies']['@erag/lang-sync-inertia'] ?? null)->toBeNull();
+
+            $bunLock = (string) file_get_contents($tempDir.'/bun.lock');
+            expect($bunLock)->not->toContain('@erag/lang-sync-inertia');
 
             // Permissions and Super Admin role must exist
             $verifyRoleProcess = runInGeneratedProject($tempDir, [
@@ -447,7 +450,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             $composerInstall = runInGeneratedProject($tempDir, ['composer', 'install', '--no-interaction', '--no-scripts']);
             expect($composerInstall->getExitCode())->toBe(0, $composerInstall->getOutput()."\n".$composerInstall->getErrorOutput());
 
-            $bunInstall = runInGeneratedProject($tempDir, ['bun', 'install']);
+            $bunInstall = runInGeneratedProject($tempDir, ['bun', 'install', '--frozen-lockfile']);
             expect($bunInstall->getExitCode())->toBe(0, $bunInstall->getOutput()."\n".$bunInstall->getErrorOutput());
 
             $wayfinder = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'wayfinder:generate', '--with-form']);

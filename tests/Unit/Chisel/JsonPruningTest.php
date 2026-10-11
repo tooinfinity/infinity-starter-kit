@@ -6,6 +6,7 @@ use App\Chisel\Installer\ConfigCleaner;
 use App\Chisel\Installer\FrontendPackagePruner;
 use Illuminate\Process\Factory;
 use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Process;
 use Laravel\Chisel\Chisel;
 use Symfony\Component\Yaml\Yaml;
 
@@ -115,6 +116,116 @@ test('chiselRemoveFrontendPackages is idempotent', function (): void {
 
         $decoded = json_decode((string) file_get_contents($file), true);
         expect($decoded['dependencies'])->toHaveKey('react');
+    } finally {
+        putenv('LARAVEL_INSTALLER_NO_NODE');
+        unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
+    }
+});
+
+test('chiselRemoveFrontendPackages prunes bun.lock and package-lock.json in skip-node mode without invoking node tooling', function (): void {
+    $packageJson = [
+        'dependencies' => [
+            '@erag/lang-sync-inertia' => '^3.1.0',
+            'react' => '^19.3.0',
+        ],
+    ];
+    file_put_contents($this->tempDir.'/package.json', json_encode($packageJson, JSON_PRETTY_PRINT));
+
+    $bunLock = [
+        'lockfileVersion' => 1,
+        'workspaces' => [
+            '' => [
+                'dependencies' => [
+                    '@erag/lang-sync-inertia' => '^3.1.0',
+                    'react' => '^19.3.0',
+                ],
+            ],
+        ],
+        'packages' => [
+            '@erag/lang-sync-inertia' => ['@erag/lang-sync-inertia@3.1.0', '', new stdClass, 'hash'],
+            '@inertiajs/vue3' => ['@inertiajs/vue3@3.7.1', '', new stdClass, 'hash'],
+            'vue' => ['vue@3.5.43', '', new stdClass, 'hash'],
+            '@vue/compiler-core' => ['@vue/compiler-core@3.5.43', '', new stdClass, 'hash'],
+            'react' => ['react@19.3.0', '', new stdClass, 'hash'],
+        ],
+    ];
+    file_put_contents($this->tempDir.'/bun.lock', json_encode($bunLock, JSON_PRETTY_PRINT));
+
+    $packageLock = [
+        'name' => 'test-project',
+        'lockfileVersion' => 3,
+        'dependencies' => [
+            '@erag/lang-sync-inertia' => ['version' => '3.1.0'],
+            'react' => ['version' => '19.3.0'],
+        ],
+        'packages' => [
+            '' => [
+                'dependencies' => [
+                    '@erag/lang-sync-inertia' => '^3.1.0',
+                    'react' => '^19.3.0',
+                ],
+            ],
+            'node_modules/@erag/lang-sync-inertia' => ['version' => '3.1.0'],
+            'node_modules/react' => ['version' => '19.3.0'],
+        ],
+    ];
+    file_put_contents($this->tempDir.'/package-lock.json', json_encode($packageLock, JSON_PRETTY_PRINT));
+
+    putenv('LARAVEL_INSTALLER_NO_NODE=true');
+    $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+    $_SERVER['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+    Process::fake();
+
+    try {
+        $chisel = Chisel::in($this->tempDir);
+        chiselRemoveFrontendPackages($this->tempDir, $chisel, '@erag/lang-sync-inertia');
+
+        Process::assertNothingRan();
+
+        $decodedPkg = json_decode((string) file_get_contents($this->tempDir.'/package.json'), true);
+        expect($decodedPkg['dependencies'])->not->toHaveKey('@erag/lang-sync-inertia')
+            ->and($decodedPkg['dependencies'])->toHaveKey('react');
+
+        $bunLockContent = (string) file_get_contents($this->tempDir.'/bun.lock');
+        expect($bunLockContent)->not->toContain('@erag/lang-sync-inertia')
+            ->and($bunLockContent)->not->toContain('@inertiajs/vue3')
+            ->and($bunLockContent)->not->toContain('vue')
+            ->and($bunLockContent)->toContain('react');
+
+        $decodedPackageLock = json_decode((string) file_get_contents($this->tempDir.'/package-lock.json'), true);
+        expect($decodedPackageLock['dependencies'])->not->toHaveKey('@erag/lang-sync-inertia')
+            ->and($decodedPackageLock['packages']['']['dependencies'])->not->toHaveKey('@erag/lang-sync-inertia')
+            ->and($decodedPackageLock['packages'])->not->toHaveKey('node_modules/@erag/lang-sync-inertia')
+            ->and($decodedPackageLock['packages']['node_modules/react'])->toBeArray();
+    } finally {
+        putenv('LARAVEL_INSTALLER_NO_NODE');
+        unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
+    }
+});
+
+test('chiselRemoveFrontendPackages preserves consistency allowing frozen-lockfile install in skip-node mode', function (): void {
+    copy(base_path('package.json'), $this->tempDir.'/package.json');
+    copy(base_path('bun.lock'), $this->tempDir.'/bun.lock');
+
+    putenv('LARAVEL_INSTALLER_NO_NODE=true');
+    $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+    $_SERVER['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+    try {
+        $chisel = Chisel::in($this->tempDir);
+        chiselRemoveFrontendPackages($this->tempDir, $chisel, '@erag/lang-sync-inertia');
+
+        $bunProcess = new Symfony\Component\Process\Process(
+            ['bun', 'install', '--frozen-lockfile'],
+            $this->tempDir,
+        );
+        $bunProcess->run();
+
+        expect($bunProcess->getExitCode())->toBe(
+            0,
+            "bun install --frozen-lockfile failed after skip-node frontend pruning:\n".$bunProcess->getErrorOutput(),
+        );
     } finally {
         putenv('LARAVEL_INSTALLER_NO_NODE');
         unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
