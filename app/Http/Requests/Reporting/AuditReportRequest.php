@@ -7,7 +7,9 @@ namespace App\Http\Requests\Reporting;
 use App\Enums\AuditEvent;
 use App\Enums\Permission;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class AuditReportRequest extends FormRequest
 {
@@ -30,6 +32,32 @@ final class AuditReportRequest extends FormRequest
             'sort' => ['nullable', 'string', Rule::in(['created_at', 'event'])],
             'direction' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+
+    /**
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->has('date_from') || $validator->errors()->has('date_to')) {
+                    return;
+                }
+
+                $dateFromStr = $this->input('date_from');
+                $dateToStr = $this->input('date_to');
+
+                if ($dateFromStr !== null || $dateToStr !== null) {
+                    $from = $dateFromStr !== null ? Date::parse($dateFromStr)->startOfDay() : Date::now()->subDays(29)->startOfDay();
+                    $to = $dateToStr !== null ? Date::parse($dateToStr)->endOfDay() : Date::now()->endOfDay();
+
+                    if ($from->diffInDays($to) > 366) {
+                        $validator->errors()->add('date_to', __('The date range cannot exceed 366 days.'));
+                    }
+                }
+            },
         ];
     }
 
