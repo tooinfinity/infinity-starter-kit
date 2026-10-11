@@ -155,8 +155,6 @@ return [
         /* @chisel-email-verification */
         Features::emailVerification(),
         /* @end-chisel-email-verification */
-        Features::updateProfileInformation(),
-        Features::updatePasswords(),
         /* @chisel-two-factor-authentication */
         Features::twoFactorAuthentication([
             'confirm' => true,
