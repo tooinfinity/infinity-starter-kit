@@ -50,7 +50,7 @@ final readonly class UserController
     {
         $action->handle($user);
 
-        Auth::logout();
+        Auth::logoutCurrentDevice();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
