@@ -6,11 +6,14 @@ namespace App\Http\Requests\Users;
 
 use App\Data\Users\UpdateUserData;
 use App\Enums\Permission;
+use App\Enums\Role;
 use App\Models\User;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
+use Spatie\Permission\Traits\HasRoles;
 
 final class UpdateUserRequest extends FormRequest
 {
@@ -45,16 +48,54 @@ final class UpdateUserRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if (! $this->has('roles')) {
+                    return;
+                }
+
+                $actor = $this->user();
+                $canManageRoles = ! enum_exists(Permission::class) || ($actor?->can(Permission::UsersManageRoles->value) ?? false);
+
+                if ($canManageRoles && trait_exists(HasRoles::class) && enum_exists(Role::class)) {
+                    $actorIsSuperAdmin = $actor?->hasRole(Role::SuperAdmin->value) ?? false;
+                    $targetUser = $this->route('user');
+
+                    if ($targetUser instanceof User) {
+                        $targetHasSuperAdmin = $targetUser->hasRole(Role::SuperAdmin->value);
+                        $submittedRoles = (array) $this->input('roles', []);
+                        $submittedHasSuperAdmin = in_array(Role::SuperAdmin->value, $submittedRoles, true);
+
+                        if (! $actorIsSuperAdmin) {
+                            if ($submittedHasSuperAdmin && ! $targetHasSuperAdmin) {
+                                $validator->errors()->add('roles', __('Only Super Admins can assign the Super Admin role.'));
+                            } elseif (! $submittedHasSuperAdmin && $targetHasSuperAdmin) {
+                                $validator->errors()->add('roles', __('Only Super Admins can remove the Super Admin role.'));
+                            }
+                        }
+                    }
+                }
+            },
+        ];
+    }
+
     public function toData(): UpdateUserData
     {
         /** @var array{name: string, email: string, is_active?: bool, roles?: list<string>} $validated */
         $validated = $this->validated();
 
+        $canManageRoles = ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersManageRoles->value) ?? false);
+
         return new UpdateUserData(
             name: $validated['name'],
             email: $validated['email'],
-            isActive: $validated['is_active'] ?? true,
-            roles: $validated['roles'] ?? [],
+            isActive: $validated['is_active'] ?? null,
+            roles: ($canManageRoles && array_key_exists('roles', $validated)) ? $validated['roles'] : null,
         );
     }
 }
