@@ -139,3 +139,46 @@ test('authorized user can export user report with custom date range, roles, and 
     $content = $response->streamedContent();
     expect($content)->toContain('Manager');
 });
+
+test('user report rejects date range exceeding 366 days and accepts exactly 366 days (PERF-001)', function (): void {
+    $user = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    $user->givePermissionTo(Permission::ReportsView->value);
+
+    // 367 days apart -> fails
+    $this->actingAs($user)
+        ->get(route('reports.users', [
+            'date_from' => '2025-01-01',
+            'date_to' => '2026-01-03',
+        ]))
+        ->assertSessionHasErrors('date_to');
+
+    // Exactly 365/366 days -> succeeds
+    $this->actingAs($user)
+        ->get(route('reports.users', [
+            'date_from' => '2025-01-01',
+            'date_to' => '2025-12-31',
+        ]))
+        ->assertSessionHasNoErrors();
+});
+
+test('export report validates filters with shared rules (VAL-001)', function (): void {
+    $user = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    PermissionModel::findOrCreate(Permission::ReportsExport->value);
+    $user->givePermissionTo(Permission::ReportsView->value);
+    $user->givePermissionTo(Permission::ReportsExport->value);
+
+    $this->actingAs($user)
+        ->get(route('reports.users.export', [
+            'status' => 'bogus-status',
+        ]))
+        ->assertSessionHasErrors('status');
+
+    $this->actingAs($user)
+        ->get(route('reports.users.export', [
+            'date_from' => '2024-01-01',
+            'date_to' => '2026-01-01',
+        ]))
+        ->assertSessionHasErrors('date_to');
+});

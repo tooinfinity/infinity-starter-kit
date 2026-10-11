@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Actions\DeleteUser;
+use App\Actions\UpdateUser;
+use App\Actions\UpdateUserPassword;
 use App\Actions\Users\ActivateUserAction;
 use App\Actions\Users\ChangeUserPasswordAction;
 use App\Actions\Users\CreateUserAction;
@@ -144,4 +147,70 @@ test('ChangeUserPasswordAction records user.password_changed audit trail with re
         ->and($audit->auditable_id)->toBe($targetUser->id)
         ->and($audit->new_values['password'])->toBe('[REDACTED]')
         ->and(json_encode($audit->new_values))->not->toContain('brand_new_secret_password');
+});
+
+test('UpdateUser self-service action records user.updated audit trail (OBS-001)', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Old Self',
+        'email' => 'old_self@example.com',
+    ]);
+    $this->actingAs($user);
+
+    $action = resolve(UpdateUser::class);
+    $action->handle($user, [
+        'name' => 'New Self',
+        'email' => 'new_self@example.com',
+    ]);
+
+    $audit = AuditTrail::query()
+        ->where('event', AuditEvent::UserUpdated)
+        ->where('auditable_id', $user->id)
+        ->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->user_id)->toBe($user->id)
+        ->and($audit->new_values['name'])->toBe('New Self')
+        ->and($audit->new_values['email'])->toBe('new_self@example.com')
+        ->and($audit->old_values['name'])->toBe('Old Self')
+        ->and($audit->old_values['email'])->toBe('old_self@example.com');
+});
+
+test('UpdateUserPassword self-service action records user.password_changed audit trail (OBS-001)', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $action = resolve(UpdateUserPassword::class);
+    $action->handle($user, 'new_secret_pass_123');
+
+    $audit = AuditTrail::query()
+        ->where('event', AuditEvent::UserPasswordChanged)
+        ->where('auditable_id', $user->id)
+        ->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->user_id)->toBe($user->id)
+        ->and($audit->new_values['password'])->toBe('[REDACTED]')
+        ->and(json_encode($audit->new_values))->not->toContain('new_secret_pass_123');
+});
+
+test('DeleteUser self-service action records user.deleted audit trail (OBS-001)', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Self Deleted',
+        'email' => 'self_deleted@example.com',
+    ]);
+    $userId = $user->id;
+    $this->actingAs($user);
+
+    $action = resolve(DeleteUser::class);
+    $action->handle($user);
+
+    $audit = AuditTrail::query()
+        ->where('event', AuditEvent::UserDeleted)
+        ->where('auditable_id', $userId)
+        ->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->user_id)->toBe($userId)
+        ->and($audit->old_values['name'])->toBe('Self Deleted')
+        ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
 });
