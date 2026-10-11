@@ -44,8 +44,8 @@ final class UserReportRequest extends FormRequest
                     return;
                 }
 
-                $dateFromStr = $this->input('date_from');
-                $dateToStr = $this->input('date_to');
+                $dateFromStr = $this->filled('date_from') ? $this->string('date_from')->value() : null;
+                $dateToStr = $this->filled('date_to') ? $this->string('date_to')->value() : null;
 
                 if ($dateFromStr !== null || $dateToStr !== null) {
                     $from = $dateFromStr !== null ? Date::parse($dateFromStr)->startOfDay() : Date::now()->subDays(29)->startOfDay();
