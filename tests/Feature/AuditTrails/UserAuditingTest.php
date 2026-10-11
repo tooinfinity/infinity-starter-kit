@@ -210,7 +210,8 @@ test('DeleteUser self-service action records user.deleted audit trail (OBS-001)'
         ->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($userId)
+        ->and($audit->auditable_id)->toBe($userId)
+        ->and($audit->user_id)->toBeNull()
         ->and($audit->old_values['name'])->toBe('Self Deleted')
         ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
 });
