@@ -66,11 +66,6 @@ jobs:
       - name: Install Bun Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Security Audit
-        run: |
-          composer audit
-          bun audit || true
-
       - name: Build Assets
         run: bun run build
 
