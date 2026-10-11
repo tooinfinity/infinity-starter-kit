@@ -9,12 +9,12 @@ use Spatie\LaravelData\Data;
 final class UpdateUserData extends Data
 {
     /**
-     * @param  list<string>  $roles
+     * @param  list<string>|null  $roles
      */
     public function __construct(
         public string $name,
         public string $email,
-        public bool $isActive = true,
-        public array $roles = [],
+        public ?bool $isActive = null,
+        public ?array $roles = null,
     ) {}
 }
