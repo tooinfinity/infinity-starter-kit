@@ -193,3 +193,27 @@ it('rejects super-admin role changes when actor is not super-admin (SEC-001)', f
 
     expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeFalse();
 });
+
+it('rejects removing super-admin role when actor is not super-admin (SEC-001)', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    RoleModel::findOrCreate('editor');
+
+    $actor = User::factory()->create();
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
+
+    $target = User::factory()->create();
+    $target->assignRole($superAdminRole);
+
+    $response = $this->actingAs($actor)
+        ->put(route('users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'roles' => ['editor'],
+        ]);
+
+    $response->assertSessionHasErrors(['roles' => __('Only Super Admins can remove the Super Admin role.')]);
+
+    expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
+});

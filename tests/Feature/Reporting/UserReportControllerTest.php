@@ -182,3 +182,17 @@ test('export report validates filters with shared rules (VAL-001)', function ():
         ]))
         ->assertSessionHasErrors('date_to');
 });
+
+test('export report returns early when date fields have invalid formats', function (): void {
+    $user = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    PermissionModel::findOrCreate(Permission::ReportsExport->value);
+    $user->givePermissionTo(Permission::ReportsView->value);
+    $user->givePermissionTo(Permission::ReportsExport->value);
+
+    $this->actingAs($user)
+        ->get(route('reports.users.export', [
+            'date_from' => 'invalid-date',
+        ]))
+        ->assertSessionHasErrors('date_from');
+});

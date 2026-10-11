@@ -28,7 +28,7 @@ final readonly class NotificationPreferenceController
                 'type' => $type->value,
                 'label' => $type->label(),
                 'mandatory' => $type->isMandatory(),
-                'database_enabled' => $type->isMandatory() || ($pref !== null ? $pref->database_enabled : true),
+                'database_enabled' => $type->isMandatory() || ($pref->database_enabled ?? true),
             ];
         })->all();
 
