@@ -56,11 +56,18 @@ Which optional modules should be installed?
 
 Select the features you want using `Space`, then press `Enter`.
 
-### 3. Set Up Authorization (if enabled)
+### 3. Authorization & Super Admin (if enabled)
+
+During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively or need to bootstrap permissions later:
 
 ```bash
-php artisan authorization:setup   # Creates permissions + Super Admin role
-php artisan admin:setup           # Creates admin user interactively
+php artisan db:seed --class=AuthorizationSeeder   # Synchronizes permissions + Super Admin role
+```
+
+To create or assign a Super Admin via Tinker:
+
+```bash
+php artisan tinker --execute 'App\Models\User::first()->assignRole("super-admin");'
 ```
 
 ### 4. Start Development
