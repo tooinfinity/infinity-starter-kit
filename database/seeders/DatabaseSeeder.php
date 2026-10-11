@@ -11,6 +11,8 @@ final class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        /* @chisel-roles-permissions */
         $this->call(AuthorizationSeeder::class);
+        /* @end-chisel-roles-permissions */
     }
 }

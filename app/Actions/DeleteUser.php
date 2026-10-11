@@ -8,11 +8,16 @@ namespace App\Actions;
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+/* @chisel-roles-permissions */
 use App\Enums\Role;
+/* @end-chisel-roles-permissions */
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+/* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
+
+/* @end-chisel-roles-permissions */
 
 final readonly class DeleteUser
 {
@@ -26,6 +31,7 @@ final readonly class DeleteUser
     public function handle(User $user): void
     {
         DB::transaction(function () use ($user): void {
+            /* @chisel-roles-permissions */
             if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
                 $superAdminCount = User::query()
                     ->role(Role::SuperAdmin->value)
@@ -39,6 +45,8 @@ final readonly class DeleteUser
                 }
             }
 
+            /* @end-chisel-roles-permissions */
+
             /* @chisel-audit-trails */
             $this->auditTrail->handle(
                 event: AuditEvent::UserDeleted,
@@ -47,8 +55,11 @@ final readonly class DeleteUser
                     'name' => $user->name,
                     'email' => $user->email,
                     'is_active' => $user->is_active,
+                    /* @chisel-roles-permissions */
                     'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
+                    /* @end-chisel-roles-permissions */
                 ],
+                user: $user,
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */
