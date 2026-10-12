@@ -16,7 +16,7 @@ function runChiselSandbox(array $answers, ?Closure $beforeRun = null): array
 
     $files = explode("\n", mb_trim((string) shell_exec('git ls-files -c -o --exclude-standard')));
     foreach ($files as $file) {
-        if ($file === '' || $file === 'composer.lock') {
+        if ($file === '' || $file === 'composer.lock' || ! file_exists(base_path($file))) {
             continue;
         }
 
@@ -98,7 +98,7 @@ function assertNoOrphanedMarkersInSandbox(string $directory): void
 
 it('handles all features enabled', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration', 'email-verification', 'two-factor-authentication'],
+        'auth_features' => ['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'],
         'optional_modules' => ['authorization', 'settings', 'user-management', 'localization', 'notifications', 'audit-trails', 'reporting'],
     ]);
 
@@ -113,6 +113,9 @@ it('handles all features enabled', function (): void {
             ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeTrue();
 
@@ -353,7 +356,7 @@ it('handles user-management ON with audit-trails ON', function (): void {
 
 it('handles auth combinations: registration OFF, email-verification ON, two-factor ON', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['email-verification', 'two-factor-authentication'],
+        'auth_features' => ['login', 'logout', 'email-verification', 'two-factor'],
         'optional_modules' => [],
     ]);
 
@@ -361,7 +364,10 @@ it('handles auth combinations: registration OFF, email-verification ON, two-fact
         $dir = $sandbox['dir'];
 
         expect(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeFalse()
-            ->and(file_exists($dir.'/tests/Feature/Controllers/RegistrationTest.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/tests/Feature/Controllers/RegisterControllerTest.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeTrue();
 
@@ -382,7 +388,10 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
         $dir = $sandbox['dir'];
 
         expect(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeTrue()
-            ->and(file_exists($dir.'/tests/Feature/Controllers/RegistrationTest.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/tests/Feature/Controllers/RegisterControllerTest.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
 
@@ -396,6 +405,111 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
         ($sandbox['cleanup'])();
     }
 });
+
+it('handles minimal authentication: login and logout only', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout'],
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('handles password recovery: login, logout, password-reset', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'password-reset'],
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Actions/CreateUserPassword.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Actions/UpdateUserPassword.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeFalse();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('handles password management: login, logout, password-update', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'password-update'],
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Actions/UpdateUserPassword.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Actions/CreateUserPassword.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/CreateUserEmailResetNotification.php'))->toBeFalse();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('handles 2FA: login, logout, two-factor', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'two-factor'],
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeFalse();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('rejects auth features missing login dependency', function (string $feature): void {
+    expect(function () use ($feature): void {
+        runChiselSandbox([
+            'auth_features' => [$feature],
+            'optional_modules' => [],
+        ]);
+    })->toThrow(RuntimeException::class, sprintf('The "%s" module requires the following module(s): login.', $feature));
+})->with([
+    'logout',
+    'two-factor',
+    'password-reset',
+    'password-update',
+    'email-verification',
+]);
 
 it('rejects invalid combinations with detailed exception', function (): void {
     expect(function (): void {

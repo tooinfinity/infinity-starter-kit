@@ -205,8 +205,10 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 'install:features',
                 '--answers='.json_encode([
                     'auth_features' => [
+                        'login',
+                        'logout',
                         'email-verification',
-                        'two-factor-authentication',
+                        'two-factor',
                     ],
                     'optional_modules' => [
                         'user-management',
@@ -375,7 +377,6 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
 
             $pest = runInGeneratedProject($tempDir, [
                 'vendor/bin/pest',
-                'tests/Feature/Controllers/SessionControllerTest.php',
                 'tests/Feature/Controllers/UserProfileControllerTest.php',
                 'tests/Unit/Actions/UpdateUserTest.php',
             ], ['APP_ENV' => 'testing']);

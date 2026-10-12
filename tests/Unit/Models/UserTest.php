@@ -15,9 +15,9 @@ test('to array', function (): void {
             /* @chisel-email-verification */
             'email_verified_at',
             /* @end-chisel-email-verification */
-            /* @chisel-two-factor-authentication */
+            /* @chisel-two-factor */
             'two_factor_confirmed_at',
-            /* @end-chisel-two-factor-authentication */
+            /* @end-chisel-two-factor */
             /* @chisel-user-management */
             'is_active',
             /* @end-chisel-user-management */
