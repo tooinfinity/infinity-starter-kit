@@ -41,9 +41,9 @@ use App\Http\Controllers\Users\UserPasswordController as AdminUserPasswordContro
 /* @chisel-two-factor-authentication */
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 /* @end-chisel-two-factor-authentication */
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Illuminate\Http\RedirectResponse;
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
