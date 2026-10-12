@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
 
-final readonly class SessionController
+final readonly class LoginController
 {
     public function create(Request $request): Response
     {
@@ -26,7 +26,7 @@ final readonly class SessionController
     {
         $user = $request->validateCredentials();
 
-        /* @chisel-two-factor-authentication */
+        /* @chisel-two-factor */
         if ($user->hasEnabledTwoFactorAuthentication()) {
             $request->session()->put([
                 'login.id' => $user->getKey(),
@@ -36,22 +36,12 @@ final readonly class SessionController
             return to_route('two-factor.login');
         }
 
-        /* @end-chisel-two-factor-authentication */
+        /* @end-chisel-two-factor */
 
         Auth::login($user, $request->boolean('remember'));
 
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));
-    }
-
-    public function destroy(Request $request): RedirectResponse
-    {
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/');
     }
 }
