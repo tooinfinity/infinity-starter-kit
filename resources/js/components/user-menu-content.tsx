@@ -1,5 +1,11 @@
-import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+/* @chisel-logout */
+import { router } from '@inertiajs/react';
+/* @end-chisel-logout */
+import { Settings } from 'lucide-react';
+/* @chisel-logout */
+import { LogOut } from 'lucide-react';
+/* @end-chisel-logout */
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -8,7 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
+/* @chisel-logout */
 import { logout } from '@/routes';
+/* @end-chisel-logout */
 import { edit } from '@/routes/user-profile';
 import type { User } from '@/types';
 
@@ -19,10 +27,12 @@ type Props = {
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
 
+    /* @chisel-logout */
     const handleLogout = () => {
         cleanup();
         router.flushAll();
     };
+    /* @end-chisel-logout */
 
     return (
         <>
@@ -45,6 +55,7 @@ export function UserMenuContent({ user }: Props) {
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>
+            {/* @chisel-logout */}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
                 <Link
@@ -58,6 +69,7 @@ export function UserMenuContent({ user }: Props) {
                     Log out
                 </Link>
             </DropdownMenuItem>
+            {/* @end-chisel-logout */}
         </>
     );
 }

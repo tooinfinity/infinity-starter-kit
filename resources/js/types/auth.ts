@@ -6,9 +6,9 @@ export type User = {
     /* @chisel-email-verification */
     email_verified_at: string | null;
     /* @end-chisel-email-verification */
-    /* @chisel-two-factor-authentication */
+    /* @chisel-two-factor */
     two_factor_enabled?: boolean;
-    /* @end-chisel-two-factor-authentication */
+    /* @end-chisel-two-factor */
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
@@ -22,7 +22,7 @@ export type Auth = {
     /* @end-chisel-roles-permissions */
 };
 
-/* @chisel-two-factor-authentication */
+/* @chisel-two-factor */
 export type TwoFactorSetupData = {
     svg: string;
     url: string;
@@ -31,4 +31,4 @@ export type TwoFactorSetupData = {
 export type TwoFactorSecretKey = {
     secretKey: string;
 };
-/* @end-chisel-two-factor-authentication */
+/* @end-chisel-two-factor */
