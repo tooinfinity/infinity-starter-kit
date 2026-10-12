@@ -21,8 +21,13 @@ final class DependencyValidator
      */
     public static function validate(array $answers, ?array $featuresOrMap = null): void
     {
+        $rawAuth = (array) ($answers['auth_features'] ?? []);
+        $authFeatures = array_values(array_filter($rawAuth, is_string(...)));
+
         $rawModules = (array) ($answers['optional_modules'] ?? []);
         $optionalModules = array_values(array_filter($rawModules, is_string(...)));
+
+        $selectedFeatures = array_values(array_unique(array_merge($authFeatures, $optionalModules)));
 
         /** @var array<string, FeatureDefinition|list<string>> $definitions */
         $definitions = $featuresOrMap ?? FeatureRegistry::all();
@@ -47,8 +52,8 @@ final class DependencyValidator
                 continue;
             }
 
-            if (in_array($featureKey, $optionalModules, true)) {
-                $missing = array_diff($required, $optionalModules);
+            if (in_array($featureKey, $selectedFeatures, true)) {
+                $missing = array_diff($required, $selectedFeatures);
                 if ($missing !== []) {
                     throw new RuntimeException(sprintf(
                         'The "%s" module requires the following module(s): %s.',

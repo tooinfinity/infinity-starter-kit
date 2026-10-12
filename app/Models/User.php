@@ -23,9 +23,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /* @end-chisel-notifications */
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-/* @chisel-two-factor-authentication */
+/* @chisel-two-factor */
 use Laravel\Fortify\TwoFactorAuthenticatable;
-/* @end-chisel-two-factor-authentication */
+/* @end-chisel-two-factor */
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
 
@@ -64,10 +64,10 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     use HasUuids;
     use Notifiable;
 
-    /* @chisel-two-factor-authentication */
+    /* @chisel-two-factor */
     use TwoFactorAuthenticatable;
 
-    /* @end-chisel-two-factor-authentication */
+    /* @end-chisel-two-factor */
 
     /**
      * @return array<string, string>
@@ -83,11 +83,11 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
             /* @end-chisel-email-verification */
             'password' => 'hashed',
             'remember_token' => 'string',
-            /* @chisel-two-factor-authentication */
+            /* @chisel-two-factor */
             'two_factor_secret' => 'string',
             'two_factor_recovery_codes' => 'string',
             'two_factor_confirmed_at' => 'datetime',
-            /* @end-chisel-two-factor-authentication */
+            /* @end-chisel-two-factor */
             /* @chisel-user-management */
             'is_active' => 'boolean',
             /* @end-chisel-user-management */

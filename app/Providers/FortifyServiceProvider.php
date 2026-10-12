@@ -35,17 +35,19 @@ final class FortifyServiceProvider extends ServiceProvider
             ['status' => $request->session()->get('status')],
         ));
         /* @end-chisel-email-verification */
-        /* @chisel-two-factor-authentication */
+        /* @chisel-two-factor */
         Fortify::twoFactorChallengeView(fn () => Inertia::render('user-two-factor-authentication-challenge/show'));
-        /* @end-chisel-two-factor-authentication */
         Fortify::confirmPasswordView(fn () => Inertia::render('user-password-confirmation/create'));
+        /* @end-chisel-two-factor */
     }
 
     private function bootRateLimitingDefaults(): void
     {
+        /* @chisel-login */
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by($request->string('email')->value().$request->ip()));
-        /* @chisel-two-factor-authentication */
+        /* @end-chisel-login */
+        /* @chisel-two-factor */
         RateLimiter::for('two-factor', fn (Request $request) => Limit::perMinute(5)->by($request->session()->get('login.id')));
-        /* @end-chisel-two-factor-authentication */
+        /* @end-chisel-two-factor */
     }
 }

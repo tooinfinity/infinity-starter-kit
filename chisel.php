@@ -191,11 +191,23 @@ $script = Chisel::script(__DIR__)
             name: 'auth_features',
             label: 'Which authentication features would you like to enable?',
             options: [
+                'login' => 'Login',
+                'logout' => 'Logout',
                 'registration' => 'Registration',
                 'email-verification' => 'Email verification',
-                'two-factor-authentication' => 'Two-factor authentication',
+                'password-reset' => 'Password reset',
+                'password-update' => 'Password update',
+                'two-factor' => 'Two-factor authentication',
             ],
-            default: ['registration', 'email-verification', 'two-factor-authentication'],
+            default: [
+                'login',
+                'logout',
+                'registration',
+                'email-verification',
+                'password-reset',
+                'password-update',
+                'two-factor',
+            ],
             hint: 'Use space to select, enter to confirm.',
         ),
         Question::multiselect(
@@ -225,6 +237,30 @@ $script = Chisel::script(__DIR__)
     ->apply(function (Chisel $chisel, array $answers): void {
         chiselValidateDependencies($answers);
     })
+    ->selected(
+        'auth_features',
+        'login',
+        then: function (Chisel $chisel) use ($authFeatures): void {
+            // Marker: 'login'
+            FeaturePruner::applySelected($chisel, $authFeatures['login']);
+        },
+        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
+            // Marker: 'login'
+            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['login']);
+        },
+    )
+    ->selected(
+        'auth_features',
+        'logout',
+        then: function (Chisel $chisel) use ($authFeatures): void {
+            // Marker: 'logout'
+            FeaturePruner::applySelected($chisel, $authFeatures['logout']);
+        },
+        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
+            // Marker: 'logout'
+            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['logout']);
+        },
+    )
     ->selected(
         'auth_features',
         'registration',
@@ -263,10 +299,34 @@ $script = Chisel::script(__DIR__)
     )
     ->selected(
         'auth_features',
-        'two-factor-authentication',
+        'password-reset',
         then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'two-factor-authentication'
-            FeaturePruner::applySelected($chisel, $authFeatures['two-factor-authentication']);
+            // Marker: 'password-reset'
+            FeaturePruner::applySelected($chisel, $authFeatures['password-reset']);
+        },
+        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
+            // Marker: 'password-reset'
+            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['password-reset']);
+        },
+    )
+    ->selected(
+        'auth_features',
+        'password-update',
+        then: function (Chisel $chisel) use ($authFeatures): void {
+            // Marker: 'password-update'
+            FeaturePruner::applySelected($chisel, $authFeatures['password-update']);
+        },
+        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
+            // Marker: 'password-update'
+            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['password-update']);
+        },
+    )
+    ->selected(
+        'auth_features',
+        'two-factor',
+        then: function (Chisel $chisel) use ($authFeatures): void {
+            // Marker: 'two-factor'
+            FeaturePruner::applySelected($chisel, $authFeatures['two-factor']);
         },
         else: function (Chisel $chisel) use ($authFeatures, $directory): void {
             $chisel->file('app/Models/User.php')
@@ -278,8 +338,8 @@ $script = Chisel::script(__DIR__)
                     "'two_factor_recovery_codes',",
                 );
 
-            // Marker: 'two-factor-authentication'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['two-factor-authentication']);
+            // Marker: 'two-factor'
+            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['two-factor']);
         },
     )
     ->selected(
@@ -389,6 +449,17 @@ foreach ($paths['cross_feature_tests'] ?? [] as $entry) {
 }
 
 return $script
+    ->selectedAny(
+        'auth_features',
+        ['password-reset', 'password-update'],
+        then: null,
+        else: function (Chisel $chisel) use ($directory): void {
+            $chisel->file('app/Http/Controllers/UserPasswordController.php')->delete();
+            $chisel->file('routes/web.php')
+                ->removeLinesContaining('use App\Http\Controllers\UserPasswordController;');
+            chiselPruneEmptyDirectories($directory, ['resources/js/pages/user-password']);
+        },
+    )
     ->selectedAny(
         'optional_modules',
         ['user-management', 'reporting'],

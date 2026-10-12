@@ -29,11 +29,11 @@ final class UserFactory extends Factory
             /* @end-chisel-email-verification */
             'password' => 'password',
             'remember_token' => Str::random(10),
-            /* @chisel-two-factor-authentication */
+            /* @chisel-two-factor */
             'two_factor_secret' => Str::random(10),
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
-            /* @end-chisel-two-factor-authentication */
+            /* @end-chisel-two-factor */
             /* @chisel-user-management */
             'is_active' => true,
             /* @end-chisel-user-management */
@@ -53,7 +53,7 @@ final class UserFactory extends Factory
 
     /* @end-chisel-email-verification */
 
-    /* @chisel-two-factor-authentication */
+    /* @chisel-two-factor */
     public function withoutTwoFactor(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -63,7 +63,7 @@ final class UserFactory extends Factory
         ]);
     }
 
-    /* @end-chisel-two-factor-authentication */
+    /* @end-chisel-two-factor */
 
     /* @chisel-user-management */
     public function active(): self
