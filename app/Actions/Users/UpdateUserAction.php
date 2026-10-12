@@ -67,7 +67,9 @@ final readonly class UpdateUserAction
             ];
             /* @end-chisel-audit-trails */
 
+            /* @chisel-email-verification */
             $emailChanged = $user->email !== $data->email;
+            /* @end-chisel-email-verification */
 
             $updatePayload = [
                 'name' => $data->name,
