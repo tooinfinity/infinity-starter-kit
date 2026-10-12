@@ -21,6 +21,7 @@
         </include>
     </source>
     <php>
+        <ini name="pcre.jit" value="0"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

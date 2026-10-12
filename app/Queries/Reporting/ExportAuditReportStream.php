@@ -57,8 +57,8 @@ final readonly class ExportAuditReportStream
 
             foreach ($query->cursor() as $audit) {
                 /** @var AuditTrail $audit */
-                $actorName = $audit->user !== null ? $audit->user->name : __('reports.common.system');
-                $actorEmail = $audit->user !== null ? $audit->user->email : '';
+                $actorName = $audit->user->name ?? __('reports.common.system');
+                $actorEmail = $audit->user->email ?? '';
 
                 fputcsv($handle, [
                     $audit->id,

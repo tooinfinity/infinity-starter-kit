@@ -31,17 +31,20 @@ final readonly class DeleteUserAction
             ]);
         }
 
-        if (trait_exists(HasRoles::class) && $user->hasRole(Role::SuperAdmin->value)) {
-            $superAdminCount = User::query()->role(Role::SuperAdmin->value)->count();
-
-            if ($superAdminCount <= 1) {
-                throw ValidationException::withMessages([
-                    'user' => __('Cannot delete the last Super Admin.'),
-                ]);
-            }
-        }
-
         DB::transaction(function () use ($user): void {
+            if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
+                $superAdminCount = User::query()
+                    ->role(Role::SuperAdmin->value)
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($superAdminCount <= 1) {
+                    throw ValidationException::withMessages([
+                        'user' => __('Cannot delete the last Super Admin.'),
+                    ]);
+                }
+            }
+
             /* @chisel-audit-trails */
             $this->auditTrail->handle(
                 event: AuditEvent::UserDeleted,
@@ -55,6 +58,10 @@ final readonly class DeleteUserAction
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */
+
+            /* @chisel-notifications */
+            $user->notifications()->delete();
+            /* @end-chisel-notifications */
 
             $user->delete();
         });

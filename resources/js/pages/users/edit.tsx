@@ -132,51 +132,57 @@ export default function UsersEdit({
                         <InputError message={form.errors.is_active} />
                     </div>
 
-                    {availableRoles.length > 0 && (
-                        <div className="space-y-3 pt-2">
-                            <Label>Assigned Roles</Label>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                {availableRoles.map((role) => {
-                                    const isChecked =
-                                        form.data.roles.includes(role);
+                    <Can permission="users.manage-roles">
+                        {availableRoles.length > 0 && (
+                            <div className="space-y-3 pt-2">
+                                <Label>Assigned Roles</Label>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {availableRoles.map((role) => {
+                                        const isChecked =
+                                            form.data.roles.includes(role);
 
-                                    return (
-                                        <div
-                                            key={role}
-                                            className="flex items-center space-x-2 rounded-lg border p-3"
-                                        >
-                                            <Checkbox
-                                                id={`role-${role}`}
-                                                checked={isChecked}
-                                                onCheckedChange={(checked) => {
-                                                    const updated = checked
-                                                        ? [
-                                                              ...form.data
-                                                                  .roles,
-                                                              role,
-                                                          ]
-                                                        : form.data.roles.filter(
-                                                              (r) => r !== role,
-                                                          );
-                                                    form.setData(
-                                                        'roles',
-                                                        updated,
-                                                    );
-                                                }}
-                                            />
-                                            <Label
-                                                htmlFor={`role-${role}`}
-                                                className="cursor-pointer font-medium"
+                                        return (
+                                            <div
+                                                key={role}
+                                                className="flex items-center space-x-2 rounded-lg border p-3"
                                             >
-                                                {role}
-                                            </Label>
-                                        </div>
-                                    );
-                                })}
+                                                <Checkbox
+                                                    id={`role-${role}`}
+                                                    checked={isChecked}
+                                                    onCheckedChange={(
+                                                        checked,
+                                                    ) => {
+                                                        const updated = checked
+                                                            ? [
+                                                                  ...form.data
+                                                                      .roles,
+                                                                  role,
+                                                              ]
+                                                            : form.data.roles.filter(
+                                                                  (r) =>
+                                                                      r !==
+                                                                      role,
+                                                              );
+                                                        form.setData(
+                                                            'roles',
+                                                            updated,
+                                                        );
+                                                    }}
+                                                />
+                                                <Label
+                                                    htmlFor={`role-${role}`}
+                                                    className="cursor-pointer font-medium"
+                                                >
+                                                    {role}
+                                                </Label>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <InputError message={form.errors.roles} />
                             </div>
-                            <InputError message={form.errors.roles} />
-                        </div>
-                    )}
+                        )}
+                    </Can>
 
                     <div className="flex items-center justify-between border-t pt-4">
                         <div className="flex items-center gap-4">

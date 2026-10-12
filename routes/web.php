@@ -41,6 +41,7 @@ use App\Http\Controllers\Users\UserPasswordController as AdminUserPasswordContro
 /* @chisel-two-factor-authentication */
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 /* @end-chisel-two-factor-authentication */
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -59,7 +60,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
 
     // User Profile...
-    Route::redirect('settings', '/settings/profile');
+    Route::get('settings', fn (): RedirectResponse => to_route('user-profile.edit'));
     Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
     Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 

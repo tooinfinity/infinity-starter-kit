@@ -28,6 +28,7 @@ it('updates user details and role assignments', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
     RoleModel::findOrCreate('manager');
 
     $target = User::factory()->create([
@@ -104,15 +105,11 @@ it('prevents deactivating the last super admin', function (): void {
 
 it('prevents removing super admin role from the last super admin', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
-    $editorRole = RoleModel::findOrCreate('editor');
+    RoleModel::findOrCreate('editor');
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
 
-    $admin = User::factory()->create();
-    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
-    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
-
-    $response = $this->actingAs($admin)
+    $response = $this->actingAs($superAdmin)
         ->put(route('users.update', $superAdmin), [
             'name' => $superAdmin->name,
             'email' => $superAdmin->email,
@@ -121,4 +118,102 @@ it('prevents removing super admin role from the last super admin', function (): 
         ]);
 
     $response->assertSessionHasErrors(['roles' => __('Cannot remove the Super Admin role from the last Super Admin.')]);
+});
+
+it('preserves existing roles and inactive status when fields are omitted (BUG-001)', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
+
+    $role = RoleModel::findOrCreate('editor');
+
+    $target = User::factory()->create([
+        'name' => 'Original Name',
+        'email' => 'original@example.com',
+        'is_active' => false,
+    ]);
+    $target->assignRole($role);
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $target), [
+            'name' => 'New Name',
+            'email' => 'original@example.com',
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    $target->refresh();
+    expect($target->name)->toBe('New Name')
+        ->and($target->is_active)->toBeFalse()
+        ->and($target->hasRole('editor'))->toBeTrue();
+});
+
+it('ignores role changes when actor lacks users.manage-roles permission (SEC-001)', function (): void {
+    $editorRole = RoleModel::findOrCreate('editor');
+    RoleModel::findOrCreate(Role::SuperAdmin->value);
+
+    $user = User::factory()->create();
+    $user->assignRole($editorRole);
+    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $response = $this->actingAs($user)
+        ->put(route('users.update', $user), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => [Role::SuperAdmin->value],
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    $user->refresh();
+    expect($user->hasRole(Role::SuperAdmin->value))->toBeFalse()
+        ->and($user->hasRole('editor'))->toBeTrue();
+});
+
+it('rejects super-admin role changes when actor is not super-admin (SEC-001)', function (): void {
+    RoleModel::findOrCreate(Role::SuperAdmin->value);
+
+    $actor = User::factory()->create();
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
+
+    $target = User::factory()->create();
+
+    $response = $this->actingAs($actor)
+        ->put(route('users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'roles' => [Role::SuperAdmin->value],
+        ]);
+
+    $response->assertSessionHasErrors(['roles']);
+
+    expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeFalse();
+});
+
+it('rejects removing super-admin role when actor is not super-admin (SEC-001)', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    RoleModel::findOrCreate('editor');
+
+    $actor = User::factory()->create();
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
+
+    $target = User::factory()->create();
+    $target->assignRole($superAdminRole);
+
+    $response = $this->actingAs($actor)
+        ->put(route('users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'roles' => ['editor'],
+        ]);
+
+    $response->assertSessionHasErrors(['roles' => __('Only Super Admins can remove the Super Admin role.')]);
+
+    expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });

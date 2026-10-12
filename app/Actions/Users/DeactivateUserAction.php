@@ -34,17 +34,20 @@ final readonly class DeactivateUserAction
             ]);
         }
 
-        if (trait_exists(HasRoles::class) && $user->hasRole(Role::SuperAdmin->value)) {
-            $superAdminCount = User::query()->role(Role::SuperAdmin->value)->count();
-
-            if ($superAdminCount <= 1) {
-                throw ValidationException::withMessages([
-                    'user' => __('Cannot deactivate the last Super Admin.'),
-                ]);
-            }
-        }
-
         DB::transaction(function () use ($user): void {
+            if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
+                $superAdminCount = User::query()
+                    ->role(Role::SuperAdmin->value)
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($superAdminCount <= 1) {
+                    throw ValidationException::withMessages([
+                        'user' => __('Cannot deactivate the last Super Admin.'),
+                    ]);
+                }
+            }
+
             $user->forceFill(['is_active' => false])->save();
 
             /* @chisel-audit-trails */

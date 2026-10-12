@@ -1,11 +1,8 @@
 <?php
 
 declare(strict_types=1);
-
-use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
-use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
 it('prevents removing super admin role from last super admin', function (): void {
@@ -15,11 +12,7 @@ it('prevents removing super admin role from last super admin', function (): void
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
 
-    $anotherAdmin = User::factory()->create();
-    $anotherAdmin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
-    $anotherAdmin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
-
-    $response = $this->actingAs($anotherAdmin)
+    $response = $this->actingAs($superAdmin)
         ->put(route('users.update', $superAdmin), [
             'name' => $superAdmin->name,
             'email' => $superAdmin->email,
@@ -42,11 +35,7 @@ it('allows removing super admin role if multiple super admins exist', function (
     $superAdmin2 = User::factory()->create();
     $superAdmin2->assignRole($superAdminRole);
 
-    $admin = User::factory()->create();
-    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
-    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
-
-    $response = $this->actingAs($admin)
+    $response = $this->actingAs($superAdmin2)
         ->put(route('users.update', $superAdmin1), [
             'name' => $superAdmin1->name,
             'email' => $superAdmin1->email,

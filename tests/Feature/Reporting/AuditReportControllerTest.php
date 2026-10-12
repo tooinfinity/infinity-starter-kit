@@ -152,3 +152,45 @@ test('authorized user can export audit report with custom date range and system 
     $content = $response->streamedContent();
     expect($content)->toContain('settings.updated');
 });
+
+test('audit report rejects date range exceeding 366 days and accepts exactly 366 days (PERF-001)', function (): void {
+    $user = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    $user->givePermissionTo(Permission::ReportsView->value);
+
+    // 367 days apart -> fails
+    $this->actingAs($user)
+        ->get(route('reports.audit', [
+            'date_from' => '2025-01-01',
+            'date_to' => '2026-01-03',
+        ]))
+        ->assertSessionHasErrors('date_to');
+
+    // Exactly 365/366 days -> succeeds
+    $this->actingAs($user)
+        ->get(route('reports.audit', [
+            'date_from' => '2025-01-01',
+            'date_to' => '2025-12-31',
+        ]))
+        ->assertSessionHasNoErrors();
+});
+
+test('audit export report validates filters with shared rules (VAL-001)', function (): void {
+    $user = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    PermissionModel::findOrCreate(Permission::ReportsExport->value);
+    $user->givePermissionTo(Permission::ReportsView->value);
+    $user->givePermissionTo(Permission::ReportsExport->value);
+
+    $this->actingAs($user)
+        ->get(route('reports.audit.export', [
+            'event' => 'bogus-event',
+        ]))
+        ->assertSessionHasErrors('event');
+
+    $this->actingAs($user)
+        ->get(route('reports.audit.export', [
+            'user_id' => 'not-a-uuid',
+        ]))
+        ->assertSessionHasErrors('user_id');
+});
