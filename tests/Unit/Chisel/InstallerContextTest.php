@@ -6,8 +6,8 @@ use App\Chisel\Installer\InstallerContext;
 
 test('installer context holds strongly-typed lifecycle properties', function (): void {
     $context = new InstallerContext(
-        providedAnswers: ['auth_features' => ['registration']],
-        answers: ['auth_features' => ['registration'], 'optional_modules' => ['authorization']],
+        providedAnswers: ['auth_features' => ['login', 'registration']],
+        answers: ['auth_features' => ['login', 'registration'], 'optional_modules' => ['authorization']],
         paths: ['auth' => []],
         selectedModules: ['authorization'],
         selectedAuthFeatures: ['registration'],
@@ -20,7 +20,7 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         isMockedScript: true,
     );
 
-    expect($context->providedAnswers)->toBe(['auth_features' => ['registration']])
+    expect($context->providedAnswers)->toBe(['auth_features' => ['login', 'registration']])
         ->and($context->answers)->toHaveKeys(['auth_features', 'optional_modules'])
         ->and($context->paths)->toBe(['auth' => []])
         ->and($context->selectedModules)->toBe(['authorization'])

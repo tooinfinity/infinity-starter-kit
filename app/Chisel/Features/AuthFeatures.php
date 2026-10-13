@@ -80,7 +80,7 @@ final class AuthFeatures
                 emptyDirectories: [
                     'resources/js/pages/user',
                 ],
-                dependencies: [],
+                dependencies: ['login'],
             ),
             'email-verification' => new FeatureDefinition(
                 key: 'email-verification',

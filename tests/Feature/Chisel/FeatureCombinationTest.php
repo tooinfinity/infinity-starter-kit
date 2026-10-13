@@ -204,7 +204,7 @@ it('handles all optional modules disabled and all auth features disabled', funct
 
 it('handles authorization alone', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ]);
 
@@ -236,7 +236,7 @@ it('handles authorization alone', function (): void {
 
 it('handles localization alone', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['localization'],
     ]);
 
@@ -264,7 +264,7 @@ it('handles localization alone', function (): void {
 
 it('handles notifications alone', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['notifications'],
     ]);
 
@@ -289,7 +289,7 @@ it('handles notifications alone', function (): void {
 
 it('handles audit-trails ON with reporting OFF', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'audit-trails'],
     ]);
 
@@ -313,7 +313,7 @@ it('handles audit-trails ON with reporting OFF', function (): void {
 
 it('handles user-management ON with reporting OFF and audit-trails OFF', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'user-management'],
     ]);
 
@@ -336,7 +336,7 @@ it('handles user-management ON with reporting OFF and audit-trails OFF', functio
 
 it('handles user-management ON with audit-trails ON', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'user-management', 'audit-trails'],
     ]);
 
@@ -380,7 +380,7 @@ it('handles auth combinations: registration OFF, email-verification ON, two-fact
 
 it('handles auth combinations: email-verification OFF, two-factor OFF, registration ON', function (): void {
     $sandbox = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ]);
 
@@ -390,7 +390,7 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
         expect(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
             ->and(file_exists($dir.'/tests/Feature/Controllers/RegisterControllerTest.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
@@ -502,9 +502,10 @@ it('rejects auth features missing login dependency', function (string $feature):
             'auth_features' => [$feature],
             'optional_modules' => [],
         ]);
-    })->toThrow(RuntimeException::class, sprintf('The "%s" module requires the following module(s): login.', $feature));
+    })->toThrow(RuntimeException::class, sprintf('The "%s" feature requires the following feature(s): login.', $feature));
 })->with([
     'logout',
+    'registration',
     'two-factor',
     'password-reset',
     'password-update',
@@ -514,22 +515,22 @@ it('rejects auth features missing login dependency', function (string $feature):
 it('rejects invalid combinations with detailed exception', function (): void {
     expect(function (): void {
         runChiselSandbox([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => ['settings'], // missing authorization
         ]);
-    })->toThrow(RuntimeException::class, 'The "settings" module requires the following module(s): authorization.');
+    })->toThrow(RuntimeException::class, 'The "settings" feature requires the following feature(s): authorization.');
 
     expect(function (): void {
         runChiselSandbox([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => ['reporting'], // missing audit-trails, user-management, authorization
         ]);
-    })->toThrow(RuntimeException::class, 'The "reporting" module requires the following module(s):');
+    })->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s):');
 });
 
 it('handles cross-feature tests: audit-trails ON with settings ON vs OFF', function (): void {
     $withSettings = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'settings', 'audit-trails'],
     ]);
 
@@ -540,7 +541,7 @@ it('handles cross-feature tests: audit-trails ON with settings ON vs OFF', funct
     }
 
     $withoutSettings = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'audit-trails'],
     ]);
 
@@ -553,7 +554,7 @@ it('handles cross-feature tests: audit-trails ON with settings ON vs OFF', funct
 
 it('handles cross-feature tests: notifications ON with localization ON vs OFF', function (): void {
     $withLocalization = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['notifications', 'localization'],
     ]);
 
@@ -565,7 +566,7 @@ it('handles cross-feature tests: notifications ON with localization ON vs OFF', 
     }
 
     $withoutLocalization = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['notifications'],
     ]);
 
@@ -582,7 +583,7 @@ it('handles cross-feature tests: notifications ON with localization ON vs OFF', 
 
 it('handles cross-feature tests: reporting ON with localization ON vs OFF', function (): void {
     $withLocalization = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'reporting', 'localization'],
     ]);
 
@@ -593,7 +594,7 @@ it('handles cross-feature tests: reporting ON with localization ON vs OFF', func
     }
 
     $withoutLocalization = runChiselSandbox([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'reporting'],
     ]);
 
@@ -608,7 +609,7 @@ it('handles cross-feature tests: reporting ON with localization ON vs OFF', func
 it('correctly prunes unselected cross-feature tests when test-support classes are unavailable', function (): void {
     $sandbox = runChiselSandbox(
         answers: [
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => ['authorization', 'audit-trails'], // settings is OFF
         ],
         beforeRun: function (string $tempDir): void {
@@ -621,6 +622,123 @@ it('correctly prunes unselected cross-feature tests when test-support classes ar
         $dir = $sandbox['dir'];
         expect(file_exists($dir.'/tests/Feature/AuditTrails/SettingsAuditingTest.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('tests individual feature removal from full auth configuration', function (string $removedFeature, ?string $expectedFailure): void {
+    $allAuth = [
+        'login',
+        'logout',
+        'registration',
+        'email-verification',
+        'password-reset',
+        'password-update',
+        'two-factor',
+    ];
+
+    $selection = array_values(array_filter($allAuth, fn (string $f): bool => $f !== $removedFeature));
+
+    if ($expectedFailure !== null) {
+        expect(function () use ($selection): void {
+            runChiselSandbox([
+                'auth_features' => $selection,
+                'optional_modules' => [],
+            ]);
+        })->toThrow(RuntimeException::class, $expectedFailure);
+
+        return;
+    }
+
+    $sandbox = runChiselSandbox([
+        'auth_features' => $selection,
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+
+        $routesContent = (string) file_get_contents($dir.'/routes/web.php');
+
+        match ($removedFeature) {
+            'logout' => expect(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeFalse()
+                ->and($routesContent)->not->toContain("Route::post('logout'")
+                ->and($routesContent)->toContain("Route::get('login'"),
+
+            'registration' => expect(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeFalse()
+                ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeFalse()
+                ->and($routesContent)->not->toContain("Route::get('register'")
+                ->and($routesContent)->toContain("Route::get('login'"),
+
+            'email-verification' => expect(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
+                ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationNotificationController.php'))->toBeFalse()
+                ->and($routesContent)->not->toContain("Route::get('verify-email'")
+                ->and($routesContent)->not->toContain("'verified'"),
+
+            'password-reset' => expect(file_exists($dir.'/app/Actions/CreateUserEmailResetNotification.php'))->toBeFalse()
+                ->and(file_exists($dir.'/app/Actions/CreateUserPassword.php'))->toBeFalse()
+                ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeTrue()
+                ->and(file_exists($dir.'/app/Actions/UpdateUserPassword.php'))->toBeTrue()
+                ->and($routesContent)->not->toContain("Route::get('forgot-password'")
+                ->and($routesContent)->not->toContain("Route::get('reset-password/{token}'")
+                ->and($routesContent)->toContain("Route::get('settings/password'"),
+
+            'password-update' => expect(file_exists($dir.'/app/Actions/UpdateUserPassword.php'))->toBeFalse()
+                ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeTrue()
+                ->and(file_exists($dir.'/app/Actions/CreateUserPassword.php'))->toBeTrue()
+                ->and($routesContent)->not->toContain("Route::get('settings/password'")
+                ->and($routesContent)->toContain("Route::get('forgot-password'")
+                ->and($routesContent)->toContain("Route::get('reset-password/{token}'"),
+
+            'two-factor' => expect(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse()
+                ->and(file_exists($dir.'/resources/js/components/two-factor-setup-modal.tsx'))->toBeFalse()
+                ->and($routesContent)->not->toContain("Route::get('settings/two-factor'"),
+
+            default => null,
+        };
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+})->with([
+    'without login (fails because dependents require login)' => ['login', 'feature requires the following feature(s): login'],
+    'without logout' => ['logout', null],
+    'without registration' => ['registration', null],
+    'without email-verification' => ['email-verification', null],
+    'without password-reset' => ['password-reset', null],
+    'without password-update' => ['password-update', null],
+    'without two-factor' => ['two-factor', null],
+]);
+
+it('handles registration and email-verification: login, logout, registration, email-verification', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'registration', 'email-verification'],
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
+
+        $routesContent = (string) file_get_contents($dir.'/routes/web.php');
+        expect($routesContent)->toContain("Route::get('login'")
+            ->and($routesContent)->toContain("Route::post('logout'")
+            ->and($routesContent)->toContain("Route::get('register'")
+            ->and($routesContent)->toContain("Route::get('verify-email'")
+            ->and($routesContent)->not->toContain("Route::get('settings/two-factor'")
+            ->and($routesContent)->not->toContain("Route::get('forgot-password'");
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

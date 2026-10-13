@@ -32,6 +32,24 @@ final class DependencyValidator
         /** @var array<string, FeatureDefinition|list<string>> $definitions */
         $definitions = $featuresOrMap ?? FeatureRegistry::all();
 
+        // When validating against all definitions, check all selected features.
+        // If a partial/legacy dependency map is provided, valid keys include both map keys and dependency targets.
+        $validKeys = array_keys($definitions);
+        foreach ($definitions as $item) {
+            $deps = $item instanceof FeatureDefinition ? $item->dependencies : $item;
+            $validKeys = array_merge($validKeys, $deps);
+        }
+
+        $validKeys = array_values(array_unique($validKeys));
+
+        $unknownFeatures = array_diff($selectedFeatures, $validKeys);
+        if ($unknownFeatures !== []) {
+            throw new RuntimeException(sprintf(
+                'Unknown feature(s) specified: %s.',
+                implode(', ', $unknownFeatures),
+            ));
+        }
+
         uksort($definitions, function (string $a, string $b) use ($definitions): int {
             $depsA = $definitions[$a] instanceof FeatureDefinition ? $definitions[$a]->dependencies : $definitions[$a];
             $depsB = $definitions[$b] instanceof FeatureDefinition ? $definitions[$b]->dependencies : $definitions[$b];
@@ -56,7 +74,7 @@ final class DependencyValidator
                 $missing = array_diff($required, $selectedFeatures);
                 if ($missing !== []) {
                     throw new RuntimeException(sprintf(
-                        'The "%s" module requires the following module(s): %s.',
+                        'The "%s" feature requires the following feature(s): %s.',
                         $featureKey,
                         implode(', ', $missing),
                     ));

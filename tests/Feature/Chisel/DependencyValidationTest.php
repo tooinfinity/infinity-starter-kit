@@ -31,7 +31,7 @@ test('chiselValidateDependencies rejects reporting without audit-trails', functi
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "reporting" module requires the following module(s): audit-trails.');
+        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): audit-trails.');
 });
 
 test('chiselValidateDependencies rejects reporting without user-management', function (): void {
@@ -40,7 +40,7 @@ test('chiselValidateDependencies rejects reporting without user-management', fun
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "reporting" module requires the following module(s): user-management.');
+        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): user-management.');
 });
 
 test('chiselValidateDependencies rejects reporting without authorization', function (): void {
@@ -49,7 +49,7 @@ test('chiselValidateDependencies rejects reporting without authorization', funct
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "reporting" module requires the following module(s): authorization.');
+        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): authorization.');
 });
 
 test('chiselValidateDependencies rejects audit-trails without authorization', function (): void {
@@ -58,7 +58,7 @@ test('chiselValidateDependencies rejects audit-trails without authorization', fu
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "audit-trails" module requires the following module(s): authorization.');
+        ->toThrow(RuntimeException::class, 'The "audit-trails" feature requires the following feature(s): authorization.');
 });
 
 test('chiselValidateDependencies rejects user-management without authorization', function (): void {
@@ -67,7 +67,7 @@ test('chiselValidateDependencies rejects user-management without authorization',
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "user-management" module requires the following module(s): authorization.');
+        ->toThrow(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
 });
 
 test('chiselValidateDependencies rejects settings without authorization', function (): void {
@@ -76,7 +76,7 @@ test('chiselValidateDependencies rejects settings without authorization', functi
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "settings" module requires the following module(s): authorization.');
+        ->toThrow(RuntimeException::class, 'The "settings" feature requires the following feature(s): authorization.');
 });
 
 test('chiselValidateDependencies accepts valid combinations', function (array $modules): void {

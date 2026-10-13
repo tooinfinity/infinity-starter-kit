@@ -573,7 +573,7 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
         $targetDir = $baseTempDir.'/target';
 
         $answers = [
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => ['authorization'],
         ];
 

@@ -15,7 +15,7 @@ final readonly class FeatureDefinition
      * @param  list<string>  $emptyDirectories
      * @param  list<string>  $composerPackages
      * @param  list<string>  $frontendPackages
-     * @param  list<string>  $dependencies
+     * @param  list<string>  $dependencies  Keys of features required for a valid, supported starter-kit application configuration.
      */
     public function __construct(
         public string $key,
