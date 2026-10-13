@@ -48,6 +48,10 @@ test('dependency validator rejects cross-feature dependency chain when intermedi
 
 test('dependency validator works with custom FeatureDefinition instances', function (): void {
     $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+        ),
         'feature-b' => new FeatureDefinition(
             key: 'feature-b',
             label: 'Feature B',

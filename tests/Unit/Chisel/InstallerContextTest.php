@@ -10,7 +10,7 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         answers: ['auth_features' => ['login', 'registration'], 'optional_modules' => ['authorization']],
         paths: ['auth' => []],
         selectedModules: ['authorization'],
-        selectedAuthFeatures: ['registration'],
+        selectedAuthFeatures: ['login', 'registration'],
         hasAuthorization: true,
         adminName: 'Admin',
         adminEmail: 'admin@example.com',
@@ -24,7 +24,7 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         ->and($context->answers)->toHaveKeys(['auth_features', 'optional_modules'])
         ->and($context->paths)->toBe(['auth' => []])
         ->and($context->selectedModules)->toBe(['authorization'])
-        ->and($context->selectedAuthFeatures)->toBe(['registration'])
+        ->and($context->selectedAuthFeatures)->toBe(['login', 'registration'])
         ->and($context->hasAuthorization)->toBeTrue()
         ->and($context->adminName)->toBe('Admin')
         ->and($context->adminEmail)->toBe('admin@example.com')
