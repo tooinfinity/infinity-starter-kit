@@ -1,5 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { dashboard, login } from '@/routes';
+import { dashboard } from '@/routes';
+/* @chisel-login */
+import { login } from '@/routes';
+/* @end-chisel-login */
 /* @chisel-registration */
 import { register } from '@/routes';
 /* @end-chisel-registration */
@@ -28,12 +31,14 @@ export default function Welcome() {
                             </Link>
                         ) : (
                             <>
+                                {/* @chisel-login */}
                                 <Link
                                     href={login()}
                                     className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                 >
                                     Log in
                                 </Link>
+                                {/* @end-chisel-login */}
                                 {/* @chisel-registration */}
                                 <Link
                                     href={register()}

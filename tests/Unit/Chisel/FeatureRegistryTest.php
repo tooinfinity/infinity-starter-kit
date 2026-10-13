@@ -14,7 +14,7 @@ test('all expected features are registered in feature registry', function (): vo
     $optional = FeatureRegistry::optionalModules();
     $all = FeatureRegistry::all();
 
-    expect($auth)->toHaveKeys(['registration', 'email-verification', 'two-factor-authentication'])
+    expect($auth)->toHaveKeys(['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'])
         ->and($optional)->toHaveKeys([
             'authorization',
             'settings',
@@ -31,7 +31,7 @@ test('auth features and optional modules are grouped in dedicated classes', func
     $auth = AuthFeatures::all();
     $optional = OptionalModules::all();
 
-    expect($auth)->toHaveKeys(['registration', 'email-verification', 'two-factor-authentication'])
+    expect($auth)->toHaveKeys(['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'])
         ->and($optional)->toHaveKeys([
             'authorization',
             'settings',
@@ -108,7 +108,14 @@ test('registered feature definitions declare expected dependencies', function ()
         ->and(FeatureRegistry::get('settings')->dependencies)->toBe(['authorization'])
         ->and(FeatureRegistry::get('authorization')->dependencies)->toBe([])
         ->and(FeatureRegistry::get('localization')->dependencies)->toBe([])
-        ->and(FeatureRegistry::get('notifications')->dependencies)->toBe([]);
+        ->and(FeatureRegistry::get('notifications')->dependencies)->toBe([])
+        ->and(FeatureRegistry::get('login')->dependencies)->toBe([])
+        ->and(FeatureRegistry::get('logout')->dependencies)->toBe(['login'])
+        ->and(FeatureRegistry::get('registration')->dependencies)->toBe(['login'])
+        ->and(FeatureRegistry::get('email-verification')->dependencies)->toBe(['login'])
+        ->and(FeatureRegistry::get('password-reset')->dependencies)->toBe(['login'])
+        ->and(FeatureRegistry::get('password-update')->dependencies)->toBe(['login'])
+        ->and(FeatureRegistry::get('two-factor')->dependencies)->toBe(['login']);
 });
 
 test('toPathsArray produces structure matching chisel-paths specification', function (): void {

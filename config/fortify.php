@@ -117,10 +117,12 @@ return [
     */
 
     'limiters' => [
+        /* @chisel-login */
         'login' => 'login',
-        /* @chisel-two-factor-authentication */
+        /* @end-chisel-login */
+        /* @chisel-two-factor */
         'two-factor' => 'two-factor',
-        /* @end-chisel-two-factor-authentication */
+        /* @end-chisel-two-factor */
     ],
 
     /*
@@ -151,17 +153,19 @@ return [
         /* @chisel-registration */
         Features::registration(),
         /* @end-chisel-registration */
+        /* @chisel-password-reset */
         Features::resetPasswords(),
+        /* @end-chisel-password-reset */
         /* @chisel-email-verification */
         Features::emailVerification(),
         /* @end-chisel-email-verification */
-        /* @chisel-two-factor-authentication */
+        /* @chisel-two-factor */
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
             // 'window' => 0
         ]),
-        /* @end-chisel-two-factor-authentication */
+        /* @end-chisel-two-factor */
     ],
 
 ];

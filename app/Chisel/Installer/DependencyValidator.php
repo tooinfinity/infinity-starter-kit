@@ -21,11 +21,38 @@ final class DependencyValidator
      */
     public static function validate(array $answers, ?array $featuresOrMap = null): void
     {
+        $rawAuth = (array) ($answers['auth_features'] ?? []);
+        $authFeatures = array_values(array_filter($rawAuth, is_string(...)));
+
         $rawModules = (array) ($answers['optional_modules'] ?? []);
         $optionalModules = array_values(array_filter($rawModules, is_string(...)));
 
+        $selectedFeatures = array_values(array_unique(array_merge($authFeatures, $optionalModules)));
+
         /** @var array<string, FeatureDefinition|list<string>> $definitions */
         $definitions = $featuresOrMap ?? FeatureRegistry::all();
+
+        // When validating against FeatureRegistry, valid keys are all registered features.
+        // If a partial/legacy dependency map is provided, valid keys include both map keys and dependency targets.
+        $validKeys = $featuresOrMap !== null
+            ? (function () use ($definitions): array {
+                $keys = array_keys($definitions);
+                foreach ($definitions as $item) {
+                    $deps = $item instanceof FeatureDefinition ? $item->dependencies : $item;
+                    $keys = array_merge($keys, $deps);
+                }
+
+                return array_values(array_unique($keys));
+            })()
+            : array_keys(FeatureRegistry::all());
+
+        $unknownFeatures = array_diff($selectedFeatures, $validKeys);
+        if ($unknownFeatures !== []) {
+            throw new RuntimeException(sprintf(
+                'Unknown feature(s) specified: %s.',
+                implode(', ', $unknownFeatures),
+            ));
+        }
 
         uksort($definitions, function (string $a, string $b) use ($definitions): int {
             $depsA = $definitions[$a] instanceof FeatureDefinition ? $definitions[$a]->dependencies : $definitions[$a];
@@ -47,11 +74,11 @@ final class DependencyValidator
                 continue;
             }
 
-            if (in_array($featureKey, $optionalModules, true)) {
-                $missing = array_diff($required, $optionalModules);
+            if (in_array($featureKey, $selectedFeatures, true)) {
+                $missing = array_diff($required, $selectedFeatures);
                 if ($missing !== []) {
                     throw new RuntimeException(sprintf(
-                        'The "%s" module requires the following module(s): %s.',
+                        'The "%s" feature requires the following feature(s): %s.',
                         $featureKey,
                         implode(', ', $missing),
                     ));

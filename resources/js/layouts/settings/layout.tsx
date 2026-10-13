@@ -9,13 +9,15 @@ import { edit as editAppearance } from '@/routes/appearance';
 /* @chisel-notifications */
 import { edit as editNotificationPreferences } from '@/routes/notification-preferences';
 /* @end-chisel-notifications */
+/* @chisel-password-update */
 import { edit as editPassword } from '@/routes/password';
+/* @end-chisel-password-update */
 /* @chisel-settings */
 import { edit as editSettings } from '@/routes/settings';
 /* @end-chisel-settings */
-/* @chisel-two-factor-authentication */
+/* @chisel-two-factor */
 import { show as showTwoFactor } from '@/routes/two-factor';
-/* @end-chisel-two-factor-authentication */
+/* @end-chisel-two-factor */
 import { edit } from '@/routes/user-profile';
 import type { NavItem } from '@/types';
 
@@ -25,18 +27,20 @@ const sidebarNavItems: NavItem[] = [
         href: edit(),
         icon: null,
     },
+    /* @chisel-password-update */
     {
         title: 'Password',
         href: editPassword(),
         icon: null,
     },
-    /* @chisel-two-factor-authentication */
+    /* @end-chisel-password-update */
+    /* @chisel-two-factor */
     {
         title: 'Two-Factor Auth',
         href: showTwoFactor(),
         icon: null,
     },
-    /* @end-chisel-two-factor-authentication */
+    /* @end-chisel-two-factor */
     {
         title: 'Appearance',
         href: editAppearance(),

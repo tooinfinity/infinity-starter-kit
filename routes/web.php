@@ -8,11 +8,20 @@ use App\Http\Controllers\AuditTrails\AuditTrailController;
 /* @chisel-localization */
 use App\Http\Controllers\LocaleController;
 /* @end-chisel-localization */
+/* @chisel-login */
+use App\Http\Controllers\LoginController;
+/* @end-chisel-login */
+/* @chisel-logout */
+use App\Http\Controllers\LogoutController;
+/* @end-chisel-logout */
 /* @chisel-notifications */
 use App\Http\Controllers\MarkAllNotificationsAsReadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationPreferenceController;
 /* @end-chisel-notifications */
+/* @chisel-registration */
+use App\Http\Controllers\RegisterController;
+/* @end-chisel-registration */
 /* @chisel-reporting */
 use App\Http\Controllers\Reporting\AuditReportController;
 use App\Http\Controllers\Reporting\ExportAuditReportController;
@@ -20,12 +29,13 @@ use App\Http\Controllers\Reporting\ExportUserReportController;
 use App\Http\Controllers\Reporting\ReportIndexController;
 use App\Http\Controllers\Reporting\UserReportController;
 /* @end-chisel-reporting */
-use App\Http\Controllers\SessionController;
 /* @chisel-settings */
 use App\Http\Controllers\SettingController;
 /* @end-chisel-settings */
 use App\Http\Controllers\UserController;
+/* @chisel-password-reset */
 use App\Http\Controllers\UserEmailResetNotificationController;
+/* @end-chisel-password-reset */
 /* @chisel-email-verification */
 use App\Http\Controllers\UserEmailVerificationController;
 use App\Http\Controllers\UserEmailVerificationNotificationController;
@@ -38,9 +48,9 @@ use App\Http\Controllers\Users\DeactivateUserController;
 use App\Http\Controllers\Users\UserController as UserManagementController;
 use App\Http\Controllers\Users\UserPasswordController as AdminUserPasswordController;
 /* @end-chisel-user-management */
-/* @chisel-two-factor-authentication */
+/* @chisel-two-factor */
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
-/* @end-chisel-two-factor-authentication */
+/* @end-chisel-two-factor */
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -64,20 +74,22 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
     Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 
+    /* @chisel-password-update */
     // User Password...
     Route::get('settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
     Route::put('settings/password', [UserPasswordController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('password.update');
+    /* @end-chisel-password-update */
 
     // Appearance...
     Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
 
-    /* @chisel-two-factor-authentication */
+    /* @chisel-two-factor */
     // User Two-Factor Authentication...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
-    /* @end-chisel-two-factor-authentication */
+    /* @end-chisel-two-factor */
 
     /* @chisel-settings */
     // Application Settings...
@@ -172,13 +184,14 @@ Route::middleware('auth')->group(function (): void {
 
 Route::middleware('guest')->group(function (): void {
     /* @chisel-registration */
-    // User...
-    Route::get('register', [UserController::class, 'create'])
+    // Registration...
+    Route::get('register', [RegisterController::class, 'create'])
         ->name('register');
-    Route::post('register', [UserController::class, 'store'])
+    Route::post('register', [RegisterController::class, 'store'])
         ->name('register.store');
     /* @end-chisel-registration */
 
+    /* @chisel-password-reset */
     // User Password...
     Route::get('reset-password/{token}', [UserPasswordController::class, 'create'])
         ->name('password.reset');
@@ -190,12 +203,15 @@ Route::middleware('guest')->group(function (): void {
         ->name('password.request');
     Route::post('forgot-password', [UserEmailResetNotificationController::class, 'store'])
         ->name('password.email');
+    /* @end-chisel-password-reset */
 
-    // Session...
-    Route::get('login', [SessionController::class, 'create'])
+    /* @chisel-login */
+    // Login...
+    Route::get('login', [LoginController::class, 'create'])
         ->name('login');
-    Route::post('login', [SessionController::class, 'store'])
+    Route::post('login', [LoginController::class, 'store'])
         ->name('login.store');
+    /* @end-chisel-login */
 });
 
 Route::middleware('auth')->group(function (): void {
@@ -213,7 +229,9 @@ Route::middleware('auth')->group(function (): void {
         ->name('user.verification.verify');
     /* @end-chisel-email-verification */
 
-    // Session...
-    Route::post('logout', [SessionController::class, 'destroy'])
+    /* @chisel-logout */
+    // Logout...
+    Route::post('logout', LogoutController::class)
         ->name('logout');
+    /* @end-chisel-logout */
 });

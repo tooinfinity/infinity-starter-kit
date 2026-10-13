@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
+/* @chisel-login */
 import { login } from '@/routes';
+/* @end-chisel-login */
 import { store } from '@/routes/register';
 
 export default function Register() {
@@ -99,12 +101,14 @@ export default function Register() {
                             </Button>
                         </div>
 
+                        {/* @chisel-login */}
                         <div className="text-center text-sm text-muted-foreground">
                             Already have an account?{' '}
                             <TextLink href={login()} tabIndex={6}>
                                 Log in
                             </TextLink>
                         </div>
+                        {/* @end-chisel-login */}
                     </>
                 )}
             </Form>

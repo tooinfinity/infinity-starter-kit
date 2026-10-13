@@ -272,8 +272,12 @@ During `composer create-project`, the `post-create-project-cmd` hook triggers `p
 
 ```text
 Which authentication features would you like to enable?
+ [x] Login
+ [x] Logout
  [x] Registration
  [x] Email verification
+ [x] Password reset
+ [x] Password update
  [x] Two-factor authentication
 
 Which optional modules should be installed?
@@ -291,7 +295,7 @@ Which optional modules should be installed?
 Pass answers as a JSON string via the `--answers` option:
 
 ```bash
-php artisan install:features --answers='{"auth_features":["registration","two-factor-authentication"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}' --no-interaction
+php artisan install:features --answers='{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}' --no-interaction
 ```
 
 Unselected modules have all exclusive code, routes, permissions, translations, and dependencies cleanly pruned.

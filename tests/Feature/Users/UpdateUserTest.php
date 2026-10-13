@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
@@ -217,3 +219,32 @@ it('rejects removing super-admin role when actor is not super-admin (SEC-001)', 
 
     expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });
+
+/* @chisel-email-verification */
+it('resets email verification and sends notification when email changes during admin update', function (): void {
+    Notification::fake();
+
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $target = User::factory()->create([
+        'email' => 'old@example.com',
+        'email_verified_at' => now(),
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $target), [
+            'name' => 'Updated Name',
+            'email' => 'new@example.com',
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    $target->refresh();
+    expect($target->email)->toBe('new@example.com')
+        ->and($target->email_verified_at)->toBeNull();
+
+    Notification::assertSentTo($target, VerifyEmail::class);
+});
+/* @end-chisel-email-verification */

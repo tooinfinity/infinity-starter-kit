@@ -48,7 +48,7 @@ test('command rejects invalid dependency combination passed via answers', functi
 
     try {
         $answers = json_encode([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => ['user-management'],
         ], JSON_THROW_ON_ERROR);
 
@@ -56,13 +56,13 @@ test('command rejects invalid dependency combination passed via answers', functi
     } finally {
         $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
     }
-})->throws(RuntimeException::class, 'The "user-management" module requires the following module(s): authorization.');
+})->throws(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
 
 test('authorization setup runs and creates permissions and roles when authorization is selected', function (): void {
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR);
 
@@ -80,7 +80,7 @@ test('authorization setup and admin setup are skipped when authorization is disa
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ], JSON_THROW_ON_ERROR);
 
@@ -96,7 +96,7 @@ test('admin setup runs and creates administrator when credentials are provided i
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
             'name' => 'Root Admin',
@@ -120,7 +120,7 @@ test('admin setup runs and creates administrator when credentials are provided v
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR);
 
@@ -148,7 +148,7 @@ test('admin setup safely handles existing user in non-interactive installation w
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
             'email' => 'existing-admin@example.com',
@@ -168,7 +168,7 @@ test('admin setup fails installation if invalid credentials provided and never l
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
             'name' => 'Bad Admin',
@@ -187,7 +187,7 @@ test('admin setup fails installation when password is provided without email', f
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
             'name' => 'No Email Admin',
@@ -205,7 +205,7 @@ test('admin setup does not create duplicate users on repeated execution', functi
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
             'name' => 'Admin Twice',
@@ -233,7 +233,7 @@ test('admin setup assigns role to existing user already with Super Admin without
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
             'email' => 'already-super@example.com',
@@ -250,7 +250,7 @@ test('non-interactive mode with authorization enabled skips admin when no creden
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR);
 
@@ -274,7 +274,7 @@ test('command does not defer when LARAVEL_INSTALLER_DEFER_HOOKS is true but answ
 
     try {
         $answers = json_encode([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => ['authorization'],
         ], JSON_THROW_ON_ERROR);
 
@@ -292,7 +292,7 @@ test('normal Node mode executes frontend install, build, and lint commands', fun
     bindMockChiselScript();
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ], JSON_THROW_ON_ERROR);
 
@@ -313,7 +313,7 @@ test('LARAVEL_INSTALLER_NO_NODE mode skips all Node commands', function () use (
 
     try {
         $answers = json_encode([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
         ], JSON_THROW_ON_ERROR);
 
@@ -332,7 +332,7 @@ test('failed authorization setup returns non-zero exit status and does not claim
     Artisan::command('authorization:setup', fn (): int => 1);
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR);
 
@@ -347,7 +347,7 @@ test('failed Wayfinder generation returns non-zero exit status and outputs error
     ]);
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ], JSON_THROW_ON_ERROR);
 
@@ -363,7 +363,7 @@ test('failed frontend installation returns non-zero exit status and outputs erro
     ]);
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ], JSON_THROW_ON_ERROR);
 
@@ -379,7 +379,7 @@ test('failed frontend build returns non-zero exit status and outputs error', fun
     ]);
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ], JSON_THROW_ON_ERROR);
 
@@ -395,7 +395,7 @@ test('failed frontend lint returns non-zero exit status and outputs error', func
     ]);
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => [],
     ], JSON_THROW_ON_ERROR);
 
@@ -412,7 +412,7 @@ test('CHISEL_TEST_FAIL_STAGE causes deterministic failure after chisel mutations
 
     try {
         $answers = json_encode([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
         ], JSON_THROW_ON_ERROR);
 
@@ -461,7 +461,7 @@ test('command fails and outputs error when chisel execution throws RuntimeExcept
     });
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR);
 
@@ -482,7 +482,7 @@ test('command fails and outputs error when chisel execution throws ProcessFailed
     });
 
     $answers = json_encode([
-        'auth_features' => ['registration'],
+        'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR);
 
@@ -534,7 +534,7 @@ return Chisel::script(__DIR__)->questions([
 
     try {
         $answers = json_encode([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
         ], JSON_THROW_ON_ERROR);
 
@@ -609,7 +609,7 @@ return Chisel::script(__DIR__)->questions([
 
     try {
         $answers = json_encode([
-            'auth_features' => ['registration'],
+            'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
         ], JSON_THROW_ON_ERROR);
 

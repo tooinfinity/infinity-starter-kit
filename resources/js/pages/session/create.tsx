@@ -12,7 +12,9 @@ import AuthLayout from '@/layouts/auth-layout';
 import { register } from '@/routes';
 /* @end-chisel-registration */
 import { store } from '@/routes/login';
+/* @chisel-password-reset */
 import { request } from '@/routes/password';
+/* @end-chisel-password-reset */
 
 type Props = {
     status?: string;
@@ -53,6 +55,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             <div className="grid gap-2">
                                 <div className="flex items-center">
                                     <Label htmlFor="password">Password</Label>
+                                    {/* @chisel-password-reset */}
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
@@ -62,6 +65,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                             Forgot password?
                                         </TextLink>
                                     )}
+                                    {/* @end-chisel-password-reset */}
                                 </div>
                                 <PasswordInput
                                     id="password"

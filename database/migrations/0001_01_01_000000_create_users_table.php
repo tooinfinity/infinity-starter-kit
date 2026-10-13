@@ -18,11 +18,11 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             /* @end-chisel-email-verification */
             $table->string('password');
-            /* @chisel-two-factor-authentication */
+            /* @chisel-two-factor */
             $table->text('two_factor_secret')->nullable();
             $table->text('two_factor_recovery_codes')->nullable();
             $table->timestamp('two_factor_confirmed_at')->nullable();
-            /* @end-chisel-two-factor-authentication */
+            /* @end-chisel-two-factor */
             /* @chisel-user-management */
             $table->boolean('is_active')->default(true);
             /* @end-chisel-user-management */

@@ -4,7 +4,9 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
+/* @chisel-logout */
 import { logout } from '@/routes';
+/* @end-chisel-logout */
 import { send } from '@/routes/verification';
 
 export default function VerifyEmail({ status }: { status?: string }) {
@@ -30,12 +32,14 @@ export default function VerifyEmail({ status }: { status?: string }) {
                             Resend verification email
                         </Button>
 
+                        {/* @chisel-logout */}
                         <TextLink
                             href={logout()}
                             className="mx-auto block text-sm"
                         >
                             Log out
                         </TextLink>
+                        {/* @end-chisel-logout */}
                     </>
                 )}
             </Form>
