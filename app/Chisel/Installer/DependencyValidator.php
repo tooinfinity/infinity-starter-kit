@@ -32,7 +32,19 @@ final class DependencyValidator
         /** @var array<string, FeatureDefinition|list<string>> $definitions */
         $definitions = $featuresOrMap ?? FeatureRegistry::all();
 
-        $validKeys = array_keys($definitions);
+        // When validating against FeatureRegistry, valid keys are all registered features.
+        // If a partial/legacy dependency map is provided, valid keys include both map keys and dependency targets.
+        $validKeys = $featuresOrMap !== null
+            ? (function () use ($definitions): array {
+                $keys = array_keys($definitions);
+                foreach ($definitions as $item) {
+                    $deps = $item instanceof FeatureDefinition ? $item->dependencies : $item;
+                    $keys = array_merge($keys, $deps);
+                }
+
+                return array_values(array_unique($keys));
+            })()
+            : array_keys(FeatureRegistry::all());
 
         $unknownFeatures = array_diff($selectedFeatures, $validKeys);
         if ($unknownFeatures !== []) {
