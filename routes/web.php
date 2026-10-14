@@ -6,33 +6,33 @@ declare(strict_types=1);
 use App\Http\Controllers\AuditTrails\AuditTrailController;
 /* @end-chisel-audit-trails */
 /* @chisel-localization */
-use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\DeleteAccountController;
 /* @end-chisel-localization */
 /* @chisel-login */
-use App\Http\Controllers\LoginController;
+use App\Http\Controllers\LocaleController;
 /* @end-chisel-login */
 /* @chisel-logout */
-use App\Http\Controllers\LogoutController;
+use App\Http\Controllers\LoginController;
 /* @end-chisel-logout */
 /* @chisel-notifications */
+use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MarkAllNotificationsAsReadController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\NotificationPreferenceController;
 /* @end-chisel-notifications */
 /* @chisel-registration */
-use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\NotificationPreferenceController;
 /* @end-chisel-registration */
 /* @chisel-reporting */
+use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\Reporting\AuditReportController;
 use App\Http\Controllers\Reporting\ExportAuditReportController;
 use App\Http\Controllers\Reporting\ExportUserReportController;
 use App\Http\Controllers\Reporting\ReportIndexController;
-use App\Http\Controllers\Reporting\UserReportController;
 /* @end-chisel-reporting */
 /* @chisel-settings */
-use App\Http\Controllers\SettingController;
+use App\Http\Controllers\Reporting\UserReportController;
 /* @end-chisel-settings */
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\SettingController;
 /* @chisel-password-reset */
 use App\Http\Controllers\UserEmailResetNotificationController;
 /* @end-chisel-password-reset */
@@ -67,7 +67,7 @@ Route::middleware(['auth'/* @chisel-email-verification */, 'verified'/* @end-chi
 
 Route::middleware('auth')->group(function (): void {
     // User...
-    Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
+    Route::delete('user', DeleteAccountController::class)->name('user.destroy');
 
     // User Profile...
     Route::get('settings', fn (): RedirectResponse => to_route('user-profile.edit'));
