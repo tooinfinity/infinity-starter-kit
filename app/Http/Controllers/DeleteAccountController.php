@@ -11,9 +11,9 @@ use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 
-final readonly class UserController
+final readonly class DeleteAccountController
 {
-    public function destroy(DeleteUserRequest $request, #[CurrentUser] User $user, DeleteUser $action): RedirectResponse
+    public function __invoke(DeleteUserRequest $request, #[CurrentUser] User $user, DeleteUser $action): RedirectResponse
     {
         $action->handle($user);
 

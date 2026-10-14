@@ -97,6 +97,7 @@ final class AuthFeatures
                     'app/Models/User.php',
                     'app/Actions/Users/UpdateUserAction.php',
                     'app/Http/Controllers/Users/UserController.php',
+                    'app/Data/Users/UserData.php',
                     'resources/js/types/users.ts',
                     'database/factories/UserFactory.php',
                     'database/migrations/0001_01_01_000000_create_users_table.php',
