@@ -8,23 +8,21 @@ namespace App\Actions\Users;
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
-use App\Enums\Role;
 use App\Models\User;
 /* @chisel-notifications */
 use App\Notifications\UserDeactivated;
 /* @end-chisel-notifications */
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Traits\HasRoles;
 
 final readonly class DeactivateUserAction
 {
-    /* @chisel-audit-trails */
     public function __construct(
+        private EnsureNotLastSuperAdminAction $ensureNotLastSuperAdmin = new EnsureNotLastSuperAdminAction,
+        /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        /* @end-chisel-audit-trails */
     ) {}
-
-    /* @end-chisel-audit-trails */
 
     public function handle(User $user, ?User $currentUser = null): void
     {
@@ -35,18 +33,7 @@ final readonly class DeactivateUserAction
         }
 
         DB::transaction(function () use ($user): void {
-            if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
-                $superAdminCount = User::query()
-                    ->role(Role::SuperAdmin->value)
-                    ->lockForUpdate()
-                    ->count();
-
-                if ($superAdminCount <= 1) {
-                    throw ValidationException::withMessages([
-                        'user' => __('Cannot deactivate the last Super Admin.'),
-                    ]);
-                }
-            }
+            $this->ensureNotLastSuperAdmin->handle($user, 'deactivate');
 
             $user->forceFill(['is_active' => false])->save();
 

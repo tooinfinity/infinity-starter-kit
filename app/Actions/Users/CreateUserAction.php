@@ -18,12 +18,12 @@ use Spatie\Permission\Traits\HasRoles;
 
 final readonly class CreateUserAction
 {
-    /* @chisel-audit-trails */
     public function __construct(
+        /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
+        /* @end-chisel-audit-trails */
     ) {}
-
-    /* @end-chisel-audit-trails */
 
     public function handle(CreateUserData $data): User
     {
@@ -45,12 +45,7 @@ final readonly class CreateUserAction
             $this->auditTrail->handle(
                 event: AuditEvent::UserCreated,
                 auditable: $user,
-                newValues: [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'is_active' => $user->is_active,
-                    'roles' => $data->roles,
-                ],
+                newValues: $this->snapshotUserAuditData->handle($user, $data->roles),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */
