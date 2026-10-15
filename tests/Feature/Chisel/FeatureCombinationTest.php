@@ -56,6 +56,9 @@ function runChiselSandbox(array $answers, ?Closure $beforeRun = null): array
 
 /**
  * Asserts all PHP files in directory pass syntax check.
+ *
+ * Files are parsed in-process with the tokenizer rather than spawning one `php -l`
+ * process per file, which dominated the runtime of this test file.
  */
 function assertPhpSyntaxValid(string $directory): void
 {
@@ -64,11 +67,10 @@ function assertPhpSyntaxValid(string $directory): void
 
     foreach ($rdi as $file) {
         if ($file->isFile() && $file->getExtension() === 'php' && ! str_contains($file->getPathname(), '.blade.php')) {
-            $output = [];
-            $code = 0;
-            exec('php -l '.escapeshellarg($file->getPathname()).' 2>&1', $output, $code);
-            if ($code !== 0) {
-                $syntaxErrors[] = $file->getPathname().': '.implode(' ', $output);
+            try {
+                token_get_all((string) file_get_contents($file->getPathname()), TOKEN_PARSE);
+            } catch (ParseError $parseError) {
+                $syntaxErrors[] = $file->getPathname().': '.$parseError->getMessage().' on line '.$parseError->getLine();
             }
         }
     }

@@ -10,6 +10,8 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\Process\Process;
 
+uses()->group('installer-e2e');
+
 function createComposerGitRepositorySource(string $baseTempDir): string
 {
     $sourceDir = $baseTempDir.'/git_source';

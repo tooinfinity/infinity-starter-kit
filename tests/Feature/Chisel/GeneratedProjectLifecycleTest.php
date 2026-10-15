@@ -9,6 +9,8 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\Process\Process;
 
+uses()->group('installer-e2e');
+
 function createRealGeneratedProjectFixture(): string
 {
     $baseTempDir = storage_path('framework/testing');
