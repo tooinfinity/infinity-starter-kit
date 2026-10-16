@@ -154,6 +154,17 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
           restore-keys: ${{ runner.os }}-bun-
 
+      - name: Get Composer Download Cache Directory
+        id: composer-download-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer Downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-download-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-downloads-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-downloads-
+
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
@@ -170,4 +181,4 @@ jobs:
         run: bun run build
 
       - name: Installer E2E Tests
-        run: vendor/bin/pest tests/Feature/Chisel/ComposerCreateProjectLifecycleTest.php tests/Feature/Chisel/GeneratedProjectLifecycleTest.php --compact
+        run: vendor/bin/pest --group=installer-e2e --compact

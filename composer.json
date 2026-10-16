@@ -97,7 +97,9 @@
             "rector --dry-run",
             "bun run test:lint"
         ],
-        "test:unit": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0",
+        "test:unit": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0 --exclude-group=installer-e2e",
+        "test:quick": "pest --parallel --exclude-group=installer-e2e",
+        "test:installer": "pest --group=installer-e2e --compact",
         "test:types": [
             "phpstan",
             "bun run test:types"
