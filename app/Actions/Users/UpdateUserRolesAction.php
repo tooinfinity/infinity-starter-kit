@@ -28,7 +28,7 @@ final readonly class UpdateUserRolesAction
      */
     public function handle(User $user, array $roles, bool $recordAuditTrail = true): User
     {
-        if (! trait_exists(HasRoles::class)) {
+        if (! trait_exists(HasRoles::class) || ! $user->exists) {
             return $user;
         }
 
