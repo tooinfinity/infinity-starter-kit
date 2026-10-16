@@ -80,12 +80,12 @@ final class OptionalModules
                     'tests/Unit/Models/SettingTest.php',
                     'tests/Unit/Enums/SettingKeyTest.php',
                     'tests/Unit/Enums/SettingGroupTest.php',
+                    'tests/Unit/Actions/GetSettingTest.php',
+                    'tests/Unit/Actions/UpdateSettingsTest.php',
                     'tests/Feature/Controllers/SettingControllerTest.php',
-                    'tests/Feature/Settings/SettingsActionTest.php',
                 ],
                 emptyDirectories: [
                     'resources/js/pages/settings/application',
-                    'tests/Feature/Settings',
                 ],
                 dependencies: [
                     'authorization',
@@ -147,7 +147,7 @@ final class OptionalModules
                     'tests/Feature/Users/ChangePasswordTest.php',
                     'tests/Feature/Users/DeleteUserTest.php',
                     'tests/Feature/Users/InactiveUserAuthTest.php',
-                    'tests/Feature/Users/SnapshotUserAuditDataActionTest.php',
+                    'tests/Unit/Actions/Users/SnapshotUserAuditDataActionTest.php',
                     'tests/Feature/Users/SuperAdminProtectionTest.php',
                 ],
                 emptyDirectories: [
@@ -159,6 +159,7 @@ final class OptionalModules
                     'resources/js/components/users',
                     'resources/js/pages/users',
                     'tests/Feature/Users',
+                    'tests/Unit/Actions/Users',
                 ],
                 dependencies: [
                     'authorization',
@@ -205,7 +206,7 @@ final class OptionalModules
                     'tests/Feature/Localization/ChangeLocaleTest.php',
                     'tests/Feature/Localization/InertiaLocalePropsTest.php',
                     'tests/Feature/Localization/LocaleMiddlewareTest.php',
-                    'tests/Feature/Localization/ResolveLocaleTest.php',
+                    'tests/Unit/Actions/ResolveLocaleTest.php',
                     'tests/Feature/Localization/TranslationFileTest.php',
                 ],
                 emptyDirectories: [
@@ -332,8 +333,8 @@ final class OptionalModules
                     'tests/Feature/AuditTrails/AuditTrailListingTest.php',
                     'tests/Feature/AuditTrails/AuditTrailSecurityTest.php',
                     'tests/Feature/AuditTrails/AuditTrailTransactionTest.php',
-                    'tests/Feature/AuditTrails/RecordAuditTrailTest.php',
-                    'tests/Unit/Enums/AuditEventEnumTest.php',
+                    'tests/Unit/Actions/AuditTrails/RecordAuditTrailTest.php',
+                    'tests/Unit/Enums/AuditEventTest.php',
                 ],
                 emptyDirectories: [
                     'app/Actions/AuditTrails',
@@ -343,6 +344,7 @@ final class OptionalModules
                     'resources/js/components/audit-trails',
                     'resources/js/pages/audit-trails',
                     'tests/Feature/AuditTrails',
+                    'tests/Unit/Actions/AuditTrails',
                 ],
                 dependencies: [
                     'authorization',
@@ -388,8 +390,8 @@ final class OptionalModules
                     'resources/js/pages/reports/users.tsx',
                     'resources/js/pages/reports/audit.tsx',
                     'resources/js/types/reports.ts',
-                    'tests/Unit/Reporting/ReportTypeTest.php',
-                    'tests/Unit/Reporting/ReportCategoryTest.php',
+                    'tests/Unit/Enums/ReportTypeTest.php',
+                    'tests/Unit/Enums/ReportCategoryTest.php',
                     'tests/Feature/Reporting/UserReportQueryTest.php',
                     'tests/Feature/Reporting/AuditReportQueryTest.php',
                     'tests/Feature/Reporting/ReportIndexControllerTest.php',
@@ -403,7 +405,6 @@ final class OptionalModules
                     'app/Http/Controllers/Reporting',
                     'resources/js/components/reports',
                     'resources/js/pages/reports',
-                    'tests/Unit/Reporting',
                     'tests/Feature/Reporting',
                 ],
                 dependencies: [

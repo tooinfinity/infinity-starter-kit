@@ -15,6 +15,11 @@
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
+    <groups>
+        <exclude>
+            <group>installer-e2e</group>
+        </exclude>
+    </groups>
     <source>
         <include>
             <directory>app</directory>
