@@ -8,6 +8,7 @@ namespace App\Actions\Users;
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 /* @chisel-notifications */
 use App\Notifications\UserDeactivated;
@@ -33,7 +34,7 @@ final readonly class DeactivateUserAction
         }
 
         DB::transaction(function () use ($user): void {
-            $this->ensureNotLastSuperAdmin->handle($user, 'deactivate');
+            $this->ensureNotLastSuperAdmin->handle($user, SuperAdminRestrictionOperation::Deactivate);
 
             $user->forceFill(['is_active' => false])->save();
 

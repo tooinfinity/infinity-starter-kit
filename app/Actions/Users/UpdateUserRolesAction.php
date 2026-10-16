@@ -9,6 +9,7 @@ use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\Role;
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
@@ -34,7 +35,11 @@ final readonly class UpdateUserRolesAction
 
         return DB::transaction(function () use ($user, $roles, $recordAuditTrail): User {
             if (enum_exists(Role::class) && ! in_array(Role::SuperAdmin->value, $roles, true)) {
-                $this->ensureNotLastSuperAdmin->handle($user, 'remove_role', 'roles');
+                $this->ensureNotLastSuperAdmin->handle(
+                    $user,
+                    SuperAdminRestrictionOperation::RemoveRole,
+                    'roles',
+                );
             }
 
             /* @chisel-audit-trails */

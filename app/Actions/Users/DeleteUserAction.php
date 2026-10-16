@@ -8,6 +8,7 @@ namespace App\Actions\Users;
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +32,7 @@ final readonly class DeleteUserAction
         }
 
         DB::transaction(function () use ($user): void {
-            $this->ensureNotLastSuperAdmin->handle($user, 'delete');
+            $this->ensureNotLastSuperAdmin->handle($user, SuperAdminRestrictionOperation::Delete);
 
             /* @chisel-audit-trails */
             $this->auditTrail->handle(

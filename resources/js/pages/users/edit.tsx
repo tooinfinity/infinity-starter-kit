@@ -45,7 +45,6 @@ export default function UsersEdit({
     const form = useForm({
         name: user.name,
         email: user.email,
-        is_active: user.is_active,
         roles: user.roles,
     });
 
@@ -77,7 +76,7 @@ export default function UsersEdit({
                 <div className="flex items-center justify-between">
                     <Heading
                         title={`Edit ${user.name}`}
-                        description="Update account information, active status, and role assignments."
+                        description="Update account information and role assignments."
                     />
                     <UserStatusBadge isActive={user.is_active} />
                 </div>
@@ -112,24 +111,6 @@ export default function UsersEdit({
                             required
                         />
                         <InputError message={form.errors.email} />
-                    </div>
-
-                    <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox
-                            id="user-is-active"
-                            name="is_active"
-                            checked={form.data.is_active}
-                            onCheckedChange={(checked) =>
-                                form.setData('is_active', Boolean(checked))
-                            }
-                        />
-                        <Label
-                            htmlFor="user-is-active"
-                            className="cursor-pointer"
-                        >
-                            Active account (allow login)
-                        </Label>
-                        <InputError message={form.errors.is_active} />
                     </div>
 
                     <Can permission="users.manage-roles">

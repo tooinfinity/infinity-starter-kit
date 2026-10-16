@@ -58,11 +58,10 @@ test('UpdateUserAction records user.updated audit trail with diff', function ():
     $data = new UpdateUserData(
         name: 'Updated Name',
         email: 'updated@example.com',
-        isActive: true,
         roles: [],
     );
 
-    $action->handle($targetUser, $data, $actor);
+    $action->handle($targetUser, $data);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
 

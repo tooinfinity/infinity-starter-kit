@@ -69,40 +69,23 @@ it('allows keeping same email during update', function (): void {
     $response->assertSessionHasNoErrors();
 });
 
-it('prevents user from deactivating their own account', function (): void {
+it('does not mutate active status during update', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
 
-    $response = $this->actingAs($admin)
-        ->put(route('users.update', $admin), [
-            'name' => $admin->name,
-            'email' => $admin->email,
-            'is_active' => false,
-            'roles' => [],
-        ]);
-
-    $response->assertSessionHasErrors(['is_active' => __('You cannot deactivate your own account.')]);
-});
-
-it('prevents deactivating the last super admin', function (): void {
-    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
-    $superAdmin = User::factory()->create();
-    $superAdmin->assignRole($superAdminRole);
-
-    $admin = User::factory()->create();
-    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
-    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $target = User::factory()->active()->create();
 
     $response = $this->actingAs($admin)
-        ->put(route('users.update', $superAdmin), [
-            'name' => $superAdmin->name,
-            'email' => $superAdmin->email,
+        ->put(route('users.update', $target), [
+            'name' => 'Updated Name',
+            'email' => $target->email,
             'is_active' => false,
-            'roles' => [Role::SuperAdmin->value],
         ]);
 
-    $response->assertSessionHasErrors(['is_active' => __('Cannot deactivate the last Super Admin.')]);
+    $response->assertRedirectToRoute('users.index');
+
+    expect($target->fresh()->is_active)->toBeTrue();
 });
 
 it('prevents removing super admin role from the last super admin', function (): void {

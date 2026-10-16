@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\Users\EnsureNotLastSuperAdminAction;
 use App\Actions\Users\UpdateUserRolesAction;
 use App\Enums\Role;
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -53,7 +54,7 @@ it('allows removing super admin role if multiple super admins exist', function (
         ->and($superAdmin1->fresh()->hasRole('editor'))->toBeTrue();
 });
 
-it('EnsureNotLastSuperAdminAction throws validation exception when only one super admin exists', function (string $operation): void {
+it('EnsureNotLastSuperAdminAction throws validation exception when only one super admin exists', function (SuperAdminRestrictionOperation $operation): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
@@ -63,9 +64,13 @@ it('EnsureNotLastSuperAdminAction throws validation exception when only one supe
     DB::transaction(function () use ($action, $superAdmin, $operation): void {
         $action->handle($superAdmin, $operation);
     });
-})->with(['delete', 'deactivate', 'remove_role'])->throws(ValidationException::class);
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+])->throws(ValidationException::class);
 
-it('EnsureNotLastSuperAdminAction passes when multiple super admins exist', function (string $operation): void {
+it('EnsureNotLastSuperAdminAction passes when multiple super admins exist', function (SuperAdminRestrictionOperation $operation): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin1 = User::factory()->create();
     $superAdmin1->assignRole($superAdminRole);
@@ -80,7 +85,11 @@ it('EnsureNotLastSuperAdminAction passes when multiple super admins exist', func
     });
 
     expect(true)->toBeTrue();
-})->with(['delete', 'deactivate', 'remove_role']);
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+]);
 
 it('UpdateUserRolesAction protects last super admin when mutating roles directly', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);

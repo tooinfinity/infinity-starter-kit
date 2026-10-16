@@ -120,6 +120,7 @@ final class OptionalModules
                     'app/Actions/Users/EnsureNotLastSuperAdminAction.php',
                     'app/Actions/Users/UpdateUserRolesAction.php',
                     'app/Actions/Users/SnapshotUserAuditDataAction.php',
+                    'app/Enums/SuperAdminRestrictionOperation.php',
                     'app/Data/Users/CreateUserData.php',
                     'app/Data/Users/UpdateUserData.php',
                     'app/Data/Users/UserData.php',

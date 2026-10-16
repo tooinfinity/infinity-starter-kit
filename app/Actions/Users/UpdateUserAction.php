@@ -6,19 +6,15 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
-/* @end-chisel-audit-trails */
 use App\Data\Users\UpdateUserData;
-/* @chisel-audit-trails */
-use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\AuditEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateUserAction
 {
     public function __construct(
-        private EnsureNotLastSuperAdminAction $ensureNotLastSuperAdmin = new EnsureNotLastSuperAdminAction,
         private UpdateUserRolesAction $updateUserRoles = new UpdateUserRolesAction,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
@@ -26,19 +22,9 @@ final readonly class UpdateUserAction
         /* @end-chisel-audit-trails */
     ) {}
 
-    public function handle(User $user, UpdateUserData $data, ?User $currentUser = null): User
+    public function handle(User $user, UpdateUserData $data): User
     {
-        if ($data->isActive !== null && $currentUser instanceof User && $user->id === $currentUser->id && ! $data->isActive) {
-            throw ValidationException::withMessages([
-                'is_active' => __('You cannot deactivate your own account.'),
-            ]);
-        }
-
         return DB::transaction(function () use ($user, $data): User {
-            if ($data->isActive === false) {
-                $this->ensureNotLastSuperAdmin->handle($user, 'deactivate', 'is_active');
-            }
-
             /* @chisel-audit-trails */
             $oldValues = $this->snapshotUserAuditData->handle($user);
             /* @end-chisel-audit-trails */
@@ -54,10 +40,6 @@ final readonly class UpdateUserAction
                 ...($emailChanged ? ['email_verified_at' => null] : []),
                 /* @end-chisel-email-verification */
             ];
-
-            if ($data->isActive !== null) {
-                $updatePayload['is_active'] = $data->isActive;
-            }
 
             $user->update($updatePayload);
 

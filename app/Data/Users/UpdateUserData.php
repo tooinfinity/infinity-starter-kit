@@ -14,7 +14,6 @@ final class UpdateUserData extends Data
     public function __construct(
         public string $name,
         public string $email,
-        public ?bool $isActive = null,
         public ?array $roles = null,
     ) {}
 }
