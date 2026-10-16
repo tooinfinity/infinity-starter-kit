@@ -131,7 +131,6 @@ final class OptionalModules
                     'app/Http/Middleware/EnsureUserIsActive.php',
                     'app/Http/Requests/Users/StoreUserRequest.php',
                     'app/Http/Requests/Users/UpdateUserRequest.php',
-                    'app/Http/Requests/Users/UpdateUserRolesRequest.php',
                     'app/Http/Requests/Users/UpdateUserPasswordRequest.php',
                     'app/Http/Requests/Users/ActivateUserRequest.php',
                     'app/Http/Requests/Users/DeactivateUserRequest.php',
@@ -150,8 +149,8 @@ final class OptionalModules
                     'tests/Feature/Users/ChangePasswordTest.php',
                     'tests/Feature/Users/DeleteUserTest.php',
                     'tests/Feature/Users/InactiveUserAuthTest.php',
+                    'tests/Feature/Users/SnapshotUserAuditDataActionTest.php',
                     'tests/Feature/Users/SuperAdminProtectionTest.php',
-                    'tests/Feature/Users/UpdateUserRolesRequestTest.php',
                 ],
                 emptyDirectories: [
                     'app/Actions/Users',

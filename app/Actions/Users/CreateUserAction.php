@@ -14,11 +14,11 @@ use App\Enums\AuditEvent;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Traits\HasRoles;
 
 final readonly class CreateUserAction
 {
     public function __construct(
+        private UpdateUserRolesAction $updateUserRoles = new UpdateUserRolesAction,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
@@ -35,8 +35,8 @@ final readonly class CreateUserAction
                 'is_active' => $data->isActive,
             ]);
 
-            if ($data->roles !== [] && trait_exists(HasRoles::class)) {
-                $user->syncRoles($data->roles);
+            if ($data->roles !== []) {
+                $this->updateUserRoles->handle($user, $data->roles, recordAuditTrail: false);
             }
 
             event(new Registered($user));

@@ -5,10 +5,15 @@ declare(strict_types=1);
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
+use App\Notifications\UserActivated;
+use App\Notifications\UserDeactivated;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
 it('activates an inactive user', function (): void {
+    Notification::fake();
+
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
@@ -21,9 +26,15 @@ it('activates an inactive user', function (): void {
     $response->assertRedirect();
 
     expect($inactiveUser->fresh()->is_active)->toBeTrue();
+
+    if (class_exists(UserActivated::class)) {
+        Notification::assertSentTo($inactiveUser, UserActivated::class);
+    }
 });
 
 it('deactivates an active user', function (): void {
+    Notification::fake();
+
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
@@ -36,6 +47,29 @@ it('deactivates an active user', function (): void {
     $response->assertRedirect();
 
     expect($activeUser->fresh()->is_active)->toBeFalse();
+
+    if (class_exists(UserDeactivated::class)) {
+        Notification::assertSentTo($activeUser, UserDeactivated::class);
+    }
+});
+
+it('forbids unauthorized users from activating or deactivating another user', function (): void {
+    $unauthorizedUser = User::factory()->create();
+    $target = User::factory()->active()->create();
+
+    $this->actingAs($unauthorizedUser)
+        ->patch(route('users.deactivate', $target))
+        ->assertForbidden();
+
+    expect($target->fresh()->is_active)->toBeTrue();
+
+    $target->forceFill(['is_active' => false])->save();
+
+    $this->actingAs($unauthorizedUser)
+        ->patch(route('users.activate', $target))
+        ->assertForbidden();
+
+    expect($target->fresh()->is_active)->toBeFalse();
 });
 
 it('prevents user from deactivating themselves', function (): void {

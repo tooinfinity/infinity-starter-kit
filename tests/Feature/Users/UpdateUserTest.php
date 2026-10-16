@@ -53,6 +53,29 @@ it('updates user details and role assignments', function (): void {
         ->and($target->hasRole('manager'))->toBeTrue();
 });
 
+it('synchronizes roles through UpdateUserRolesAction during update', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
+    RoleModel::findOrCreate('manager');
+    RoleModel::findOrCreate('editor');
+
+    $target = User::factory()->create();
+    $target->assignRole('editor');
+
+    $this->actingAs($admin)
+        ->put(route('users.update', $target), [
+            'name' => 'Target User',
+            'email' => $target->email,
+            'roles' => ['manager'],
+        ]);
+
+    $target->refresh();
+    expect($target->hasRole('manager'))->toBeTrue()
+        ->and($target->hasRole('editor'))->toBeFalse();
+});
+
 it('allows keeping same email during update', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
@@ -69,7 +92,7 @@ it('allows keeping same email during update', function (): void {
     $response->assertSessionHasNoErrors();
 });
 
-it('does not mutate active status during update', function (): void {
+it('cannot deactivate an active user through normal profile update', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
@@ -86,6 +109,47 @@ it('does not mutate active status during update', function (): void {
     $response->assertRedirectToRoute('users.index');
 
     expect($target->fresh()->is_active)->toBeTrue();
+});
+
+it('cannot activate an inactive user through normal profile update', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $target = User::factory()->inactive()->create();
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $target), [
+            'name' => 'Updated Name',
+            'email' => $target->email,
+            'is_active' => true,
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    expect($target->fresh()->is_active)->toBeFalse();
+});
+
+it('forbids unauthorized users from updating another user', function (): void {
+    $unauthorizedUser = User::factory()->create();
+    $target = User::factory()->create();
+
+    $response = $this->actingAs($unauthorizedUser)
+        ->put(route('users.update', $target), [
+            'name' => 'Updated Name',
+            'email' => 'new@example.com',
+        ]);
+
+    $response->assertForbidden();
+
+    expect($target->fresh()->name)->toBe($target->name);
+
+    $guestResponse = $this->put(route('users.update', $target), [
+        'name' => 'Updated Name',
+        'email' => 'new@example.com',
+    ]);
+
+    $guestResponse->assertForbidden();
 });
 
 it('prevents removing super admin role from the last super admin', function (): void {

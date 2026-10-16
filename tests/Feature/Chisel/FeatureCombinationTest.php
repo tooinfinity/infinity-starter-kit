@@ -354,6 +354,90 @@ it('handles user-management ON with audit-trails ON', function (): void {
     }
 });
 
+it('handles user-management without audit-trails (notifications ON)', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization', 'user-management', 'notifications'],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/NotificationPreference.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeFalse()
+            ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeFalse();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('handles user-management with audit-trails and notifications', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'notifications'],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/NotificationPreference.php'))->toBeTrue()
+            ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeTrue();
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
+it('handles removing user-management leaving no broken imports, routes, or frontend references', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'],
+        'optional_modules' => ['authorization', 'settings', 'localization', 'notifications', 'audit-trails'],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/CreateUserAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/UpdateUserAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/ActivateUserAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/DeactivateUserAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/DeleteUserAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/UpdateUserRolesAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Actions/Users/EnsureNotLastSuperAdminAction.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Data/Users/UserData.php'))->toBeFalse()
+            ->and(file_exists($dir.'/resources/js/pages/users/index.tsx'))->toBeFalse()
+            ->and(file_exists($dir.'/resources/js/types/users.ts'))->toBeFalse()
+            ->and(file_exists($dir.'/tests/Feature/Users/UpdateUserTest.php'))->toBeFalse()
+            ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeFalse();
+
+        $routesContent = (string) file_get_contents($dir.'/routes/web.php');
+        expect($routesContent)->not->toContain('UserController as UserManagementController')
+            ->and($routesContent)->not->toContain("Route::get('users'")
+            ->and($routesContent)->not->toContain('users.activate');
+
+        $sidebarContent = (string) file_get_contents($dir.'/resources/js/components/app-sidebar.tsx');
+        expect($sidebarContent)->not->toContain("title: 'Users'")
+            ->and($sidebarContent)->not->toContain('@/routes/users');
+
+        $typesContent = (string) file_get_contents($dir.'/resources/js/types/index.ts');
+        expect($typesContent)->not->toContain('./users');
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
 it('handles auth combinations: registration OFF, email-verification ON, two-factor ON', function (): void {
     $sandbox = runChiselSandbox([
         'auth_features' => ['login', 'logout', 'email-verification', 'two-factor'],
