@@ -150,7 +150,6 @@ final class GeneratedApplicationValidator
         $chiselConfig = is_array($context->paths['chisel'] ?? null) ? $context->paths['chisel'] : [];
         $rawChiselFiles = is_array($chiselConfig['files'] ?? null) ? $chiselConfig['files'] : [
             'app/Console/Commands/InstallFeaturesCommand.php',
-            'app/Console/Commands/SetupAuthorizationCommand.php',
             'app/Console/Commands/SetupAdminUserCommand.php',
             'chisel.php',
             'chisel-paths.php',
@@ -215,7 +214,6 @@ final class GeneratedApplicationValidator
 
         $staleInstallerTerms = [
             'InstallFeaturesCommand',
-            'SetupAuthorizationCommand',
             'SetupAdminUserCommand',
             'chisel.php',
             'chisel-paths.php',

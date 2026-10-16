@@ -115,13 +115,12 @@ function runInGeneratedProject(string $dir, array $command, array $env = [], int
     return $process;
 }
 
-function assertGeneratedProjectCleanOfInstallerArtifacts(string $tempDir): void
+function assertGeneratedProjectCleanOfInstallerArtifacts(string $tempDir, bool $authorizationEnabled = true): void
 {
     $removedPaths = [
         'chisel.php',
         'chisel-paths.php',
         'app/Console/Commands/InstallFeaturesCommand.php',
-        'app/Console/Commands/SetupAuthorizationCommand.php',
         'app/Console/Commands/SetupAdminUserCommand.php',
         'app/Chisel',
         'tests/Support',
@@ -130,9 +129,18 @@ function assertGeneratedProjectCleanOfInstallerArtifacts(string $tempDir): void
         'tests/Unit/Chisel',
     ];
 
+    if (! $authorizationEnabled) {
+        $removedPaths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+    }
+
     foreach ($removedPaths as $path) {
         expect(file_exists($tempDir.'/'.$path))
             ->toBeFalse("Expected installer artifact [{$path}] to be removed from generated project.");
+    }
+
+    if ($authorizationEnabled) {
+        expect(file_exists($tempDir.'/app/Console/Commands/SetupAuthorizationCommand.php'))
+            ->toBeTrue('Expected SetupAuthorizationCommand.php to remain in generated project when authorization is enabled.');
     }
 
     $composerJson = json_decode((string) file_get_contents($tempDir.'/composer.json'), true);
@@ -155,7 +163,6 @@ function assertGeneratedProjectCleanOfInstallerArtifacts(string $tempDir): void
     // Recursively scan generated project files for stale references
     $forbiddenTokens = [
         'InstallFeaturesCommand',
-        'SetupAuthorizationCommand',
         'SetupAdminUserCommand',
         'chisel.php',
         'chisel-paths.php',
@@ -165,6 +172,10 @@ function assertGeneratedProjectCleanOfInstallerArtifacts(string $tempDir): void
         '@chisel-',
         '@end-chisel-',
     ];
+
+    if (! $authorizationEnabled) {
+        $forbiddenTokens[] = 'SetupAuthorizationCommand';
+    }
 
     $scanDirs = ['app', 'bootstrap', 'config', 'database', 'lang', 'resources', 'routes', 'tests'];
     foreach ($scanDirs as $scanDir) {
@@ -256,6 +267,15 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             ]);
 
             expect($verifyAuthProcess->getExitCode())->toBe(0, $verifyAuthProcess->getErrorOutput());
+
+            // Verify authorization:setup can be run again at runtime in the generated project and admin:setup is absent
+            $artisanListProcess = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'list']);
+            expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
+                ->and($artisanListProcess->getOutput())->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
+
+            $rerunAuthSetup = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'authorization:setup']);
+            expect($rerunAuthSetup->getExitCode())->toBe(0, $rerunAuthSetup->getOutput()."\n".$rerunAuthSetup->getErrorOutput());
             $authData = json_decode($verifyAuthProcess->getOutput(), true);
             expect($authData)->toBeArray()
                 ->and($authData['role'])->toBeTrue()
@@ -306,7 +326,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
 
             expect($installProcess->getExitCode())->toBe(0, $installProcess->getOutput()."\n".$installProcess->getErrorOutput());
 
-            assertGeneratedProjectCleanOfInstallerArtifacts($tempDir);
+            assertGeneratedProjectCleanOfInstallerArtifacts($tempDir, authorizationEnabled: false);
 
             // Verify optional modules are absent
             $absentPaths = [
@@ -348,6 +368,11 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 ->and($packageJson['devDependencies']['@erag/lang-sync-inertia'] ?? null)->toBeNull();
 
             // Verify no admin user or authorization setup ran
+            $artisanListProcess = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'list']);
+            expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
+                ->and($artisanListProcess->getOutput())->not->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
+
             $userCountProcess = runInGeneratedProject($tempDir, [
                 PHP_BINARY,
                 '-r',

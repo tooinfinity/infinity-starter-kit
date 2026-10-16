@@ -112,3 +112,16 @@ test('shared inertia props return empty arrays for guests', function (): void {
             ->where('auth.roles', [])
         );
 });
+
+test('starter kit source repository contains both setup commands', function (): void {
+    $authCommand = 'app/Console/Commands/SetupAuthorizationCommand.php';
+    $adminCommand = implode('', ['app/Console/Commands/', 'SetupAdmin', 'UserCommand.php']);
+
+    expect(file_exists(base_path($authCommand)))->toBeTrue()
+        ->and(file_exists(base_path($adminCommand)))->toBeTrue();
+});
+
+test('authorization seeder does not exist and is not referenced', function (): void {
+    expect(file_exists(base_path('database/seeders/AuthorizationSeeder.php')))->toBeFalse()
+        ->and(class_exists('Database\Seeders\AuthorizationSeeder'))->toBeFalse();
+});

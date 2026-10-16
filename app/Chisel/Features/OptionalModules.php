@@ -29,7 +29,6 @@ final class OptionalModules
                     'app/Models/User.php',
                     'app/Providers/AppServiceProvider.php',
                     'app/Http/Middleware/HandleInertiaRequests.php',
-                    'database/seeders/DatabaseSeeder.php',
                     'resources/js/components/nav-main.tsx',
                     'routes/web.php',
                     'resources/js/types/auth.ts',
@@ -37,7 +36,6 @@ final class OptionalModules
                 exclusiveFiles: [
                     'config/permission.php',
                     'database/migrations/2026_01_01_000002_create_permission_tables.php',
-                    'database/seeders/AuthorizationSeeder.php',
                     'app/Enums/Permission.php',
                     'app/Enums/Role.php',
                     'app/Console/Commands/SetupAuthorizationCommand.php',

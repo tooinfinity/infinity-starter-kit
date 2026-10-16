@@ -58,10 +58,10 @@ Select the features you want using `Space`, then press `Enter`.
 
 ### 3. Authorization & Super Admin (if enabled)
 
-During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively or need to bootstrap permissions later:
+During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively, need to bootstrap permissions later, or updated the `Permission` or `Role` enums:
 
 ```bash
-php artisan db:seed --class=AuthorizationSeeder   # Synchronizes permissions + Super Admin role
+php artisan authorization:setup   # Synchronizes permissions + Super Admin role
 ```
 
 To create or assign a Super Admin via Tinker:
@@ -306,9 +306,9 @@ Upon finishing execution, Chisel automatically cleans up the repository:
 1. Strips `@php artisan install:features --ansi` and `"laravel/chisel"` from `composer.json`.
 2. Formats all PHP code using Laravel Pint (`vendor/bin/pint --format agent`).
 3. Re-generates Wayfinder typed routes and actions (`php artisan wayfinder:generate --with-form --no-interaction`).
-4. Deletes `chisel.php`, `chisel-paths.php`, `app/Console/Commands/InstallFeaturesCommand.php`, `app/Console/Commands/SetupAuthorizationCommand.php`, `app/Console/Commands/SetupAdminUserCommand.php`, and Chisel installer tests.
+4. Deletes `chisel.php`, `chisel-paths.php`, `app/Console/Commands/InstallFeaturesCommand.php`, `app/Console/Commands/SetupAdminUserCommand.php`, and Chisel installer tests.
 
-> **Note:** `InstallFeaturesCommand`, `SetupAuthorizationCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files.
+> **Note:** `InstallFeaturesCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files. `SetupAuthorizationCommand` is a persistent runtime command that remains available in the generated application when Authorization is enabled.
 
 ---
 
@@ -371,7 +371,7 @@ composer run lint
 │   ├── Actions/                  # Reusable business logic actions
 │   ├── Console/Commands/         # Artisan commands
 │   │   ├── InstallFeaturesCommand.php    # ⚙️ Installer-only (removed after install)
-│   │   ├── SetupAuthorizationCommand.php # ⚙️ Installer-only (removed after install)
+│   │   ├── SetupAuthorizationCommand.php # 🛡️ Authorization runtime synchronization
 │   │   └── SetupAdminUserCommand.php     # ⚙️ Installer-only (removed after install)
 │   ├── Data/                     # Spatie Data transfer objects
 │   │   └── Reporting/            # Report summary, series, and breakdown DTOs

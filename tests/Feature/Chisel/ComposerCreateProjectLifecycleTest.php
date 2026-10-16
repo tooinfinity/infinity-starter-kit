@@ -174,13 +174,12 @@ function detectFrontendPackageManager(string $dir): array
     ];
 }
 
-function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir): void
+function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir, bool $authorizationEnabled = true): void
 {
     $removedPaths = [
         'chisel.php',
         'chisel-paths.php',
         'app/Console/Commands/InstallFeaturesCommand.php',
-        'app/Console/Commands/SetupAuthorizationCommand.php',
         'app/Console/Commands/SetupAdminUserCommand.php',
         'app/Chisel',
         'tests/Support',
@@ -189,9 +188,18 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir): void
         'tests/Unit/Chisel',
     ];
 
+    if (! $authorizationEnabled) {
+        $removedPaths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+    }
+
     foreach ($removedPaths as $path) {
         expect(file_exists($targetDir.'/'.$path))
             ->toBeFalse("Expected installer artifact [{$path}] to be removed from generated project.");
+    }
+
+    if ($authorizationEnabled) {
+        expect(file_exists($targetDir.'/app/Console/Commands/SetupAuthorizationCommand.php'))
+            ->toBeTrue('Expected SetupAuthorizationCommand.php to remain in generated project when authorization is enabled.');
     }
 
     $composerJson = json_decode((string) file_get_contents($targetDir.'/composer.json'), true);
@@ -216,7 +224,6 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir): void
 
     $forbiddenTokens = [
         'InstallFeaturesCommand',
-        'SetupAuthorizationCommand',
         'SetupAdminUserCommand',
         'chisel.php',
         'chisel-paths.php',
@@ -226,6 +233,10 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir): void
         '@chisel-',
         '@end-chisel-',
     ];
+
+    if (! $authorizationEnabled) {
+        $forbiddenTokens[] = 'SetupAuthorizationCommand';
+    }
 
     $scanDirs = ['app', 'bootstrap', 'config', 'database', 'lang', 'resources', 'routes', 'tests'];
     foreach ($scanDirs as $scanDir) {
@@ -347,6 +358,16 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             ]);
 
             expect($verifyAuthProcess->getExitCode())->toBe(0, $verifyAuthProcess->getErrorOutput());
+
+            // Verify authorization:setup can be run at runtime and admin:setup is not exposed
+            $artisanListProcess = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'list']);
+            expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
+                ->and($artisanListProcess->getOutput())->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
+
+            $rerunAuthSetup = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'authorization:setup']);
+            expect($rerunAuthSetup->getExitCode())->toBe(0, $rerunAuthSetup->getOutput()."\n".$rerunAuthSetup->getErrorOutput());
+
             $authData = json_decode($verifyAuthProcess->getOutput(), true);
             expect($authData)->toBeArray()
                 ->and($authData['role'])->toBeTrue('Super Admin role must exist in generated database.')
@@ -401,7 +422,7 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             expect($createProcess->getExitCode())
                 ->toBe(0, "composer create-project failed:\nSTDOUT:\n".$createProcess->getOutput()."\nSTDERR:\n".$createProcess->getErrorOutput());
 
-            assertCreatedProjectCleanOfInstallerArtifacts($targetDir);
+            assertCreatedProjectCleanOfInstallerArtifacts($targetDir, authorizationEnabled: false);
 
             // Verify optional module paths are absent
             $absentPaths = [
@@ -449,7 +470,12 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             expect($packageJson['dependencies']['@erag/lang-sync-inertia'] ?? null)->toBeNull()
                 ->and($packageJson['devDependencies']['@erag/lang-sync-inertia'] ?? null)->toBeNull();
 
-            // Verify no admin user was created
+            // Verify no admin user was created and authorization commands are absent
+            $artisanListProcess = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'list']);
+            expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
+                ->and($artisanListProcess->getOutput())->not->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
+
             $userCountProcess = runInCreatedProject($targetDir, [
                 PHP_BINARY,
                 '-r',
@@ -535,6 +561,13 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             ]);
 
             expect($verifyAuthProcess->getExitCode())->toBe(0, $verifyAuthProcess->getErrorOutput());
+
+            // Verify authorization:setup is present and admin:setup is absent
+            $artisanListProcess = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'list']);
+            expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
+                ->and($artisanListProcess->getOutput())->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
+
             $authData = json_decode($verifyAuthProcess->getOutput(), true);
             expect($authData)->toBeArray()
                 ->and($authData['role'])->toBeTrue('Super Admin role must exist even without admin credentials.')

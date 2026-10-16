@@ -18,7 +18,6 @@ final class Cleanup
     {
         return [
             'app/Console/Commands/InstallFeaturesCommand.php',
-            'app/Console/Commands/SetupAuthorizationCommand.php',
             'app/Console/Commands/SetupAdminUserCommand.php',
             'chisel.php',
             'chisel-paths.php',
