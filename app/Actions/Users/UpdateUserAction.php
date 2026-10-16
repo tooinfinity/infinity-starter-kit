@@ -11,60 +11,24 @@ use App\Data\Users\UpdateUserData;
 /* @chisel-audit-trails */
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
-use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Traits\HasRoles;
 
 final readonly class UpdateUserAction
 {
-    /* @chisel-audit-trails */
     public function __construct(
+        private UpdateUserRolesAction $updateUserRoles = new UpdateUserRolesAction,
+        /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
+        /* @end-chisel-audit-trails */
     ) {}
 
-    /* @end-chisel-audit-trails */
-
-    public function handle(User $user, UpdateUserData $data, ?User $currentUser = null): User
+    public function handle(User $user, UpdateUserData $data): User
     {
-        if ($data->isActive !== null && $currentUser instanceof User && $user->id === $currentUser->id && ! $data->isActive) {
-            throw ValidationException::withMessages([
-                'is_active' => __('You cannot deactivate your own account.'),
-            ]);
-        }
-
         return DB::transaction(function () use ($user, $data): User {
-            $isSuperAdmin = trait_exists(HasRoles::class) && $user->hasRole(Role::SuperAdmin->value);
-
-            if ($isSuperAdmin) {
-                $superAdminCount = User::query()
-                    ->role(Role::SuperAdmin->value)
-                    ->lockForUpdate()
-                    ->count();
-
-                if ($superAdminCount <= 1) {
-                    if ($data->isActive === false) {
-                        throw ValidationException::withMessages([
-                            'is_active' => __('Cannot deactivate the last Super Admin.'),
-                        ]);
-                    }
-
-                    if ($data->roles !== null && ! in_array(Role::SuperAdmin->value, $data->roles, true)) {
-                        throw ValidationException::withMessages([
-                            'roles' => __('Cannot remove the Super Admin role from the last Super Admin.'),
-                        ]);
-                    }
-                }
-            }
-
             /* @chisel-audit-trails */
-            $oldValues = [
-                'name' => $user->name,
-                'email' => $user->email,
-                'is_active' => $user->is_active,
-                'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
-            ];
+            $oldValues = $this->snapshotUserAuditData->handle($user);
             /* @end-chisel-audit-trails */
 
             /* @chisel-email-verification */
@@ -79,10 +43,6 @@ final readonly class UpdateUserAction
                 /* @end-chisel-email-verification */
             ];
 
-            if ($data->isActive !== null) {
-                $updatePayload['is_active'] = $data->isActive;
-            }
-
             $user->update($updatePayload);
 
             /* @chisel-email-verification */
@@ -92,8 +52,8 @@ final readonly class UpdateUserAction
 
             /* @end-chisel-email-verification */
 
-            if ($data->roles !== null && trait_exists(HasRoles::class)) {
-                $user->syncRoles($data->roles);
+            if ($data->roles !== null) {
+                $this->updateUserRoles->handle($user, $data->roles, recordAuditTrail: false);
             }
 
             /* @chisel-audit-trails */
@@ -101,12 +61,7 @@ final readonly class UpdateUserAction
                 event: AuditEvent::UserUpdated,
                 auditable: $user,
                 oldValues: $oldValues,
-                newValues: [
-                    'name' => $data->name,
-                    'email' => $data->email,
-                    'is_active' => $user->is_active,
-                    'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
-                ],
+                newValues: $this->snapshotUserAuditData->handle($user, $data->roles),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */

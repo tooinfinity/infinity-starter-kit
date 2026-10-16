@@ -5,6 +5,7 @@ declare(strict_types=1);
 /* @chisel-audit-trails */
 use App\Http\Controllers\AuditTrails\AuditTrailController;
 /* @end-chisel-audit-trails */
+use App\Http\Controllers\DeleteAccountController;
 /* @chisel-localization */
 use App\Http\Controllers\LocaleController;
 /* @end-chisel-localization */
@@ -32,7 +33,6 @@ use App\Http\Controllers\Reporting\UserReportController;
 /* @chisel-settings */
 use App\Http\Controllers\SettingController;
 /* @end-chisel-settings */
-use App\Http\Controllers\UserController;
 /* @chisel-password-reset */
 use App\Http\Controllers\UserEmailResetNotificationController;
 /* @end-chisel-password-reset */
@@ -67,7 +67,7 @@ Route::middleware(['auth'/* @chisel-email-verification */, 'verified'/* @end-chi
 
 Route::middleware('auth')->group(function (): void {
     // User...
-    Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
+    Route::delete('user', DeleteAccountController::class)->name('user.destroy');
 
     // User Profile...
     Route::get('settings', fn (): RedirectResponse => to_route('user-profile.edit'));

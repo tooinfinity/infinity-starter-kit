@@ -16,12 +16,11 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class ActivateUserAction
 {
-    /* @chisel-audit-trails */
     public function __construct(
+        /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        /* @end-chisel-audit-trails */
     ) {}
-
-    /* @end-chisel-audit-trails */
 
     public function handle(User $user): void
     {

@@ -8,20 +8,20 @@ namespace App\Actions\Users;
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
-use App\Enums\Role;
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Traits\HasRoles;
 
 final readonly class DeleteUserAction
 {
-    /* @chisel-audit-trails */
     public function __construct(
+        private EnsureNotLastSuperAdminAction $ensureNotLastSuperAdmin = new EnsureNotLastSuperAdminAction,
+        /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
+        /* @end-chisel-audit-trails */
     ) {}
-
-    /* @end-chisel-audit-trails */
 
     public function handle(User $user, ?User $currentUser = null): void
     {
@@ -32,29 +32,13 @@ final readonly class DeleteUserAction
         }
 
         DB::transaction(function () use ($user): void {
-            if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
-                $superAdminCount = User::query()
-                    ->role(Role::SuperAdmin->value)
-                    ->lockForUpdate()
-                    ->count();
-
-                if ($superAdminCount <= 1) {
-                    throw ValidationException::withMessages([
-                        'user' => __('Cannot delete the last Super Admin.'),
-                    ]);
-                }
-            }
+            $this->ensureNotLastSuperAdmin->handle($user, SuperAdminRestrictionOperation::Delete);
 
             /* @chisel-audit-trails */
             $this->auditTrail->handle(
                 event: AuditEvent::UserDeleted,
                 auditable: $user,
-                oldValues: [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'is_active' => $user->is_active,
-                    'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
-                ],
+                oldValues: $this->snapshotUserAuditData->handle($user),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */

@@ -11,11 +11,13 @@ use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\DeactivateUserAction;
 use App\Actions\Users\DeleteUserAction;
 use App\Actions\Users\UpdateUserAction;
+use App\Actions\Users\UpdateUserRolesAction;
 use App\Data\Users\CreateUserData;
 use App\Data\Users\UpdateUserData;
 use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
 use App\Models\User;
+use Spatie\Permission\Models\Role as RoleModel;
 
 test('CreateUserAction records user.created audit trail', function (): void {
     $actor = User::factory()->create();
@@ -56,11 +58,10 @@ test('UpdateUserAction records user.updated audit trail with diff', function ():
     $data = new UpdateUserData(
         name: 'Updated Name',
         email: 'updated@example.com',
-        isActive: true,
         roles: [],
     );
 
-    $action->handle($targetUser, $data, $actor);
+    $action->handle($targetUser, $data);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
 
@@ -214,4 +215,31 @@ test('DeleteUser self-service action records user.deleted audit trail (OBS-001)'
         ->and($audit->user_id)->toBeNull()
         ->and($audit->old_values['name'])->toBe('Self Deleted')
         ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
+});
+
+test('UpdateUserRolesAction records user.updated audit trail with roles and tags', function (): void {
+    $actor = User::factory()->create();
+    $this->actingAs($actor);
+
+    RoleModel::findOrCreate('editor');
+    RoleModel::findOrCreate('manager');
+
+    $targetUser = User::factory()->create();
+    $targetUser->assignRole('editor');
+
+    $action = resolve(UpdateUserRolesAction::class);
+    $action->handle($targetUser, ['manager']);
+
+    $audit = AuditTrail::query()
+        ->where('event', AuditEvent::UserUpdated)
+        ->where('auditable_id', $targetUser->id)
+        ->latest('id')
+        ->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->user_id)->toBe($actor->id)
+        ->and($audit->auditable_id)->toBe($targetUser->id)
+        ->and($audit->tags)->toBe(['users', 'roles'])
+        ->and($audit->old_values['roles'])->toBe(['editor'])
+        ->and($audit->new_values['roles'])->toBe(['manager']);
 });

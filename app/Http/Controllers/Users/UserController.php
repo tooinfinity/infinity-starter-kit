@@ -7,22 +7,21 @@ namespace App\Http\Controllers\Users;
 use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\DeleteUserAction;
 use App\Actions\Users\UpdateUserAction;
-use App\Enums\Role as RoleEnum;
+use App\Data\Users\UserData;
 use App\Http\Requests\Users\DeleteUserRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
 use App\Queries\Users\UserListingQuery;
+use App\Queries\Users\UserRolesQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Role as RoleModel;
-use Spatie\Permission\Traits\HasRoles;
 
 final readonly class UserController
 {
-    public function index(Request $request, UserListingQuery $query): Response
+    public function index(Request $request, UserListingQuery $query, UserRolesQuery $rolesQuery): Response
     {
         $filters = [
             'search' => $request->string('search')->value(),
@@ -31,30 +30,19 @@ final readonly class UserController
 
         $paginatedUsers = $query->handle($filters);
 
-        $users = $paginatedUsers->through(fn (User $user): array => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'is_active' => $user->is_active,
-            /* @chisel-email-verification */
-            'email_verified_at' => $user->email_verified_at?->toISOString(),
-            /* @end-chisel-email-verification */
-            'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
-            'created_at' => $user->created_at->toISOString(),
-            'updated_at' => $user->updated_at->toISOString(),
-        ]);
+        $users = $paginatedUsers->through(fn (User $user): array => UserData::fromModel($user)->toArray());
 
         return Inertia::render('users/index', [
             'users' => $users,
             'filters' => $filters,
-            'availableRoles' => $this->availableRoles(),
+            'availableRoles' => $rolesQuery->handle(),
         ]);
     }
 
-    public function create(): Response
+    public function create(UserRolesQuery $rolesQuery): Response
     {
         return Inertia::render('users/create', [
-            'availableRoles' => $this->availableRoles(),
+            'availableRoles' => $rolesQuery->handle(),
         ]);
     }
 
@@ -70,28 +58,17 @@ final readonly class UserController
         return to_route('users.index');
     }
 
-    public function edit(User $user): Response
+    public function edit(User $user, UserRolesQuery $rolesQuery): Response
     {
         return Inertia::render('users/edit', [
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'is_active' => $user->is_active,
-                /* @chisel-email-verification */
-                'email_verified_at' => $user->email_verified_at?->toISOString(),
-                /* @end-chisel-email-verification */
-                'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
-                'created_at' => $user->created_at->toISOString(),
-                'updated_at' => $user->updated_at->toISOString(),
-            ],
-            'availableRoles' => $this->availableRoles(),
+            'user' => UserData::fromModel($user)->toArray(),
+            'availableRoles' => $rolesQuery->handle(),
         ]);
     }
 
     public function update(UpdateUserRequest $request, User $user, UpdateUserAction $action): RedirectResponse
     {
-        $action->handle($user, $request->toData(), $request->user());
+        $action->handle($user, $request->toData());
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -111,22 +88,5 @@ final readonly class UserController
         ]);
 
         return to_route('users.index');
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function availableRoles(): array
-    {
-        if (class_exists(RoleModel::class)) {
-            /** @var list<string> $roles */
-            $roles = RoleModel::query()->pluck('name')->all();
-
-            if (! empty($roles)) {
-                return $roles;
-            }
-        }
-
-        return enum_exists(RoleEnum::class) ? RoleEnum::values() : [];
     }
 }

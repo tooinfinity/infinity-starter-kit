@@ -42,7 +42,6 @@ final class UpdateUserRequest extends FormRequest
                 new ValidEmail,
                 Rule::unique(User::class)->ignore($userId),
             ],
-            'is_active' => ['sometimes', 'boolean'],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
         ];
@@ -86,7 +85,7 @@ final class UpdateUserRequest extends FormRequest
 
     public function toData(): UpdateUserData
     {
-        /** @var array{name: string, email: string, is_active?: bool, roles?: list<string>} $validated */
+        /** @var array{name: string, email: string, roles?: list<string>} $validated */
         $validated = $this->validated();
 
         $canManageRoles = ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersManageRoles->value) ?? false);
@@ -94,7 +93,6 @@ final class UpdateUserRequest extends FormRequest
         return new UpdateUserData(
             name: $validated['name'],
             email: $validated['email'],
-            isActive: $validated['is_active'] ?? null,
             roles: ($canManageRoles && array_key_exists('roles', $validated)) ? $validated['roles'] : null,
         );
     }
