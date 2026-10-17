@@ -34,22 +34,29 @@ final class DependencyValidator
         /** @var array<string, FeatureDefinition|list<string>> $definitions */
         $definitions = $featuresOrMap ?? FeatureRegistry::all();
 
+        $isLegacyMap = false;
+        foreach ($definitions as $item) {
+            if (! ($item instanceof FeatureDefinition)) {
+                $isLegacyMap = true;
+                break;
+            }
+        }
+
+        if ($isLegacyMap) {
+            // A partial legacy dependency map defines prerequisites for features that have them,
+            // but does not declare all available features. Registered features are resolved from
+            // FeatureRegistry::all() so features with zero dependencies (e.g. authorization) are
+            // recognized as valid, while unknown dependency targets are strictly rejected.
+            $registeredFeatures = array_keys(FeatureRegistry::all());
+            foreach ($registeredFeatures as $registeredKey) {
+                $definitions[$registeredKey] ??= [];
+            }
+        }
+
         // Validate graph integrity (no self-dependencies, unknown dependencies, duplicates, or cycles)
         self::validateDefinitions($definitions);
 
-        // When validating against FeatureRegistry, valid keys are all registered features.
-        // If a partial/legacy dependency map is provided, valid keys include both map keys and dependency targets.
-        $validKeys = $featuresOrMap !== null
-            ? (function () use ($definitions): array {
-                $keys = array_keys($definitions);
-                foreach ($definitions as $item) {
-                    $deps = $item instanceof FeatureDefinition ? $item->dependencies : $item;
-                    $keys = array_merge($keys, $deps);
-                }
-
-                return array_values(array_unique($keys));
-            })()
-            : array_keys(FeatureRegistry::all());
+        $validKeys = array_keys($definitions);
 
         $unknownFeatures = array_diff($selectedFeatures, $validKeys);
         if ($unknownFeatures !== []) {
@@ -71,17 +78,12 @@ final class DependencyValidator
             $transitiveMap[$key] = self::resolveTransitiveDependencies($key, $graph);
         }
 
+        // Sort by dependency topology (deeper transitive dependencies evaluated first),
+        // with deterministic alphabetical order as tie-breaker for independent features.
         uksort($definitions, function (string $a, string $b) use ($transitiveMap): int {
             $transitiveCountDiff = count($transitiveMap[$b] ?? []) <=> count($transitiveMap[$a] ?? []);
             if ($transitiveCountDiff !== 0) {
                 return $transitiveCountDiff;
-            }
-
-            $order = ['audit-trails' => 1, 'user-management' => 2, 'settings' => 3];
-            $orderA = $order[$a] ?? 99;
-            $orderB = $order[$b] ?? 99;
-            if ($orderA !== $orderB) {
-                return $orderA <=> $orderB;
             }
 
             return strcmp($a, $b);
@@ -109,6 +111,9 @@ final class DependencyValidator
     /**
      * Validates the internal consistency and graph integrity of feature definitions.
      *
+     * Validates strictly against registered feature keys. Dependency targets are never
+     * inferred as known features merely because they were referenced.
+     *
      * @param  array<string, FeatureDefinition|list<string>>  $definitions
      *
      * @throws RuntimeException
@@ -116,13 +121,6 @@ final class DependencyValidator
     public static function validateDefinitions(array $definitions): void
     {
         $knownKeys = array_keys($definitions);
-        foreach ($definitions as $item) {
-            if (is_array($item)) {
-                $knownKeys = array_merge($knownKeys, $item);
-            }
-        }
-
-        $knownKeys = array_values(array_unique($knownKeys));
 
         $graph = [];
 
@@ -246,10 +244,6 @@ final class DependencyValidator
         $recStack[$node] = true;
 
         foreach ($graph[$node] ?? [] as $neighbor) {
-            if (! isset($graph[$neighbor])) {
-                continue;
-            }
-
             if (isset($recStack[$neighbor])) {
                 $cycleStartIndex = (int) array_search($neighbor, $path, true);
                 $cyclePath = array_slice($path, $cycleStartIndex);

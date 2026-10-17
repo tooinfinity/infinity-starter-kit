@@ -160,16 +160,20 @@ function assertFeatureRetained(string $directory, FeatureDefinition $feature, ar
             continue;
         }
 
-        // Translation files for optional modules require both localization and the module to be enabled
-        if ((str_starts_with($file, 'lang/fr/') || str_starts_with($file, 'lang/ar/')) && ! str_ends_with($file, 'common.php') && ! str_ends_with($file, 'localization.php')) {
-            $requiredModule = match (true) {
-                str_contains($file, 'reports') => 'reporting',
-                str_contains($file, 'notifications') => 'notifications',
-                str_contains($file, 'audit') => 'audit-trails',
-                default => null,
-            };
+        // If another feature in the registry also claims this file as exclusive,
+        // and that co-owning feature was not selected, the file was pruned by that unselected feature.
+        if ($selectedModules !== []) {
+            $isPrunedByOtherFeature = false;
+            foreach (FeatureRegistry::all() as $otherKey => $otherFeature) {
+                if ($otherKey !== $feature->key && in_array($file, $otherFeature->exclusiveFiles, true)) {
+                    if (! in_array($otherKey, $selectedModules, true)) {
+                        $isPrunedByOtherFeature = true;
+                        break;
+                    }
+                }
+            }
 
-            if ($requiredModule !== null && $selectedModules !== [] && (! in_array($requiredModule, $selectedModules, true) || ! in_array('localization', $selectedModules, true))) {
+            if ($isPrunedByOtherFeature) {
                 continue;
             }
         }

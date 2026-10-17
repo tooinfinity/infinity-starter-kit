@@ -289,3 +289,73 @@ test('optional dependency does not cause validation failure when optional target
         'optional_modules' => ['feature-consumer'],
     ], $custom))->toThrow(RuntimeException::class, 'The "feature-consumer" feature requires the following feature(s): feature-core.');
 });
+
+test('validateDefinitions rejects unknown dependency target in raw array definition without inferring existence', function (): void {
+    $raw = [
+        'feature-a' => ['does-not-exist'],
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($raw))
+        ->toThrow(RuntimeException::class, 'Feature "feature-a" declares unknown dependency "does-not-exist".');
+});
+
+test('validateDefinitions accepts raw array definitions when all targets are registered features', function (): void {
+    $raw = [
+        'feature-a' => ['feature-b'],
+        'feature-b' => [],
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($raw))
+        ->not->toThrow(Throwable::class);
+});
+
+test('validate rejects partial legacy dependency map with unknown dependency target', function (): void {
+    $legacyMap = [
+        'reporting' => ['does-not-exist'],
+    ];
+
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['reporting']], $legacyMap))
+        ->toThrow(RuntimeException::class, 'Feature "reporting" declares unknown dependency "does-not-exist".');
+});
+
+test('validate accepts partial legacy dependency map with known registered targets and verifies missing dependencies', function (): void {
+    $legacyMap = [
+        'reporting' => ['audit-trails', 'user-management', 'authorization'],
+        'audit-trails' => ['authorization'],
+        'user-management' => ['authorization'],
+        'settings' => ['authorization'],
+    ];
+
+    // Missing dependency in legacy map throws expected failure
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['settings']], $legacyMap))
+        ->toThrow(RuntimeException::class, 'The "settings" feature requires the following feature(s): authorization.');
+
+    // Valid combination with legacy map succeeds
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['settings', 'authorization'],
+    ], $legacyMap))->not->toThrow(Throwable::class);
+});
+
+test('dependency validator evaluates features deterministically by dependency depth and alphabetical order', function (): void {
+    $custom = [
+        'feature-z' => new FeatureDefinition(
+            key: 'feature-z',
+            label: 'Feature Z',
+            dependencies: ['feature-base'],
+        ),
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            dependencies: ['feature-base'],
+        ),
+        'feature-base' => new FeatureDefinition(
+            key: 'feature-base',
+            label: 'Base Feature',
+        ),
+    ];
+
+    // Both feature-a and feature-z are missing feature-base.
+    // They have equal dependency depth (1). Deterministic alphabetical tie-breaker ensures feature-a is reported first.
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['feature-z', 'feature-a']], $custom))
+        ->toThrow(RuntimeException::class, 'The "feature-a" feature requires the following feature(s): feature-base.');
+});
