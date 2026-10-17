@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Chisel\FeatureDefinition;
+use App\Chisel\FeatureRegistry;
+use App\Chisel\Installer\Cleanup;
+
 /**
  * Creates an isolated sandbox of git-tracked files, executes chisel.php, and yields sandbox directory.
  *
@@ -96,6 +100,116 @@ function assertNoOrphanedMarkersInSandbox(string $directory): void
     }
 
     expect($filesWithMarkers)->toBeEmpty('Found unhandled chisel markers in: '.implode(', ', $filesWithMarkers));
+}
+
+/**
+ * Asserts all feature-owned files, packages, and markers for an unselected feature are completely removed.
+ */
+function assertFeaturePruned(string $directory, FeatureDefinition $feature): void
+{
+    foreach ($feature->exclusiveFiles as $file) {
+        expect(file_exists($directory.'/'.$file))
+            ->toBeFalse("Expected exclusive file [{$file}] for pruned feature [{$feature->key}] to be removed.");
+    }
+
+    if ($feature->composerPackages !== []) {
+        $composerPath = $directory.'/composer.json';
+        if (file_exists($composerPath)) {
+            $composer = json_decode((string) file_get_contents($composerPath), true);
+            foreach ($feature->composerPackages as $pkg) {
+                expect(isset($composer['require'][$pkg]) || isset($composer['require-dev'][$pkg]))
+                    ->toBeFalse("Expected composer package [{$pkg}] for pruned feature [{$feature->key}] to be removed.");
+            }
+        }
+    }
+
+    if ($feature->frontendPackages !== []) {
+        $packagePath = $directory.'/package.json';
+        if (file_exists($packagePath)) {
+            $packageJson = json_decode((string) file_get_contents($packagePath), true);
+            foreach ($feature->frontendPackages as $pkg) {
+                expect(isset($packageJson['dependencies'][$pkg]) || isset($packageJson['devDependencies'][$pkg]))
+                    ->toBeFalse("Expected frontend package [{$pkg}] for pruned feature [{$feature->key}] to be removed.");
+            }
+        }
+    }
+
+    if ($feature->sectionMarker !== null) {
+        foreach ($feature->markerFiles as $markerFile) {
+            $fullPath = $directory.'/'.$markerFile;
+            if (file_exists($fullPath)) {
+                $content = (string) file_get_contents($fullPath);
+                expect(str_contains($content, '@chisel-'.$feature->sectionMarker) || str_contains($content, '@end-chisel-'.$feature->sectionMarker))
+                    ->toBeFalse("Marker tag [{$feature->sectionMarker}] still present in [{$markerFile}] after pruning.");
+            }
+        }
+    }
+}
+
+/**
+ * Asserts all feature-owned files, packages, and marker sections for a selected feature are retained.
+ *
+ * @param  list<string>  $selectedModules
+ */
+function assertFeatureRetained(string $directory, FeatureDefinition $feature, array $selectedModules = []): void
+{
+    $cleanupFiles = Cleanup::files();
+
+    foreach ($feature->exclusiveFiles as $file) {
+        if (in_array($file, $cleanupFiles, true)) {
+            continue;
+        }
+
+        // Translation files for optional modules require both localization and the module to be enabled
+        if ((str_starts_with($file, 'lang/fr/') || str_starts_with($file, 'lang/ar/')) && ! str_ends_with($file, 'common.php') && ! str_ends_with($file, 'localization.php')) {
+            $requiredModule = match (true) {
+                str_contains($file, 'reports') => 'reporting',
+                str_contains($file, 'notifications') => 'notifications',
+                str_contains($file, 'audit') => 'audit-trails',
+                default => null,
+            };
+
+            if ($requiredModule !== null && $selectedModules !== [] && (! in_array($requiredModule, $selectedModules, true) || ! in_array('localization', $selectedModules, true))) {
+                continue;
+            }
+        }
+
+        expect(file_exists($directory.'/'.$file))
+            ->toBeTrue("Expected exclusive file [{$file}] for retained feature [{$feature->key}] to exist.");
+    }
+
+    if ($feature->composerPackages !== []) {
+        $composerPath = $directory.'/composer.json';
+        if (file_exists($composerPath)) {
+            $composer = json_decode((string) file_get_contents($composerPath), true);
+            foreach ($feature->composerPackages as $pkg) {
+                expect(isset($composer['require'][$pkg]) || isset($composer['require-dev'][$pkg]))
+                    ->toBeTrue("Expected composer package [{$pkg}] for retained feature [{$feature->key}] to exist.");
+            }
+        }
+    }
+
+    if ($feature->frontendPackages !== []) {
+        $packagePath = $directory.'/package.json';
+        if (file_exists($packagePath)) {
+            $packageJson = json_decode((string) file_get_contents($packagePath), true);
+            foreach ($feature->frontendPackages as $pkg) {
+                expect(isset($packageJson['dependencies'][$pkg]) || isset($packageJson['devDependencies'][$pkg]))
+                    ->toBeTrue("Expected frontend package [{$pkg}] for retained feature [{$feature->key}] to exist.");
+            }
+        }
+    }
+
+    if ($feature->sectionMarker !== null) {
+        foreach ($feature->markerFiles as $markerFile) {
+            $fullPath = $directory.'/'.$markerFile;
+            if (file_exists($fullPath)) {
+                $content = (string) file_get_contents($fullPath);
+                expect(str_contains($content, '@chisel-'.$feature->sectionMarker) || str_contains($content, '@end-chisel-'.$feature->sectionMarker))
+                    ->toBeFalse("Marker delimiter [{$feature->sectionMarker}] was not stripped in [{$markerFile}] for retained feature.");
+            }
+        }
+    }
 }
 
 it('handles all features enabled', function (): void {
@@ -834,3 +948,41 @@ it('handles registration and email-verification: login, logout, registration, em
         ($sandbox['cleanup'])();
     }
 });
+
+it('verifies individual optional module removal preserves other modules and cleans up pruned feature', function (string $removedModule): void {
+    $allModules = ['authorization', 'settings', 'user-management', 'localization', 'notifications', 'audit-trails', 'reporting'];
+
+    $excluded = [$removedModule];
+    if ($removedModule === 'authorization') {
+        $excluded = ['authorization', 'settings', 'user-management', 'audit-trails', 'reporting'];
+    } elseif ($removedModule === 'audit-trails' || $removedModule === 'user-management') {
+        $excluded = [$removedModule, 'reporting'];
+    }
+
+    $selectedModules = array_values(array_diff($allModules, $excluded));
+
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'],
+        'optional_modules' => $selectedModules,
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        assertFeaturePruned($dir, FeatureRegistry::get($removedModule));
+
+        foreach ($selectedModules as $retained) {
+            assertFeatureRetained($dir, FeatureRegistry::get($retained), $selectedModules);
+        }
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+})->with([
+    'reporting removed' => ['reporting'],
+    'notifications removed' => ['notifications'],
+    'localization removed' => ['localization'],
+    'settings removed' => ['settings'],
+]);

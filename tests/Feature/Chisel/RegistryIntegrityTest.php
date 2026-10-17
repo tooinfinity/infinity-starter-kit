@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Features\CrossFeatureTests;
+use App\Chisel\Installer\DependencyValidator;
 
 test('every composer package declared in chisel-paths.php exists in composer.json', function (): void {
     /** @var array<string, mixed> $paths */
@@ -196,4 +197,9 @@ test('every composer and frontend package declared across feature definitions ex
             expect($exists)->toBeTrue("Frontend package [{$pkg}] for feature [{$name}] is not present in package.json.");
         }
     }
+});
+
+test('entire starter kit feature registry passes dependency graph integrity validation', function (): void {
+    expect(fn () => DependencyValidator::validateDefinitions(FeatureRegistry::all()))
+        ->not->toThrow(Throwable::class);
 });

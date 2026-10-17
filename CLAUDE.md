@@ -460,4 +460,29 @@ This application uses Laravel Octane, a long-running PHP server. The application
 - Activate `inertia-react-development` when working with Inertia React client-side patterns.
 - Always use `@inertiajs/react` components (`Link`, `useForm`, `usePage`) with Wayfinder route helpers.
 
+=== chisel/core rules ===
+
+# Chisel Feature Architecture & Engineering Conventions
+
+- Always inspect existing implementation before modifying architecture.
+- Preserve established conventions and architectural boundaries.
+- Keep Actions, controllers, and models strictly consistent with existing repository rules (Actions perform mutations with single `handle()`, controllers are CRUD-only, Form Requests handle 100% of authorization and validation).
+- Do not introduce unrelated refactors or clean up unrelated code.
+- Do not weaken static analysis or tests; never disable lint rules to make changes pass.
+- Preserve public APIs unless explicitly directed to change them.
+- Add regression tests for all bugs and architectural enhancements.
+- Chisel-removable features must leave a clean, valid generated application with zero orphaned markers (`assertNoOrphanedMarkersInSandbox`) and valid PHP syntax (`assertPhpSyntaxValid`).
+- Use the existing feature/marker/dependency infrastructure (`FeatureDefinition`, `FeatureRegistry`, `DependencyValidator`) rather than creating parallel or competing systems.
+- Always run repository-defined verification commands (`composer test:lint`, `composer test:types`, `composer test`).
+
+## Registrable Resource Convention
+
+Future features integrating polymorphic or registrable entity models must follow this convention:
+- Resource types must use stable, explicit string keys (e.g., `'organization'`, `'location'`, `'user'`).
+- Arbitrary PHP model class names must never come directly from user input or request payloads.
+- Supported resources must be explicitly allow-listed/registered in a centralized configuration or registry.
+- Future features should reuse an established registry rather than creating competing ad-hoc registries.
+- Generalize the implementation only after multiple concrete consumers prove the abstraction.
+
 </laravel-boost-guidelines>
+
