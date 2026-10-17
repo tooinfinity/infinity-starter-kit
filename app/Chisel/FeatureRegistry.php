@@ -223,9 +223,7 @@ final class FeatureRegistry
                         return $countDiff;
                     }
 
-                    $order = ['audit-trails' => 1, 'user-management' => 2, 'settings' => 3];
-
-                    return ($order[$a] ?? 99) <=> ($order[$b] ?? 99);
+                    return strcmp($a, $b);
                 });
 
                 return $deps;

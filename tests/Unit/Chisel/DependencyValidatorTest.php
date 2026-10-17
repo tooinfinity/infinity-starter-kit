@@ -73,3 +73,289 @@ test('dependency validator rejects unknown feature keys', function (): void {
     expect(fn () => DependencyValidator::validate(['auth_features' => ['login', 'something-invalid']]))
         ->toThrow(RuntimeException::class, 'Unknown feature(s) specified: something-invalid.');
 });
+
+test('dependency validator rejects self-dependency in required dependencies', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            dependencies: ['feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-a" cannot depend on itself.');
+});
+
+test('dependency validator rejects self-dependency in optional dependencies', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            optionalDependencies: ['feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-a" cannot optionally depend on itself.');
+});
+
+test('dependency validator rejects unknown required dependency target in definition', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            dependencies: ['non-existent-dep'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-a" declares unknown dependency "non-existent-dep".');
+});
+
+test('dependency validator rejects unknown optional dependency target in definition', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            optionalDependencies: ['non-existent-optional'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-a" declares unknown optional dependency "non-existent-optional".');
+});
+
+test('dependency validator rejects duplicate required dependencies', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+        ),
+        'feature-b' => new FeatureDefinition(
+            key: 'feature-b',
+            label: 'Feature B',
+            dependencies: ['feature-a', 'feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-b" declares duplicate dependency "feature-a".');
+});
+
+test('dependency validator rejects duplicate optional dependencies', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+        ),
+        'feature-b' => new FeatureDefinition(
+            key: 'feature-b',
+            label: 'Feature B',
+            optionalDependencies: ['feature-a', 'feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-b" declares duplicate optional dependency "feature-a".');
+});
+
+test('dependency validator rejects overlapping required and optional dependencies', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+        ),
+        'feature-b' => new FeatureDefinition(
+            key: 'feature-b',
+            label: 'Feature B',
+            dependencies: ['feature-a'],
+            optionalDependencies: ['feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Feature "feature-b" cannot declare "feature-a" as both a required and optional dependency.');
+});
+
+test('dependency validator rejects direct circular dependencies', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            dependencies: ['feature-b'],
+        ),
+        'feature-b' => new FeatureDefinition(
+            key: 'feature-b',
+            label: 'Feature B',
+            dependencies: ['feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Dependency cycle detected: feature-a -> feature-b -> feature-a.');
+});
+
+test('dependency validator rejects indirect circular dependencies across multiple features', function (): void {
+    $custom = [
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            dependencies: ['feature-b'],
+        ),
+        'feature-b' => new FeatureDefinition(
+            key: 'feature-b',
+            label: 'Feature B',
+            dependencies: ['feature-c'],
+        ),
+        'feature-c' => new FeatureDefinition(
+            key: 'feature-c',
+            label: 'Feature C',
+            dependencies: ['feature-a'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->toThrow(RuntimeException::class, 'Dependency cycle detected: feature-a -> feature-b -> feature-c -> feature-a.');
+});
+
+test('dependency validator accepts diamond dependency configurations', function (): void {
+    $custom = [
+        'feature-base' => new FeatureDefinition(
+            key: 'feature-base',
+            label: 'Base Feature',
+        ),
+        'feature-left' => new FeatureDefinition(
+            key: 'feature-left',
+            label: 'Left Feature',
+            dependencies: ['feature-base'],
+        ),
+        'feature-right' => new FeatureDefinition(
+            key: 'feature-right',
+            label: 'Right Feature',
+            dependencies: ['feature-base'],
+        ),
+        'feature-top' => new FeatureDefinition(
+            key: 'feature-top',
+            label: 'Top Feature',
+            dependencies: ['feature-left', 'feature-right'],
+        ),
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($custom))
+        ->not->toThrow(Throwable::class);
+
+    // Valid when all selected
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['feature-base', 'feature-left', 'feature-right', 'feature-top'],
+    ], $custom))->not->toThrow(Throwable::class);
+
+    // Invalid when top is selected but left is missing
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['feature-base', 'feature-right', 'feature-top'],
+    ], $custom))->toThrow(RuntimeException::class, 'The "feature-top" feature requires the following feature(s): feature-left.');
+});
+
+test('optional dependency does not cause validation failure when optional target is absent', function (): void {
+    $custom = [
+        'feature-core' => new FeatureDefinition(
+            key: 'feature-core',
+            label: 'Core Feature',
+        ),
+        'feature-opt' => new FeatureDefinition(
+            key: 'feature-opt',
+            label: 'Optional Integration Feature',
+        ),
+        'feature-consumer' => new FeatureDefinition(
+            key: 'feature-consumer',
+            label: 'Consumer Feature',
+            dependencies: ['feature-core'],
+            optionalDependencies: ['feature-opt'],
+        ),
+    ];
+
+    // Consumer enabled, core enabled, optional feature absent -> VALID
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['feature-core', 'feature-consumer'],
+    ], $custom))->not->toThrow(Throwable::class);
+
+    // Consumer enabled, core enabled, optional feature also present -> VALID
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['feature-core', 'feature-opt', 'feature-consumer'],
+    ], $custom))->not->toThrow(Throwable::class);
+
+    // Consumer enabled, core absent -> FAILS on required dependency
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['feature-consumer'],
+    ], $custom))->toThrow(RuntimeException::class, 'The "feature-consumer" feature requires the following feature(s): feature-core.');
+});
+
+test('validateDefinitions rejects unknown dependency target in raw array definition without inferring existence', function (): void {
+    $raw = [
+        'feature-a' => ['does-not-exist'],
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($raw))
+        ->toThrow(RuntimeException::class, 'Feature "feature-a" declares unknown dependency "does-not-exist".');
+});
+
+test('validateDefinitions accepts raw array definitions when all targets are registered features', function (): void {
+    $raw = [
+        'feature-a' => ['feature-b'],
+        'feature-b' => [],
+    ];
+
+    expect(fn () => DependencyValidator::validateDefinitions($raw))
+        ->not->toThrow(Throwable::class);
+});
+
+test('validate rejects partial legacy dependency map with unknown dependency target', function (): void {
+    $legacyMap = [
+        'reporting' => ['does-not-exist'],
+    ];
+
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['reporting']], $legacyMap))
+        ->toThrow(RuntimeException::class, 'Feature "reporting" declares unknown dependency "does-not-exist".');
+});
+
+test('validate accepts partial legacy dependency map with known registered targets and verifies missing dependencies', function (): void {
+    $legacyMap = [
+        'reporting' => ['audit-trails', 'user-management', 'authorization'],
+        'audit-trails' => ['authorization'],
+        'user-management' => ['authorization'],
+        'settings' => ['authorization'],
+    ];
+
+    // Missing dependency in legacy map throws expected failure
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['settings']], $legacyMap))
+        ->toThrow(RuntimeException::class, 'The "settings" feature requires the following feature(s): authorization.');
+
+    // Valid combination with legacy map succeeds
+    expect(fn () => DependencyValidator::validate([
+        'optional_modules' => ['settings', 'authorization'],
+    ], $legacyMap))->not->toThrow(Throwable::class);
+});
+
+test('dependency validator evaluates features deterministically by dependency depth and alphabetical order', function (): void {
+    $custom = [
+        'feature-z' => new FeatureDefinition(
+            key: 'feature-z',
+            label: 'Feature Z',
+            dependencies: ['feature-base'],
+        ),
+        'feature-a' => new FeatureDefinition(
+            key: 'feature-a',
+            label: 'Feature A',
+            dependencies: ['feature-base'],
+        ),
+        'feature-base' => new FeatureDefinition(
+            key: 'feature-base',
+            label: 'Base Feature',
+        ),
+    ];
+
+    // Both feature-a and feature-z are missing feature-base.
+    // They have equal dependency depth (1). Deterministic alphabetical tie-breaker ensures feature-a is reported first.
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['feature-z', 'feature-a']], $custom))
+        ->toThrow(RuntimeException::class, 'The "feature-a" feature requires the following feature(s): feature-base.');
+});
