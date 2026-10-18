@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Edit,
     FilterX,
@@ -76,6 +76,7 @@ export default function UsersIndex({
     filters: UserFilters;
     availableRoles: string[];
 }) {
+    const { timezone } = usePage().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const [status, setStatus] = useState(filters.status ?? 'all');
     const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
@@ -402,7 +403,14 @@ export default function UsersIndex({
                                             <td className="px-4 py-3.5 text-xs text-muted-foreground">
                                                 {new Date(
                                                     user.created_at,
-                                                ).toLocaleDateString()}
+                                                ).toLocaleDateString(
+                                                    undefined,
+                                                    {
+                                                        timeZone:
+                                                            timezone ||
+                                                            undefined,
+                                                    },
+                                                )}
                                             </td>
                                             <td className="px-4 py-3.5 text-right">
                                                 <DropdownMenu>

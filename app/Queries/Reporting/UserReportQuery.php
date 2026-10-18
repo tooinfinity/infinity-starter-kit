@@ -12,6 +12,7 @@ use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
@@ -39,16 +40,18 @@ final readonly class UserReportQuery
      */
     public function handle(array $filters = [], int $perPage = 15): array
     {
+        $timezone = $this->resolveTimezone();
+
         $dateFromStr = ! empty($filters['date_from'])
             ? $filters['date_from']
-            : Date::now()->subDays(29)->toDateString();
+            : Date::now($timezone)->subDays(29)->toDateString();
 
         $dateToStr = ! empty($filters['date_to'])
             ? $filters['date_to']
-            : Date::now()->toDateString();
+            : Date::now($timezone)->toDateString();
 
-        $from = Date::parse($dateFromStr)->startOfDay();
-        $to = Date::parse($dateToStr)->endOfDay();
+        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->utc();
+        $to = Date::parse($dateToStr, $timezone)->endOfDay()->utc();
 
         // 1. Summary Cards
         $totalUsers = User::query()->count();
@@ -87,24 +90,31 @@ final readonly class UserReportQuery
             ),
         ];
 
-        // 2. Time-series (registrations per day)
-        /** @var list<object{date: string, count: int|string}> $rawSeries */
-        $rawSeries = DB::table('users')
-            ->selectRaw('DATE(created_at) as date, count(*) as count')
-            ->whereBetween('created_at', [$from, $to])
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->all();
-
+        // 2. Time-series (registrations per day in display timezone)
         /** @var array<string, int> $countsByDate */
         $countsByDate = [];
-        foreach ($rawSeries as $item) {
-            $countsByDate[$item->date] = (int) $item->count;
+        /** @var Collection<int, string> $rawCreatedAts */
+        $rawCreatedAts = DB::table('users')
+            ->whereBetween('created_at', [$from, $to])
+            ->pluck('created_at');
+
+        $storedTimezone = config()->string('app.timezone', 'UTC');
+
+        foreach ($rawCreatedAts as $createdAt) {
+            $dateKey = Date::parse($createdAt, $storedTimezone)
+                ->setTimezone($timezone)
+                ->toDateString();
+
+            $countsByDate[$dateKey] = ($countsByDate[$dateKey] ?? 0) + 1;
         }
 
         $series = [];
-        $period = CarbonPeriod::create($from->copy()->startOfDay(), '1 day', $to->copy()->startOfDay());
+        $period = CarbonPeriod::create(
+            Date::parse($dateFromStr, $timezone)->startOfDay(),
+            '1 day',
+            Date::parse($dateToStr, $timezone)->startOfDay(),
+        );
+
         foreach ($period as $date) {
             /** @var Carbon $date */
             $key = $date->toDateString();
@@ -163,5 +173,16 @@ final readonly class UserReportQuery
         }
 
         return $query;
+    }
+
+    private function resolveTimezone(): string
+    {
+        $timezone = config('app.display_timezone');
+
+        if (is_string($timezone) && $timezone !== '') {
+            return $timezone;
+        }
+
+        return config()->string('app.timezone', 'UTC');
     }
 }

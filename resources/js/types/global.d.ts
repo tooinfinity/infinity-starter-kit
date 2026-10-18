@@ -14,6 +14,7 @@ declare module '@inertiajs/core' {
         };
         sharedPageProps: {
             name: string;
+            timezone: string;
             auth: Auth;
             sidebarOpen: boolean;
             /* @chisel-localization */

@@ -59,6 +59,7 @@ final class OptionalModules
                 label: 'Settings',
                 sectionMarker: 'settings',
                 markerFiles: [
+                    'bootstrap/app.php',
                     'routes/web.php',
                     'app/Enums/Permission.php',
                     'resources/js/layouts/settings/layout.tsx',
@@ -71,6 +72,7 @@ final class OptionalModules
                     'app/Models/Setting.php',
                     'app/Actions/GetSetting.php',
                     'app/Actions/UpdateSettings.php',
+                    'app/Http/Middleware/HandleSettings.php',
                     'app/Http/Controllers/SettingController.php',
                     'app/Http/Requests/UpdateSettingsRequest.php',
                     'database/factories/SettingFactory.php',
@@ -83,6 +85,7 @@ final class OptionalModules
                     'tests/Unit/Actions/GetSettingTest.php',
                     'tests/Unit/Actions/UpdateSettingsTest.php',
                     'tests/Feature/Controllers/SettingControllerTest.php',
+                    'tests/Feature/Middleware/HandleSettingsTest.php',
                 ],
                 emptyDirectories: [
                     'resources/js/pages/settings/application',

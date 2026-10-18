@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Download, FilterX, Search, Users as UsersIcon } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { Can } from '@/components/can';
@@ -55,6 +55,7 @@ export default function UserReportPage({
     users,
     filters,
 }: UserReportPageProps) {
+    const { timezone } = usePage().props;
     const [dateFrom, setDateFrom] = useState(filters.date_from);
     const [dateTo, setDateTo] = useState(filters.date_to);
     const [status, setStatus] = useState(filters.status ?? 'all');
@@ -300,6 +301,7 @@ export default function UserReportPage({
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric',
+                                                timeZone: timezone || undefined,
                                             })}
                                         </td>
                                     </tr>

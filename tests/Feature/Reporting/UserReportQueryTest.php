@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Queries\Reporting\ExportUserReportStream;
 use App\Queries\Reporting\UserReportQuery;
 use Illuminate\Support\Facades\Date;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 test('user report query handles empty dataset gracefully', function (): void {
     User::query()->delete();
@@ -161,4 +163,35 @@ test('user report query searches by name and email and supports sorting', functi
         'direction' => 'asc',
     ]);
     expect($sortedResult['paginated']->first()?->name)->toBe('Alice Developer');
+});
+
+it('buckets report days in the configured display timezone', function (): void {
+    config(['app.display_timezone' => 'Africa/Algiers']); // UTC+1
+
+    User::factory()->create(['created_at' => '2026-10-17 23:30:00']); // 2026-10-18 00:30 local
+
+    $series = collect(resolve(UserReportQuery::class)->handle([
+        'date_from' => '2026-10-17',
+        'date_to' => '2026-10-18',
+    ])['series']);
+
+    expect($series->firstWhere('date', '2026-10-18')->value)->toBe(1);
+});
+
+it('exports report stream using fallback timezone when display_timezone is not set', function (): void {
+    config(['app.display_timezone' => null]);
+
+    $stream = resolve(ExportUserReportStream::class);
+    $response = $stream->handle();
+
+    expect($response)->toBeInstanceOf(StreamedResponse::class);
+});
+
+it('exports report stream using configured display timezone', function (): void {
+    config(['app.display_timezone' => 'Africa/Algiers']);
+
+    $stream = resolve(ExportUserReportStream::class);
+    $response = $stream->handle();
+
+    expect($response)->toBeInstanceOf(StreamedResponse::class);
 });

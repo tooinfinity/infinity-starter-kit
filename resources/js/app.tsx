@@ -8,10 +8,14 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import '../css/app.css';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const defaultAppName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 void createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    title: (title, page) => {
+        const appName = (page?.props?.name as string) || defaultAppName;
+
+        return title ? `${title} - ${appName}` : appName;
+    },
     resolve: (name) =>
         resolvePageComponent<ComponentType>(
             `./pages/${name}.tsx`,

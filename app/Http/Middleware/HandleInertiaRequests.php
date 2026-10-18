@@ -43,6 +43,7 @@ final class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'timezone' => config('app.display_timezone', config('app.timezone', 'UTC')),
             'auth' => [
                 'user' => $user,
                 /* @chisel-roles-permissions */

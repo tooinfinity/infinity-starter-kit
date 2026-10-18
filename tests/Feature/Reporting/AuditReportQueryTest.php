@@ -7,7 +7,9 @@ use App\Models\AuditTrail;
 use App\Models\Setting;
 use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
+use App\Queries\Reporting\ExportAuditReportStream;
 use Illuminate\Support\Facades\Date;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 test('audit report query handles empty dataset gracefully', function (): void {
     AuditTrail::query()->delete();
@@ -147,4 +149,39 @@ test('audit report query filters by event, user_id and search', function (): voi
         'search' => 'Specific Actor',
     ]);
     expect($actorResult['paginated']->total())->toBe(1);
+});
+
+it('buckets report days in the configured display timezone', function (): void {
+    config(['app.display_timezone' => 'Africa/Algiers']); // UTC+1
+
+    AuditTrail::query()->delete();
+
+    AuditTrail::factory()->create([
+        'created_at' => '2026-10-17 23:30:00', // 2026-10-18 00:30 local
+    ]);
+
+    $series = collect(resolve(AuditReportQuery::class)->handle([
+        'date_from' => '2026-10-17',
+        'date_to' => '2026-10-18',
+    ])['series']);
+
+    expect($series->firstWhere('date', '2026-10-18')->value)->toBe(1);
+});
+
+it('exports audit report stream using fallback timezone when display_timezone is not set', function (): void {
+    config(['app.display_timezone' => null]);
+
+    $stream = resolve(ExportAuditReportStream::class);
+    $response = $stream->handle();
+
+    expect($response)->toBeInstanceOf(StreamedResponse::class);
+});
+
+it('exports audit report stream using configured display timezone', function (): void {
+    config(['app.display_timezone' => 'Africa/Algiers']);
+
+    $stream = resolve(ExportAuditReportStream::class);
+    $response = $stream->handle();
+
+    expect($response)->toBeInstanceOf(StreamedResponse::class);
 });

@@ -10,6 +10,9 @@ use App\Http\Middleware\HandleInertiaRequests;
 /* @chisel-localization */
 use App\Http\Middleware\HandleLocale;
 /* @end-chisel-localization */
+/* @chisel-settings */
+use App\Http\Middleware\HandleSettings;
+/* @end-chisel-settings */
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state'/* @chisel-localization */, 'locale'/* @end-chisel-localization */]);
 
         $middleware->web(append: [
+            /* @chisel-settings */
+            HandleSettings::class,
+            /* @end-chisel-settings */
             HandleAppearance::class,
             /* @chisel-localization */
             HandleLocale::class,

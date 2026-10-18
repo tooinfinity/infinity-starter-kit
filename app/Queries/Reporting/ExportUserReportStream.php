@@ -21,16 +21,18 @@ final readonly class ExportUserReportStream
      */
     public function handle(array $filters = []): StreamedResponse
     {
+        $timezone = $this->resolveTimezone();
+
         $dateFromStr = ! empty($filters['date_from'])
             ? $filters['date_from']
-            : Date::now()->subDays(29)->toDateString();
+            : Date::now($timezone)->subDays(29)->toDateString();
 
         $dateToStr = ! empty($filters['date_to'])
             ? $filters['date_to']
-            : Date::now()->toDateString();
+            : Date::now($timezone)->toDateString();
 
-        $from = Date::parse($dateFromStr)->startOfDay();
-        $to = Date::parse($dateToStr)->endOfDay();
+        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->utc();
+        $to = Date::parse($dateToStr, $timezone)->endOfDay()->utc();
 
         /** @var Builder<User> $query */
         $query = $this->reportQuery->buildFilteredQuery($filters, $from, $to)->latest('created_at');
@@ -92,5 +94,16 @@ final readonly class ExportUserReportStream
         }
 
         return $value;
+    }
+
+    private function resolveTimezone(): string
+    {
+        $timezone = config('app.display_timezone');
+
+        if (is_string($timezone) && $timezone !== '') {
+            return $timezone;
+        }
+
+        return config()->string('app.timezone', 'UTC');
     }
 }

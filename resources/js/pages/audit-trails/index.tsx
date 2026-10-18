@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Eye, FilterX, History, Search, X } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { AuditTrailDetail } from '@/components/audit-trails/audit-trail-detail';
@@ -45,6 +45,7 @@ export default function AuditTrailsIndex({
     filters,
     availableEvents,
 }: Props) {
+    const { timezone } = usePage().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const [event, setEvent] = useState(filters.event ?? 'all');
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? '');
@@ -415,7 +416,10 @@ export default function AuditTrailsIndex({
                                             <td className="px-4 py-3.5 text-xs text-muted-foreground">
                                                 {new Date(
                                                     audit.created_at,
-                                                ).toLocaleString()}
+                                                ).toLocaleString(undefined, {
+                                                    timeZone:
+                                                        timezone || undefined,
+                                                })}
                                             </td>
 
                                             <td className="px-4 py-3.5 text-right">

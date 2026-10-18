@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Activity, Download, FilterX, Search } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { Can } from '@/components/can';
@@ -67,6 +67,7 @@ export default function AuditReportPage({
     availableEvents,
     filters,
 }: AuditReportPageProps) {
+    const { timezone } = usePage().props;
     const [dateFrom, setDateFrom] = useState(filters.date_from);
     const [dateTo, setDateTo] = useState(filters.date_to);
     const [event, setEvent] = useState(filters.event ?? 'all');
@@ -357,7 +358,9 @@ export default function AuditReportPage({
                                         <td className="px-4 py-3.5 text-end text-xs text-muted-foreground">
                                             {new Date(
                                                 item.created_at,
-                                            ).toLocaleString()}
+                                            ).toLocaleString(undefined, {
+                                                timeZone: timezone || undefined,
+                                            })}
                                         </td>
                                     </tr>
                                 ))
