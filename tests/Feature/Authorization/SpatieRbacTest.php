@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 use Spatie\Permission\PermissionRegistrar;
@@ -124,4 +126,20 @@ test('starter kit source repository contains both setup commands', function (): 
 test('authorization seeder does not exist and is not referenced', function (): void {
     expect(file_exists(base_path('database/seeders/AuthorizationSeeder.php')))->toBeFalse()
         ->and(class_exists('Database\Seeders\AuthorizationSeeder'))->toBeFalse();
+});
+
+test('uses a non-integer model_id column in the Spatie pivot tables', function (string $table): void {
+    $column = collect(Schema::getColumns($table))->firstWhere('name', 'model_id');
+
+    expect($column)->not->toBeNull()
+        ->and($column['type_name'])->not->toContain('int');
+})->with(['model_has_roles', 'model_has_permissions']);
+
+test('stores the UUID user id as the pivot model_id', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(RoleModel::findOrCreate(Role::SuperAdmin->value));
+    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    expect(DB::table('model_has_roles')->value('model_id'))->toBe($user->id)
+        ->and(DB::table('model_has_permissions')->value('model_id'))->toBe($user->id);
 });

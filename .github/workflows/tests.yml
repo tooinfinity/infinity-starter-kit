@@ -17,6 +17,54 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [sqlite, mysql, pgsql]
+        include:
+          - db: sqlite
+            db_connection: sqlite
+            db_host: 127.0.0.1
+            db_port: ''
+            db_database: ':memory:'
+            db_username: ''
+            db_password: ''
+          - db: mysql
+            db_connection: mysql
+            db_host: 127.0.0.1
+            db_port: 3306
+            db_database: laravel
+            db_username: root
+            db_password: ''
+          - db: pgsql
+            db_connection: pgsql
+            db_host: 127.0.0.1
+            db_port: 5432
+            db_database: laravel
+            db_username: root
+            db_password: ''
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: laravel
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+      pgsql:
+        image: postgres:16
+        env:
+          POSTGRES_DB: laravel
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +75,7 @@ jobs:
           php-version: "8.5"
           tools: composer:v2
           coverage: pcov
+          extensions: pdo, pdo_sqlite, pdo_mysql, pdo_pgsql
           ini-values: zend.assertions=1
 
       - name: Setup Bun
@@ -107,12 +156,19 @@ jobs:
 
       - name: Tests
         run: composer test
+        env:
+          DB_CONNECTION: ${{ matrix.db_connection }}
+          DB_HOST: ${{ matrix.db_host }}
+          DB_PORT: ${{ matrix.db_port }}
+          DB_DATABASE: ${{ matrix.db_database }}
+          DB_USERNAME: ${{ matrix.db_username }}
+          DB_PASSWORD: ${{ matrix.db_password }}
 
       - name: Store Artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-screenshots
+          name: browser-screenshots-${{ matrix.db }}
           path: tests/Browser/Screenshots
           if-no-files-found: ignore
 
