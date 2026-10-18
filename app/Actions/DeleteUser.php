@@ -33,12 +33,12 @@ final readonly class DeleteUser
         DB::transaction(function () use ($user): void {
             /* @chisel-roles-permissions */
             if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
-                $superAdminCount = User::query()
+                $superAdmins = User::query()
                     ->role(Role::SuperAdmin->value)
                     ->lockForUpdate()
-                    ->count();
+                    ->get(['users.id']);
 
-                if ($superAdminCount <= 1) {
+                if (count($superAdmins) <= 1) {
                     throw ValidationException::withMessages([
                         'user' => __('Cannot delete the last Super Admin.'),
                     ]);

@@ -28,11 +28,13 @@ test('notifications sent in French locale are translated in French', function ()
     $user->notify(new UserActivated);
     $user->notify(new UserDeactivated);
 
-    $notifications = $user->notifications()->oldest()->get();
+    $passwordNotification = $user->notifications()->where('type', PasswordChanged::class)->first();
+    $activatedNotification = $user->notifications()->where('type', UserActivated::class)->first();
+    $deactivatedNotification = $user->notifications()->where('type', UserDeactivated::class)->first();
 
-    expect($notifications[0]->data['title'])->toBe('Mot de passe modifié')
-        ->and($notifications[1]->data['title'])->toBe('Compte activé')
-        ->and($notifications[2]->data['title'])->toBe('Compte désactivé');
+    expect($passwordNotification->data['title'])->toBe('Mot de passe modifié')
+        ->and($activatedNotification->data['title'])->toBe('Compte activé')
+        ->and($deactivatedNotification->data['title'])->toBe('Compte désactivé');
 
     app()->setLocale('en');
 });
@@ -45,11 +47,13 @@ test('notifications sent in Arabic locale are translated in Arabic', function ()
     $user->notify(new UserActivated);
     $user->notify(new UserDeactivated);
 
-    $notifications = $user->notifications()->oldest()->get();
+    $passwordNotification = $user->notifications()->where('type', PasswordChanged::class)->first();
+    $activatedNotification = $user->notifications()->where('type', UserActivated::class)->first();
+    $deactivatedNotification = $user->notifications()->where('type', UserDeactivated::class)->first();
 
-    expect($notifications[0]->data['title'])->toBe('تم تغيير كلمة المرور')
-        ->and($notifications[1]->data['title'])->toBe('تم تفعيل الحساب')
-        ->and($notifications[2]->data['title'])->toBe('تم تعطيل الحساب');
+    expect($passwordNotification->data['title'])->toBe('تم تغيير كلمة المرور')
+        ->and($activatedNotification->data['title'])->toBe('تم تفعيل الحساب')
+        ->and($deactivatedNotification->data['title'])->toBe('تم تعطيل الحساب');
 
     app()->setLocale('en');
 });

@@ -25,12 +25,12 @@ final readonly class EnsureNotLastSuperAdminAction
             return;
         }
 
-        $superAdminCount = User::query()
+        $superAdmins = User::query()
             ->role(Role::SuperAdmin->value)
             ->lockForUpdate()
-            ->count();
+            ->get(['users.id']);
 
-        if ($superAdminCount <= 1) {
+        if (count($superAdmins) <= 1) {
             match ($operation) {
                 SuperAdminRestrictionOperation::Deactivate => throw ValidationException::withMessages([
                     $errorField => __('Cannot deactivate the last Super Admin.'),
