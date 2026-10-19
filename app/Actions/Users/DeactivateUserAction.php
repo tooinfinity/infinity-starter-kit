@@ -23,6 +23,7 @@ final readonly class DeactivateUserAction
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         /* @end-chisel-audit-trails */
+        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
     public function handle(User $user, ?User $currentUser = null): void
@@ -31,6 +32,10 @@ final readonly class DeactivateUserAction
             throw ValidationException::withMessages([
                 'user' => __('You cannot deactivate your own account.'),
             ]);
+        }
+
+        if ($currentUser instanceof User) {
+            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
         }
 
         DB::transaction(function () use ($user): void {

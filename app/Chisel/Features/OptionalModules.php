@@ -119,6 +119,7 @@ final class OptionalModules
                     'app/Actions/Users/ChangeUserPasswordAction.php',
                     'app/Actions/Users/DeleteUserAction.php',
                     'app/Actions/Users/EnsureNotLastSuperAdminAction.php',
+                    'app/Actions/Users/EnsureActorMayManageTargetAction.php',
                     'app/Actions/Users/UpdateUserRolesAction.php',
                     'app/Actions/Users/SnapshotUserAuditDataAction.php',
                     'app/Enums/SuperAdminRestrictionOperation.php',

@@ -14,15 +14,19 @@ use SensitiveParameter;
 
 final readonly class ChangeUserPasswordAction
 {
-    /* @chisel-audit-trails */
     public function __construct(
+        /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        /* @end-chisel-audit-trails */
+        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
-    /* @end-chisel-audit-trails */
-
-    public function handle(User $user, #[SensitiveParameter] string $password): void
+    public function handle(User $user, #[SensitiveParameter] string $password, ?User $currentUser = null): void
     {
+        if ($currentUser instanceof User) {
+            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
+        }
+
         DB::transaction(function () use ($user, $password): void {
             $user->forceFill([
                 'password' => $password,

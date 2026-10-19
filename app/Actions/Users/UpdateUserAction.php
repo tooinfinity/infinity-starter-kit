@@ -22,10 +22,15 @@ final readonly class UpdateUserAction
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
         /* @end-chisel-audit-trails */
+        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
-    public function handle(User $user, UpdateUserData $data): User
+    public function handle(User $user, UpdateUserData $data, ?User $currentUser = null): User
     {
+        if ($currentUser instanceof User) {
+            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
+        }
+
         return DB::transaction(function () use ($user, $data): User {
             /* @chisel-audit-trails */
             $oldValues = $this->snapshotUserAuditData->handle($user);

@@ -22,15 +22,20 @@ final readonly class UpdateUserRolesAction
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
         /* @end-chisel-audit-trails */
+        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
     /**
      * @param  list<string>  $roles
      */
-    public function handle(User $user, array $roles, bool $recordAuditTrail = true): User
+    public function handle(User $user, array $roles, bool $recordAuditTrail = true, ?User $currentUser = null): User
     {
         if (! trait_exists(HasRoles::class) || ! $user->exists) {
             return $user;
+        }
+
+        if ($currentUser instanceof User) {
+            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
         }
 
         return DB::transaction(function () use ($user, $roles, $recordAuditTrail): User {

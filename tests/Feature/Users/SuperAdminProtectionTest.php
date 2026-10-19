@@ -2,13 +2,22 @@
 
 declare(strict_types=1);
 
+use App\Actions\Users\ActivateUserAction;
+use App\Actions\Users\ChangeUserPasswordAction;
+use App\Actions\Users\DeactivateUserAction;
+use App\Actions\Users\DeleteUserAction;
 use App\Actions\Users\EnsureNotLastSuperAdminAction;
+use App\Actions\Users\UpdateUserAction;
 use App\Actions\Users\UpdateUserRolesAction;
+use App\Data\Users\UpdateUserData;
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
 it('prevents removing super admin role from last super admin', function (): void {
@@ -178,4 +187,81 @@ it('UpdateUserRolesAction returns unpersisted user directly', function (): void 
     $result = $action->handle($unsavedUser, ['editor']);
 
     expect($result)->toBe($unsavedUser);
+});
+
+dataset('super-admin-targeted-operations', [
+    'change email' => [Permission::UsersUpdate, 'put', 'users.update', fn (User $t): array => ['name' => $t->name, 'email' => 'attacker@example.com']],
+    'change password' => [Permission::UsersManagePassword, 'put', 'users.password.update', fn (): array => ['password' => 'new-secure-password123']],
+    'deactivate' => [Permission::UsersUpdate, 'patch', 'users.deactivate', fn (): array => []],
+    'activate' => [Permission::UsersUpdate, 'patch', 'users.activate', fn (): array => []],
+    'delete' => [Permission::UsersDelete, 'delete', 'users.destroy', fn (): array => []],
+]);
+
+it('forbids non-super-admins from managing a super admin', function (Permission $permission, string $method, string $route, Closure $payload): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+
+    $target = User::factory()->create(['is_active' => true]);
+    $target->assignRole($role);
+    User::factory()->create()->assignRole($role); // a second super admin, so "last super admin" can't mask the result
+
+    $actor = User::factory()->create();
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate($permission->value));
+
+    $original = $target->only(['email', 'password', 'is_active']);
+
+    $this->actingAs($actor)->{$method}(route($route, $target), $payload($target))->assertForbidden();
+
+    $fresh = $target->fresh();
+    expect($fresh)->not->toBeNull()
+        ->and($fresh->only(['email', 'password', 'is_active']))->toBe($original);
+})->with('super-admin-targeted-operations');
+
+it('still lets a super admin manage another super admin', function (): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $actor = User::factory()->create();
+    $actor->assignRole($role);
+
+    $target = User::factory()->create();
+    $target->assignRole($role);
+
+    $this->actingAs($actor)
+        ->put(route('users.password.update', $target), ['password' => 'new-secure-password123'])
+        ->assertRedirect();
+});
+
+it('still lets a delegated admin manage ordinary users', function (): void {
+    $actor = User::factory()->create();
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManagePassword->value));
+
+    $this->actingAs($actor)
+        ->put(route('users.password.update', User::factory()->create()), ['password' => 'new-secure-password123'])
+        ->assertRedirect();
+});
+
+it('EnsureActorMayManageTargetAction prevents non-super-admin from managing super admin in actions directly', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole($superAdminRole);
+
+    $delegatedAdmin = User::factory()->create();
+
+    expect(fn () => resolve(ChangeUserPasswordAction::class)->handle($superAdmin, 'new-password', $delegatedAdmin))
+        ->toThrow(AuthorizationException::class);
+
+    expect(fn () => resolve(ActivateUserAction::class)->handle($superAdmin, $delegatedAdmin))
+        ->toThrow(AuthorizationException::class);
+
+    expect(fn () => resolve(DeactivateUserAction::class)->handle($superAdmin, $delegatedAdmin))
+        ->toThrow(AuthorizationException::class);
+
+    expect(fn () => resolve(DeleteUserAction::class)->handle($superAdmin, $delegatedAdmin))
+        ->toThrow(AuthorizationException::class);
+
+    expect(fn () => resolve(UpdateUserAction::class)->handle($superAdmin, new UpdateUserData('New Name', 'new@example.com'), $delegatedAdmin))
+        ->toThrow(AuthorizationException::class);
+
+    expect(fn () => resolve(UpdateUserRolesAction::class)->handle($superAdmin, ['editor'], currentUser: $delegatedAdmin))
+        ->toThrow(AuthorizationException::class);
 });

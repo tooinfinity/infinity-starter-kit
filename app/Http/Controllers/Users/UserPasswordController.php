@@ -14,7 +14,7 @@ final readonly class UserPasswordController
 {
     public function __invoke(UpdateUserPasswordRequest $request, User $user, ChangeUserPasswordAction $action): RedirectResponse
     {
-        $action->handle($user, $request->string('password')->value());
+        $action->handle($user, $request->string('password')->value(), $request->user());
 
         Inertia::flash('toast', [
             'type' => 'success',

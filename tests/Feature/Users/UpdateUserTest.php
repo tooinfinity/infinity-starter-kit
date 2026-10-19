@@ -262,7 +262,7 @@ it('rejects removing super-admin role when actor is not super-admin (SEC-001)', 
             'roles' => ['editor'],
         ]);
 
-    $response->assertSessionHasErrors(['roles' => __('Only Super Admins can remove the Super Admin role.')]);
+    $response->assertForbidden();
 
     expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });

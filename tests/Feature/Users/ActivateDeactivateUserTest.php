@@ -85,7 +85,7 @@ it('prevents user from deactivating themselves', function (): void {
     expect($admin->fresh()->is_active)->toBeTrue();
 });
 
-it('prevents deactivating the last super admin', function (): void {
+it('forbids non-super-admins from deactivating a super admin', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin = User::factory()->active()->create();
     $superAdmin->assignRole($superAdminRole);
@@ -97,7 +97,7 @@ it('prevents deactivating the last super admin', function (): void {
     $response = $this->actingAs($anotherAdmin)
         ->patch(route('users.deactivate', $superAdmin));
 
-    $response->assertSessionHasErrors(['user']);
+    $response->assertForbidden();
 
     expect($superAdmin->fresh()->is_active)->toBeTrue();
 });

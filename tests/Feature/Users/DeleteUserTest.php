@@ -38,7 +38,7 @@ it('prevents user from deleting themselves', function (): void {
     expect(User::query()->where('id', $admin->id)->exists())->toBeTrue();
 });
 
-it('prevents deleting the last super admin', function (): void {
+it('forbids non-super-admins from deleting a super admin', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
@@ -50,7 +50,7 @@ it('prevents deleting the last super admin', function (): void {
     $response = $this->actingAs($anotherAdmin)
         ->delete(route('users.destroy', $superAdmin));
 
-    $response->assertSessionHasErrors(['user']);
+    $response->assertForbidden();
 
     expect(User::query()->where('id', $superAdmin->id)->exists())->toBeTrue();
 });
