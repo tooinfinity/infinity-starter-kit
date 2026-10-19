@@ -1,4 +1,4 @@
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Bell } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown';
@@ -13,8 +13,15 @@ export function NotificationBell() {
     const { notifications } = usePage().props;
     const unreadCount = notifications?.unreadCount ?? 0;
 
+    const handleOpenChange = (isOpen: boolean) => {
+        setOpen(isOpen);
+        if (isOpen && notifications?.recent === undefined) {
+            router.reload({ only: ['notifications.recent'] });
+        }
+    };
+
     return (
-        <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"

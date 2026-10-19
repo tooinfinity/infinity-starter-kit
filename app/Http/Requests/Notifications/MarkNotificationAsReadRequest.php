@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Requests\Notifications;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 final class MarkNotificationAsReadRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $notification = $this->user()?->notifications()->find($this->route('notification'));
+        $id = $this->route('notification');
+
+        if (! is_string($id) || ! Str::isUuid($id)) {
+            return false;
+        }
+
+        $notification = $this->user()?->notifications()->find($id);
 
         return $notification !== null;
     }

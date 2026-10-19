@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Deferred, Link, router, usePage } from '@inertiajs/react';
 import { CheckCheck } from 'lucide-react';
 import { NotificationEmptyState } from '@/components/notifications/notification-empty-state';
 import { NotificationItem } from '@/components/notifications/notification-item';
@@ -7,7 +7,33 @@ import {
     DropdownMenuContent,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
 import { index, markAllRead } from '@/routes/notifications';
+
+function NotificationItemSkeleton() {
+    return (
+        <div className="flex items-start gap-3 rounded-lg p-3">
+            <Skeleton className="mt-0.5 h-8 w-8 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className="h-3 w-3/4" />
+            </div>
+        </div>
+    );
+}
+
+function NotificationDropdownSkeleton() {
+    return (
+        <div className="divide-y divide-border/40">
+            <NotificationItemSkeleton />
+            <NotificationItemSkeleton />
+            <NotificationItemSkeleton />
+        </div>
+    );
+}
 
 type Props = {
     onClose?: () => void;
@@ -58,22 +84,27 @@ export function NotificationDropdown({ onClose }: Props) {
             </div>
 
             <div className="max-h-[350px] divide-y divide-border/40 overflow-y-auto p-1">
-                {recent.length === 0 ? (
-                    <NotificationEmptyState
-                        title="No notifications"
-                        description="You are caught up with all notifications."
-                        className="py-8"
-                    />
-                ) : (
-                    recent.map((item) => (
-                        <NotificationItem
-                            key={item.id}
-                            notification={item}
-                            compact
-                            onActionClick={onClose}
+                <Deferred
+                    data="notifications.recent"
+                    fallback={<NotificationDropdownSkeleton />}
+                >
+                    {recent.length === 0 ? (
+                        <NotificationEmptyState
+                            title="No notifications"
+                            description="You are caught up with all notifications."
+                            className="py-8"
                         />
-                    ))
-                )}
+                    ) : (
+                        recent.map((item) => (
+                            <NotificationItem
+                                key={item.id}
+                                notification={item}
+                                compact
+                                onActionClick={onClose}
+                            />
+                        ))
+                    )}
+                </Deferred>
             </div>
 
             <DropdownMenuSeparator className="m-0" />

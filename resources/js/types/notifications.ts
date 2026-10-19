@@ -40,5 +40,5 @@ export type NotificationPreference = {
 
 export type NotificationsSharedData = {
     unreadCount: number;
-    recent: NotificationItem[];
+    recent?: NotificationItem[];
 };

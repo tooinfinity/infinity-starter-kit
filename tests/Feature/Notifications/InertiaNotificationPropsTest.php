@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Notifications\PasswordChanged;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guest has unreadCount 0 and empty recent in shared props', function (): void {
@@ -15,7 +16,21 @@ test('guest has unreadCount 0 and empty recent in shared props', function (): vo
         );
 });
 
-test('authenticated user receives accurate unreadCount and recent notifications in shared props', function (): void {
+test('does not load recent notifications on a normal page visit', function (): void {
+    $user = User::factory()->create();
+    $user->notify(new PasswordChanged);
+    $user->notify(new PasswordChanged);
+
+    DB::enableQueryLog();
+    $this->actingAs($user)->get(route('dashboard'))->assertOk();
+
+    $recentQueries = collect(DB::getQueryLog())
+        ->filter(fn (array $q): bool => str_contains(mb_strtolower($q['query']), 'notifications') && str_contains(mb_strtolower($q['query']), 'limit 5'));
+
+    expect($recentQueries)->toBeEmpty();
+});
+
+test('authenticated user receives unreadCount and loads deferred recent notifications', function (): void {
     $user = User::factory()->create();
     $user->notify(new PasswordChanged);
     $user->notify(new PasswordChanged);
@@ -25,8 +40,11 @@ test('authenticated user receives accurate unreadCount and recent notifications 
         ->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page
             ->where('notifications.unreadCount', 2)
-            ->has('notifications.recent', 2)
-            ->where('notifications.recent.0.title', 'Password Changed')
+            ->missing('notifications.recent')
+            ->loadDeferredProps(fn (Assert $page): Assert => $page
+                ->has('notifications.recent', 2)
+                ->where('notifications.recent.0.title', 'Password Changed')
+            )
         );
 });
 

@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 /* @chisel-notifications */
 use Illuminate\Notifications\DatabaseNotification;
+use Inertia\Inertia;
 /* @end-chisel-notifications */
 use Inertia\Middleware;
 
@@ -67,7 +68,7 @@ final class HandleInertiaRequests extends Middleware
                     ? once(fn (): int => $user->unreadNotifications()->count())
                     : 0,
                 'recent' => $user instanceof User
-                    ? once(fn (): array => $user->notifications()
+                    ? Inertia::defer(fn (): array => $user->notifications()
                         ->latest()
                         ->limit(5)
                         ->get()
