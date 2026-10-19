@@ -267,6 +267,83 @@ it('rejects removing super-admin role when actor is not super-admin (SEC-001)', 
     expect($target->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });
 
+it('rejects assigning a role that grants permissions the actor lacks', function (): void {
+    $ops = RoleModel::findOrCreate('ops');
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+
+    $actor = User::factory()->create();
+    foreach ([Permission::UsersView, Permission::UsersUpdate, Permission::UsersManageRoles] as $p) {
+        $actor->givePermissionTo(PermissionModel::findOrCreate($p->value));
+    }
+
+    $target = User::factory()->create();
+
+    $this->actingAs($actor)
+        ->put(route('users.update', $target), ['name' => $target->name, 'email' => $target->email, 'roles' => ['ops']])
+        ->assertSessionHasErrors('roles');
+
+    expect($target->fresh()->hasRole('ops'))->toBeFalse();
+});
+
+it("allows assigning a role whose permissions are a subset of the actor's", function (): void {
+    $viewer = RoleModel::findOrCreate('viewer');
+    $viewer->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $actor = User::factory()->create();
+    foreach ([Permission::UsersView, Permission::UsersUpdate, Permission::UsersManageRoles] as $p) {
+        $actor->givePermissionTo(PermissionModel::findOrCreate($p->value));
+    }
+
+    $target = User::factory()->create();
+
+    $this->actingAs($actor)
+        ->put(route('users.update', $target), ['name' => $target->name, 'email' => $target->email, 'roles' => ['viewer']])
+        ->assertRedirectToRoute('users.index');
+
+    expect($target->fresh()->hasRole('viewer'))->toBeTrue();
+});
+
+it('allows super admin to assign roles with any permissions', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole($superAdminRole);
+
+    $ops = RoleModel::findOrCreate('ops');
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+
+    $target = User::factory()->create();
+
+    $this->actingAs($superAdmin)
+        ->put(route('users.update', $target), ['name' => $target->name, 'email' => $target->email, 'roles' => ['ops']])
+        ->assertRedirectToRoute('users.index');
+
+    expect($target->fresh()->hasRole('ops'))->toBeTrue();
+});
+
+it('allows updating a user while retaining existing roles even if actor lacks their permissions', function (): void {
+    $ops = RoleModel::findOrCreate('ops');
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+
+    $target = User::factory()->create();
+    $target->assignRole('ops');
+
+    $actor = User::factory()->create();
+    foreach ([Permission::UsersView, Permission::UsersUpdate, Permission::UsersManageRoles] as $p) {
+        $actor->givePermissionTo(PermissionModel::findOrCreate($p->value));
+    }
+
+    $this->actingAs($actor)
+        ->put(route('users.update', $target), [
+            'name' => 'Updated Name',
+            'email' => $target->email,
+            'roles' => ['ops'],
+        ])
+        ->assertRedirectToRoute('users.index');
+
+    expect($target->fresh()->name)->toBe('Updated Name')
+        ->and($target->fresh()->hasRole('ops'))->toBeTrue();
+});
+
 /* @chisel-email-verification */
 it('resets email verification and sends notification when email changes during admin update', function (): void {
     Notification::fake();

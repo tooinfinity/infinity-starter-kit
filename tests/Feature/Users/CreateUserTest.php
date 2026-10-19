@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Permission;
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission as PermissionModel;
@@ -104,17 +105,86 @@ it('rejects assigning super-admin role when creator is not super-admin', functio
     $creator->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersCreate->value));
     $creator->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
     $creator->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
-    RoleModel::findOrCreate(App\Enums\Role::SuperAdmin->value);
+    RoleModel::findOrCreate(Role::SuperAdmin->value);
 
     $response = $this->actingAs($creator)
         ->post(route('users.store'), [
             'name' => 'Escalated User',
             'email' => 'escalated@example.com',
             'password' => 'password123',
-            'roles' => [App\Enums\Role::SuperAdmin->value],
+            'roles' => [Role::SuperAdmin->value],
         ]);
 
     $response->assertSessionHasErrors(['roles']);
 
     expect(User::query()->where('email', 'escalated@example.com')->exists())->toBeFalse();
+});
+
+it('rejects assigning a role that grants permissions creator lacks', function (): void {
+    $ops = RoleModel::findOrCreate('ops');
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+
+    $creator = User::factory()->create();
+    foreach ([Permission::UsersView, Permission::UsersCreate, Permission::UsersManageRoles] as $p) {
+        $creator->givePermissionTo(PermissionModel::findOrCreate($p->value));
+    }
+
+    $response = $this->actingAs($creator)
+        ->post(route('users.store'), [
+            'name' => 'Escalated User',
+            'email' => 'escalated@example.com',
+            'password' => 'password123',
+            'roles' => ['ops'],
+        ]);
+
+    $response->assertSessionHasErrors('roles');
+
+    expect(User::query()->where('email', 'escalated@example.com')->exists())->toBeFalse();
+});
+
+it("allows assigning a role whose permissions are a subset of creator's", function (): void {
+    $viewer = RoleModel::findOrCreate('viewer');
+    $viewer->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $creator = User::factory()->create();
+    foreach ([Permission::UsersView, Permission::UsersCreate, Permission::UsersManageRoles] as $p) {
+        $creator->givePermissionTo(PermissionModel::findOrCreate($p->value));
+    }
+
+    $response = $this->actingAs($creator)
+        ->post(route('users.store'), [
+            'name' => 'Viewer User',
+            'email' => 'viewer@example.com',
+            'password' => 'password123',
+            'roles' => ['viewer'],
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    $created = User::query()->where('email', 'viewer@example.com')->first();
+    expect($created)->not->toBeNull()
+        ->and($created->hasRole('viewer'))->toBeTrue();
+});
+
+it('allows super admin to assign any role when creating user', function (): void {
+    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole($superAdminRole);
+
+    $ops = RoleModel::findOrCreate('ops');
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+
+    $response = $this->actingAs($superAdmin)
+        ->post(route('users.store'), [
+            'name' => 'Ops User',
+            'email' => 'ops@example.com',
+            'password' => 'password123',
+            'roles' => ['ops'],
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    $created = User::query()->where('email', 'ops@example.com')->first();
+    expect($created)->not->toBeNull()
+        ->and($created->hasRole('ops'))->toBeTrue();
 });

@@ -13,12 +13,11 @@ final readonly class EnsureActorMayManageTargetAction
 {
     public function handle(User $actor, User $target): bool
     {
-        if (! trait_exists(HasRoles::class) || ! enum_exists(Role::class)) {
+        if (! trait_exists(HasRoles::class) || ! enum_exists(Role::class) || ! $target->hasRole(Role::SuperAdmin->value)) {
             return true;
         }
 
-        return ! $target->hasRole(Role::SuperAdmin->value)
-            || $actor->hasRole(Role::SuperAdmin->value);
+        return $actor->hasRole(Role::SuperAdmin->value);
     }
 
     public function ensure(User $actor, User $target): void

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Users;
 
+use App\Actions\Users\EnsureActorMayAssignRolesAction;
 use App\Data\Users\CreateUserData;
 use App\Enums\Permission;
-use App\Enums\Role;
 use App\Models\User;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
-use Spatie\Permission\Traits\HasRoles;
 
 final class StoreUserRequest extends FormRequest
 {
@@ -60,18 +59,11 @@ final class StoreUserRequest extends FormRequest
                     return;
                 }
 
-                $actor = $this->user();
-                $canManageRoles = ! enum_exists(Permission::class) || ($actor?->can(Permission::UsersManageRoles->value) ?? false);
-
-                if ($canManageRoles && trait_exists(HasRoles::class) && enum_exists(Role::class)) {
-                    $actorIsSuperAdmin = $actor?->hasRole(Role::SuperAdmin->value) ?? false;
-                    $submittedRoles = (array) $this->input('roles', []);
-                    $submittedHasSuperAdmin = in_array(Role::SuperAdmin->value, $submittedRoles, true);
-
-                    if ($submittedHasSuperAdmin && ! $actorIsSuperAdmin) {
-                        $validator->errors()->add('roles', __('Only Super Admins can assign the Super Admin role.'));
-                    }
-                }
+                resolve(EnsureActorMayAssignRolesAction::class)->handle(
+                    $validator,
+                    $this->user(),
+                    (array) $this->input('roles', []),
+                );
             },
         ];
     }
