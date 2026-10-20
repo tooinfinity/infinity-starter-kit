@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Users;
 
-use App\Actions\Users\EnsureActorMayManageTargetAction;
 use App\Enums\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 final class UpdateUserPasswordRequest extends FormRequest
@@ -15,11 +15,7 @@ final class UpdateUserPasswordRequest extends FormRequest
     public function authorize(): bool
     {
         $actor = $this->user();
-        $target = $this->route('user');
-
-        if (is_string($target)) {
-            $target = User::query()->find($target);
-        }
+        $target = $this->targetUser();
 
         if (! $actor instanceof User || ! $target instanceof User) {
             return false;
@@ -27,7 +23,7 @@ final class UpdateUserPasswordRequest extends FormRequest
 
         $canManagePassword = ! enum_exists(Permission::class) || $actor->can(Permission::UsersManagePassword->value);
 
-        return $canManagePassword && resolve(EnsureActorMayManageTargetAction::class)->handle($actor, $target);
+        return $canManagePassword && $actor->canManage($target);
     }
 
     /**
@@ -41,5 +37,16 @@ final class UpdateUserPasswordRequest extends FormRequest
                 Password::defaults(),
             ],
         ];
+    }
+
+    public function targetUser(): ?User
+    {
+        $target = $this->route('user');
+
+        if (is_string($target)) {
+            $target = Str::isUuid($target) ? User::query()->find($target) : null;
+        }
+
+        return $target instanceof User ? $target : null;
     }
 }

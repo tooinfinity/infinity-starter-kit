@@ -4,27 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Users;
 
-use App\Actions\Users\EnsureActorMayAssignRolesAction;
-use App\Actions\Users\EnsureActorMayManageTargetAction;
 use App\Data\Users\UpdateUserData;
 use App\Enums\Permission;
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
+use App\Rules\CanAssignRoles;
+use App\Rules\NotLastSuperAdmin;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 final class UpdateUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $actor = $this->user();
-        $target = $this->route('user');
-
-        if (is_string($target)) {
-            $target = User::query()->find($target);
-        }
+        $target = $this->targetUser();
 
         if (! $actor instanceof User || ! $target instanceof User) {
             return false;
@@ -32,7 +29,7 @@ final class UpdateUserRequest extends FormRequest
 
         $canUpdate = ! enum_exists(Permission::class) || $actor->can(Permission::UsersUpdate->value);
 
-        return $canUpdate && resolve(EnsureActorMayManageTargetAction::class)->handle($actor, $target);
+        return $canUpdate && $actor->canManage($target);
     }
 
     /**
@@ -40,9 +37,8 @@ final class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var User|string|null $targetUser */
-        $targetUser = $this->route('user');
-        $userId = $targetUser instanceof User ? $targetUser->id : (string) $targetUser;
+        $target = $this->targetUser();
+        $userId = $target?->id;
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -55,32 +51,25 @@ final class UpdateUserRequest extends FormRequest
                 new ValidEmail,
                 Rule::unique(User::class)->ignore($userId),
             ],
-            'roles' => ['sometimes', 'array'],
+            'roles' => [
+                'sometimes',
+                'array',
+                new CanAssignRoles($this->user(), $target),
+                new NotLastSuperAdmin($target, SuperAdminRestrictionOperation::RemoveRole),
+            ],
             'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
         ];
     }
 
-    /**
-     * @return list<callable(Validator): void>
-     */
-    public function after(): array
+    public function targetUser(): ?User
     {
-        return [
-            function (Validator $validator): void {
-                if (! $this->has('roles')) {
-                    return;
-                }
+        $target = $this->route('user');
 
-                $target = $this->route('user');
+        if (is_string($target)) {
+            $target = Str::isUuid($target) ? User::query()->find($target) : null;
+        }
 
-                resolve(EnsureActorMayAssignRolesAction::class)->handle(
-                    $validator,
-                    $this->user(),
-                    (array) $this->input('roles', []),
-                    $target instanceof User ? $target : null,
-                );
-            },
-        ];
+        return $target instanceof User ? $target : null;
     }
 
     public function toData(): UpdateUserData

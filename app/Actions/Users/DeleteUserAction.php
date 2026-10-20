@@ -10,18 +10,17 @@ use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
+use App\Rules\NotLastSuperAdmin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final readonly class DeleteUserAction
 {
     public function __construct(
-        private EnsureNotLastSuperAdminAction $ensureNotLastSuperAdmin = new EnsureNotLastSuperAdminAction,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
         /* @end-chisel-audit-trails */
-        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
     public function handle(User $user, ?User $currentUser = null): void
@@ -32,12 +31,8 @@ final readonly class DeleteUserAction
             ]);
         }
 
-        if ($currentUser instanceof User) {
-            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
-        }
-
         DB::transaction(function () use ($user): void {
-            $this->ensureNotLastSuperAdmin->handle($user, SuperAdminRestrictionOperation::Delete);
+            NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Delete);
 
             /* @chisel-audit-trails */
             $this->auditTrail->handle(

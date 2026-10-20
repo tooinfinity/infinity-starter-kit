@@ -20,15 +20,10 @@ final readonly class ActivateUserAction
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         /* @end-chisel-audit-trails */
-        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
-    public function handle(User $user, ?User $currentUser = null): void
+    public function handle(User $user): void
     {
-        if ($currentUser instanceof User) {
-            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
-        }
-
         DB::transaction(function () use ($user): void {
             $user->forceFill(['is_active' => true])->save();
 

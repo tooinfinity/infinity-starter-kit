@@ -11,6 +11,7 @@ use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
 dataset('user-management-requests', [
@@ -49,6 +50,23 @@ it('resolves string target ID and allows authorized user', function (string $req
 })->with('user-management-requests');
 
 it('denies authorization when string target ID does not exist', function (string $requestClass, Permission $permission, string $method, string $uri): void {
+    $actor = User::factory()->create();
+    $actor->givePermissionTo(PermissionModel::findOrCreate($permission->value));
+
+    /** @var FormRequest $request */
+    $request = new $requestClass;
+    $request->setUserResolver(fn () => $actor);
+
+    $route = new Route($method, $uri, []);
+    $route->bind(request());
+    $route->setParameter('user', (string) Str::uuid());
+
+    $request->setRouteResolver(fn (): Route => $route);
+
+    expect($request->authorize())->toBeFalse();
+})->with('user-management-requests');
+
+it('denies authorization when string target ID is an invalid uuid', function (string $requestClass, Permission $permission, string $method, string $uri): void {
     $actor = User::factory()->create();
     $actor->givePermissionTo(PermissionModel::findOrCreate($permission->value));
 

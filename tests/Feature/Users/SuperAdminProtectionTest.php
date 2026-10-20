@@ -2,19 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\ActivateUserAction;
-use App\Actions\Users\ChangeUserPasswordAction;
-use App\Actions\Users\DeactivateUserAction;
-use App\Actions\Users\DeleteUserAction;
-use App\Actions\Users\EnsureNotLastSuperAdminAction;
-use App\Actions\Users\UpdateUserAction;
 use App\Actions\Users\UpdateUserRolesAction;
-use App\Data\Users\UpdateUserData;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Rules\NotLastSuperAdmin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission as PermissionModel;
@@ -63,15 +56,13 @@ it('allows removing super admin role if multiple super admins exist', function (
         ->and($superAdmin1->fresh()->hasRole('editor'))->toBeTrue();
 });
 
-it('EnsureNotLastSuperAdminAction throws validation exception when only one super admin exists', function (SuperAdminRestrictionOperation $operation): void {
+it('NotLastSuperAdmin throws validation exception when only one super admin exists', function (SuperAdminRestrictionOperation $operation): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
 
-    $action = resolve(EnsureNotLastSuperAdminAction::class);
-
-    DB::transaction(function () use ($action, $superAdmin, $operation): void {
-        $action->handle($superAdmin, $operation);
+    DB::transaction(function () use ($superAdmin, $operation): void {
+        NotLastSuperAdmin::check($superAdmin, $operation);
     });
 })->with([
     SuperAdminRestrictionOperation::Delete,
@@ -79,7 +70,7 @@ it('EnsureNotLastSuperAdminAction throws validation exception when only one supe
     SuperAdminRestrictionOperation::RemoveRole,
 ])->throws(ValidationException::class);
 
-it('EnsureNotLastSuperAdminAction passes when multiple super admins exist', function (SuperAdminRestrictionOperation $operation): void {
+it('NotLastSuperAdmin passes when multiple super admins exist', function (SuperAdminRestrictionOperation $operation): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin1 = User::factory()->create();
     $superAdmin1->assignRole($superAdminRole);
@@ -87,10 +78,8 @@ it('EnsureNotLastSuperAdminAction passes when multiple super admins exist', func
     $superAdmin2 = User::factory()->create();
     $superAdmin2->assignRole($superAdminRole);
 
-    $action = resolve(EnsureNotLastSuperAdminAction::class);
-
-    DB::transaction(function () use ($action, $superAdmin1, $operation): void {
-        $action->handle($superAdmin1, $operation);
+    DB::transaction(function () use ($superAdmin1, $operation): void {
+        NotLastSuperAdmin::check($superAdmin1, $operation);
     });
 
     expect(true)->toBeTrue();
@@ -99,21 +88,6 @@ it('EnsureNotLastSuperAdminAction passes when multiple super admins exist', func
     SuperAdminRestrictionOperation::Deactivate,
     SuperAdminRestrictionOperation::RemoveRole,
 ]);
-
-it('UpdateUserRolesAction protects last super admin when mutating roles directly', function (): void {
-    $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
-    RoleModel::findOrCreate('editor');
-
-    $superAdmin = User::factory()->create();
-    $superAdmin->assignRole($superAdminRole);
-
-    $action = resolve(UpdateUserRolesAction::class);
-
-    expect(fn () => $action->handle($superAdmin, ['editor']))
-        ->toThrow(ValidationException::class);
-
-    expect($superAdmin->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
-});
 
 it('UpdateUserRolesAction allows removing super admin role if multiple super admins exist', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
@@ -240,28 +214,14 @@ it('still lets a delegated admin manage ordinary users', function (): void {
         ->assertRedirect();
 });
 
-it('EnsureActorMayManageTargetAction prevents non-super-admin from managing super admin in actions directly', function (): void {
+it('User canManage prevents non-super-admin from managing super admin', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
 
     $delegatedAdmin = User::factory()->create();
 
-    expect(fn () => resolve(ChangeUserPasswordAction::class)->handle($superAdmin, 'new-password', $delegatedAdmin))
-        ->toThrow(AuthorizationException::class);
-
-    expect(fn () => resolve(ActivateUserAction::class)->handle($superAdmin, $delegatedAdmin))
-        ->toThrow(AuthorizationException::class);
-
-    expect(fn () => resolve(DeactivateUserAction::class)->handle($superAdmin, $delegatedAdmin))
-        ->toThrow(AuthorizationException::class);
-
-    expect(fn () => resolve(DeleteUserAction::class)->handle($superAdmin, $delegatedAdmin))
-        ->toThrow(AuthorizationException::class);
-
-    expect(fn () => resolve(UpdateUserAction::class)->handle($superAdmin, new UpdateUserData('New Name', 'new@example.com'), $delegatedAdmin))
-        ->toThrow(AuthorizationException::class);
-
-    expect(fn () => resolve(UpdateUserRolesAction::class)->handle($superAdmin, ['editor'], currentUser: $delegatedAdmin))
-        ->toThrow(AuthorizationException::class);
+    expect($delegatedAdmin->canManage($superAdmin))->toBeFalse();
+    expect($superAdmin->canManage($delegatedAdmin))->toBeTrue();
+    expect($superAdmin->canManage($superAdmin))->toBeTrue();
 });

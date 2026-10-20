@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Users;
 
-use App\Actions\Users\EnsureActorMayAssignRolesAction;
 use App\Data\Users\CreateUserData;
 use App\Enums\Permission;
 use App\Models\User;
+use App\Rules\CanAssignRoles;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\Validation\Validator;
 
 final class StoreUserRequest extends FormRequest
 {
@@ -43,28 +42,8 @@ final class StoreUserRequest extends FormRequest
                 Password::defaults(),
             ],
             'is_active' => ['sometimes', 'boolean'],
-            'roles' => ['sometimes', 'array'],
+            'roles' => ['sometimes', 'array', new CanAssignRoles($this->user())],
             'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
-        ];
-    }
-
-    /**
-     * @return list<callable(Validator): void>
-     */
-    public function after(): array
-    {
-        return [
-            function (Validator $validator): void {
-                if (! $this->has('roles')) {
-                    return;
-                }
-
-                resolve(EnsureActorMayAssignRolesAction::class)->handle(
-                    $validator,
-                    $this->user(),
-                    (array) $this->input('roles', []),
-                );
-            },
         ];
     }
 

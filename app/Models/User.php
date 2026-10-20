@@ -7,6 +7,9 @@ namespace App\Models;
 /* @chisel-localization */
 use App\Enums\Locale;
 /* @end-chisel-localization */
+/* @chisel-roles-permissions */
+use App\Enums\Role;
+/* @end-chisel-roles-permissions */
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 /* @chisel-email-verification */
@@ -117,4 +120,16 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     }
 
     /* @end-chisel-notifications */
+
+    /* @chisel-user-management */
+    public function canManage(self $target): bool
+    {
+        if (! trait_exists(HasRoles::class) || ! enum_exists(Role::class) || ! $target->hasRole(Role::SuperAdmin->value)) {
+            return true;
+        }
+
+        return $this->hasRole(Role::SuperAdmin->value);
+    }
+
+    /* @end-chisel-user-management */
 }

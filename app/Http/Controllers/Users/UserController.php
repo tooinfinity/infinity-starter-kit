@@ -68,7 +68,7 @@ final readonly class UserController
 
     public function update(UpdateUserRequest $request, User $user, UpdateUserAction $action): RedirectResponse
     {
-        $action->handle($user, $request->toData(), $request->user());
+        $action->handle($user, $request->toData());
 
         Inertia::flash('toast', [
             'type' => 'success',

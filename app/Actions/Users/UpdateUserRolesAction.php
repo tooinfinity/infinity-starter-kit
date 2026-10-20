@@ -11,36 +11,31 @@ use App\Enums\AuditEvent;
 use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
+use App\Rules\NotLastSuperAdmin;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
 
 final readonly class UpdateUserRolesAction
 {
     public function __construct(
-        private EnsureNotLastSuperAdminAction $ensureNotLastSuperAdmin = new EnsureNotLastSuperAdminAction,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
         /* @end-chisel-audit-trails */
-        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
     /**
      * @param  list<string>  $roles
      */
-    public function handle(User $user, array $roles, bool $recordAuditTrail = true, ?User $currentUser = null): User
+    public function handle(User $user, array $roles, bool $recordAuditTrail = true): User
     {
         if (! trait_exists(HasRoles::class) || ! $user->exists) {
             return $user;
         }
 
-        if ($currentUser instanceof User) {
-            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
-        }
-
         return DB::transaction(function () use ($user, $roles, $recordAuditTrail): User {
             if (enum_exists(Role::class) && ! in_array(Role::SuperAdmin->value, $roles, true)) {
-                $this->ensureNotLastSuperAdmin->handle(
+                NotLastSuperAdmin::check(
                     $user,
                     SuperAdminRestrictionOperation::RemoveRole,
                     'roles',
