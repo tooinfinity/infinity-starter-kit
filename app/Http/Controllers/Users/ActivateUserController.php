@@ -14,7 +14,7 @@ final readonly class ActivateUserController
 {
     public function __invoke(ActivateUserRequest $request, User $user, ActivateUserAction $action): RedirectResponse
     {
-        $action->handle($user, $request->user());
+        $action->handle($user);
 
         Inertia::flash('toast', [
             'type' => 'success',

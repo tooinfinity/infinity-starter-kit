@@ -7,26 +7,27 @@ namespace App\Models;
 /* @chisel-localization */
 use App\Enums\Locale;
 /* @end-chisel-localization */
+use App\Enums\Role;
 use Carbon\CarbonInterface;
-use Database\Factories\UserFactory;
 /* @chisel-email-verification */
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 /* @end-chisel-email-verification */
 /* @chisel-localization */
-use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 /* @end-chisel-localization */
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 /* @chisel-notifications */
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 /* @end-chisel-notifications */
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 /* @chisel-two-factor */
-use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Notifications\Notifiable;
 /* @end-chisel-two-factor */
 /* @chisel-roles-permissions */
+use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
 /* @end-chisel-roles-permissions */
@@ -117,4 +118,16 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     }
 
     /* @end-chisel-notifications */
+
+    /* @chisel-user-management */
+    public function canManage(self $target): bool
+    {
+        if (! trait_exists(HasRoles::class) || ! enum_exists(Role::class) || ! $target->hasRole(Role::SuperAdmin->value)) {
+            return true;
+        }
+
+        return $this->hasRole(Role::SuperAdmin->value);
+    }
+
+    /* @end-chisel-user-management */
 }

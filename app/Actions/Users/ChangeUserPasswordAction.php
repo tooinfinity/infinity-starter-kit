@@ -18,15 +18,10 @@ final readonly class ChangeUserPasswordAction
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         /* @end-chisel-audit-trails */
-        private EnsureActorMayManageTargetAction $ensureActorMayManageTarget = new EnsureActorMayManageTargetAction,
     ) {}
 
-    public function handle(User $user, #[SensitiveParameter] string $password, ?User $currentUser = null): void
+    public function handle(User $user, #[SensitiveParameter] string $password): void
     {
-        if ($currentUser instanceof User) {
-            $this->ensureActorMayManageTarget->ensure($currentUser, $user);
-        }
-
         DB::transaction(function () use ($user, $password): void {
             $user->forceFill([
                 'password' => $password,
