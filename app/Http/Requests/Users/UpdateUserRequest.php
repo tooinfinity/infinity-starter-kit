@@ -13,6 +13,7 @@ use App\Rules\NotLastSuperAdmin;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class UpdateUserRequest extends FormRequest
@@ -37,7 +38,7 @@ final class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         $target = $this->targetUser();
-        $userId = $target instanceof User ? $target->id : (string) $this->route('user');
+        $userId = $target?->id;
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -65,7 +66,7 @@ final class UpdateUserRequest extends FormRequest
         $target = $this->route('user');
 
         if (is_string($target)) {
-            $target = User::query()->find($target);
+            $target = Str::isUuid($target) ? User::query()->find($target) : null;
         }
 
         return $target instanceof User ? $target : null;

@@ -7,6 +7,7 @@ namespace App\Http\Requests\Users;
 use App\Enums\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 final class ActivateUserRequest extends FormRequest
 {
@@ -37,7 +38,7 @@ final class ActivateUserRequest extends FormRequest
         $target = $this->route('user');
 
         if (is_string($target)) {
-            $target = User::query()->find($target);
+            $target = Str::isUuid($target) ? User::query()->find($target) : null;
         }
 
         return $target instanceof User ? $target : null;

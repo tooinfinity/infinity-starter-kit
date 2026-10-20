@@ -9,6 +9,7 @@ use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use App\Rules\NotLastSuperAdmin;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Validator;
 
 final class DeleteUserRequest extends FormRequest
@@ -61,7 +62,7 @@ final class DeleteUserRequest extends FormRequest
         $target = $this->route('user');
 
         if (is_string($target)) {
-            $target = User::query()->find($target);
+            $target = Str::isUuid($target) ? User::query()->find($target) : null;
         }
 
         return $target instanceof User ? $target : null;
