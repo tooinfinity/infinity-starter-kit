@@ -7,27 +7,29 @@ namespace App\Models;
 /* @chisel-localization */
 use App\Enums\Locale;
 /* @end-chisel-localization */
+/* @chisel-roles-permissions */
 use App\Enums\Role;
+/* @end-chisel-roles-permissions */
 use Carbon\CarbonInterface;
-/* @chisel-email-verification */
 use Database\Factories\UserFactory;
+/* @chisel-email-verification */
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 /* @end-chisel-email-verification */
 /* @chisel-localization */
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-/* @end-chisel-localization */
 use Illuminate\Contracts\Translation\HasLocalePreference;
+/* @end-chisel-localization */
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-/* @chisel-notifications */
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-/* @end-chisel-notifications */
+/* @chisel-notifications */
 use Illuminate\Database\Eloquent\Relations\HasMany;
+/* @end-chisel-notifications */
 use Illuminate\Foundation\Auth\User as Authenticatable;
-/* @chisel-two-factor */
 use Illuminate\Notifications\Notifiable;
+/* @chisel-two-factor */
+use Laravel\Fortify\TwoFactorAuthenticatable;
 /* @end-chisel-two-factor */
 /* @chisel-roles-permissions */
-use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
 /* @end-chisel-roles-permissions */
