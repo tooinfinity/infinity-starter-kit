@@ -196,3 +196,25 @@ test('export report returns early when date fields have invalid formats', functi
         ]))
         ->assertSessionHasErrors('date_from');
 });
+
+test('exports users without a per-row roles query', function (): void {
+    $admin = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    PermissionModel::findOrCreate(Permission::ReportsExport->value);
+    $admin->givePermissionTo(Permission::ReportsView->value);
+    $admin->givePermissionTo(Permission::ReportsExport->value);
+
+    $role = Role::findOrCreate('editor');
+    User::factory()->count(25)->create()->each(fn (User $u) => $u->assignRole($role));
+
+    Illuminate\Support\Facades\DB::enableQueryLog();
+
+    $csv = $this->actingAs($admin)->get(route('reports.users.export'))->streamedContent();
+
+    $roleQueries = collect(Illuminate\Support\Facades\DB::getQueryLog())
+        ->filter(fn (array $q): bool => str_contains($q['query'], 'model_has_roles'))
+        ->count();
+
+    expect($roleQueries)->toBeLessThanOrEqual(2)
+        ->and(mb_substr_count($csv, "\n"))->toBeGreaterThanOrEqual(26);
+});

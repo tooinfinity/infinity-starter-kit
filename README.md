@@ -224,7 +224,7 @@ A **production-ready, read-only** reporting engine designed to extract actionabl
 - **Dedicated Query Services** — Complex aggregations and filtering live in `App\Queries\Reporting`, keeping controllers clean and invokable.
 - **Spatie Data Transfer Objects** — Typed contracts (`ReportSummaryCardData`, `ReportTimeSeriesPointData`, `ReportBreakdownItemData`, `ReportMetadataData`) serialize seamlessly to Inertia.
 - **Zero-Dependency Accessible Visualizations** — Custom SVG/CSS charts featuring interactive tooltips, full keyboard/screen-reader accessibility, RTL layout support, and a companion tabular view switch.
-- **Secure Streaming CSV Export** — Memory-efficient cursor streaming (`cursor()`), Excel UTF-8 BOM (`\xEF\xBB\xBF`), and formula injection sanitization (`=`, `+`, `-`, `@`, `\t`, `\r` neutralized).
+- **Secure Streaming CSV Export** — Memory-efficient chunked streaming (`lazy()`), Excel UTF-8 BOM (`\xEF\xBB\xBF`), and formula injection sanitization (`=`, `+`, `-`, `@`, `\t`, `\r` neutralized).
 - **Granular RBAC Permissions** — Protected via `Permission::ReportsView` (`reports.view`) and `Permission::ReportsExport` (`reports.export`).
 - **Trilingual Localization** — Full translations available in English (`en`), French (`fr`), and Arabic (`ar`).
 

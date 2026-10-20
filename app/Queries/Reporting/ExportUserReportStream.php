@@ -56,7 +56,7 @@ final readonly class ExportUserReportStream
             ],
                 escape: '\\');
 
-            foreach ($query->cursor() as $user) {
+            foreach ($query->lazy(500) as $user) {
                 /** @var User $user */
                 $roleNames = [];
                 if (trait_exists(HasRoles::class)) {
