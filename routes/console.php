@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-/* @chisel-notifications */
 use App\Models\User;
+/* @chisel-notifications */
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::call(function (): void {
@@ -12,3 +12,7 @@ Schedule::call(function (): void {
     });
 })->daily();
 /* @end-chisel-notifications */
+
+/* @chisel-audit-trails */
+Schedule::command('audit:prune')->daily();
+/* @end-chisel-audit-trails */

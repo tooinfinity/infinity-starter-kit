@@ -186,7 +186,7 @@ export default function AuditTrailsIndex({
                             <div className="relative">
                                 <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by IP, URL, or user..."
+                                    placeholder="Search by IP, target ID, or user..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="pr-8 pl-8"
@@ -380,6 +380,38 @@ export default function AuditTrailsIndex({
                                                                         .email
                                                                 }
                                                             </p>
+                                                        </div>
+                                                    </div>
+                                                ) : audit.actor_name ? (
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Avatar className="size-7 shrink-0">
+                                                            <AvatarFallback className="bg-muted text-[10px] font-medium text-foreground uppercase">
+                                                                {getInitials(
+                                                                    audit.actor_name,
+                                                                )}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <p className="font-medium text-foreground">
+                                                                    {
+                                                                        audit.actor_name
+                                                                    }
+                                                                </p>
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
+                                                                >
+                                                                    Deleted
+                                                                </Badge>
+                                                            </div>
+                                                            {audit.actor_email && (
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {
+                                                                        audit.actor_email
+                                                                    }
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ) : (

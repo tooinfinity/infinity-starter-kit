@@ -28,6 +28,8 @@ final readonly class AuditTrailController
                 'name' => $audit->user->name,
                 'email' => $audit->user->email,
             ] : null,
+            'actor_name' => $audit->actor_name,
+            'actor_email' => $audit->actor_email,
             'event' => $audit->event->value,
             'event_label' => $audit->event->label(),
             'auditable_type' => $audit->auditable_type,

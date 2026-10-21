@@ -17,6 +17,8 @@ export type AuditTrailItem = {
     id: string;
     user_id: string | null;
     user: AuditUser | null;
+    actor_name?: string | null;
+    actor_email?: string | null;
     event: AuditEventName;
     event_label: string;
     auditable_type: string | null;

@@ -6,6 +6,7 @@ use App\Enums\AuditEvent;
 use App\Enums\Permission;
 use App\Models\AuditTrail;
 use App\Models\User;
+use App\Queries\AuditTrails\AuditTrailListingQuery;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
@@ -88,7 +89,7 @@ test('audit trails can be filtered by date range', function (): void {
         );
 });
 
-test('audit trails can be searched by ip address, url, or user name', function (): void {
+test('audit trails can be searched by ip address, auditable id, or user name', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
@@ -96,11 +97,11 @@ test('audit trails can be searched by ip address, url, or user name', function (
     AuditTrail::factory()->create([
         'user_id' => $specificUser->id,
         'ip_address' => '10.0.0.1',
-        'url' => 'http://localhost/unique-path',
+        'auditable_id' => 'target-12345',
     ]);
     AuditTrail::factory()->create([
         'ip_address' => '192.168.1.1',
-        'url' => 'http://localhost/other-path',
+        'auditable_id' => 'other-99999',
     ]);
 
     // Search by user name
@@ -109,17 +110,67 @@ test('audit trails can be searched by ip address, url, or user name', function (
     $responseName->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
 
-    // Search by IP
+    // Search by IP prefix
     $responseIp = $this->actingAs($admin)
         ->get(route('audit-trails.index', ['search' => '10.0.0.1']));
     $responseIp->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
 
-    // Search by URL
-    $responseUrl = $this->actingAs($admin)
-        ->get(route('audit-trails.index', ['search' => 'unique-path']));
-    $responseUrl->assertOk()
+    // Search by Auditable ID prefix
+    $responseId = $this->actingAs($admin)
+        ->get(route('audit-trails.index', ['search' => 'target-12345']));
+    $responseId->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
+});
+
+test('treats % in the search box as a literal character', function (): void {
+    AuditTrail::factory()->create(['ip_address' => '10.0.0.1']);
+    $literal = AuditTrail::factory()->create(['auditable_id' => '%literal-target']);
+
+    $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '%'])->items())->pluck('id');
+
+    expect($ids->all())->toBe([$literal->id]);
+});
+
+test('treats _ in the search box as a literal character', function (): void {
+    AuditTrail::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
+    $literal = AuditTrail::factory()->create(['auditable_id' => '_literal_target']);
+
+    $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '_'])->items())->pluck('id');
+
+    expect($ids->all())->toBe([$literal->id]);
+});
+
+test('search matches deleted user via actor_name and actor_email', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
+
+    $deletedActor = AuditTrail::factory()->create([
+        'user_id' => null,
+        'actor_name' => 'Former Admin',
+        'actor_email' => 'former@example.com',
+    ]);
+    AuditTrail::factory()->create([
+        'user_id' => null,
+        'actor_name' => 'Other Person',
+        'actor_email' => 'other@example.com',
+    ]);
+
+    $responseName = $this->actingAs($admin)
+        ->get(route('audit-trails.index', ['search' => 'Former Admin']));
+    $responseName->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->has('auditTrails.data', 1)
+            ->where('auditTrails.data.0.id', $deletedActor->id)
+        );
+
+    $responseEmail = $this->actingAs($admin)
+        ->get(route('audit-trails.index', ['search' => 'former@example.com']));
+    $responseEmail->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->has('auditTrails.data', 1)
+            ->where('auditTrails.data.0.id', $deletedActor->id)
+        );
 });
 
 test('audit trails pagination per_page works correctly', function (): void {

@@ -114,3 +114,16 @@ test('RecordAuditTrail falls back to authenticated user when actor is not passed
 
     expect($record->user_id)->toBe($user->id);
 });
+
+test('keeps the actor identity after the actor is deleted', function (): void {
+    $actor = User::factory()->create(['name' => 'Ada', 'email' => 'ada@example.com']);
+    $this->actingAs($actor);
+
+    $audit = resolve(RecordAuditTrail::class)->handle(event: AuditEvent::SettingsUpdated);
+    $actor->delete();
+
+    $audit->refresh();
+    expect($audit->user_id)->toBeNull()
+        ->and($audit->actor_email)->toBe('ada@example.com')
+        ->and($audit->actor_name)->toBe('Ada');
+});

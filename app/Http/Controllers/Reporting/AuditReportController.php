@@ -29,6 +29,8 @@ final readonly class AuditReportController
                 'name' => $audit->user->name,
                 'email' => $audit->user->email,
             ] : null,
+            'actor_name' => $audit->actor_name,
+            'actor_email' => $audit->actor_email,
             'auditable_type' => $audit->auditable_type,
             'auditable_id' => $audit->auditable_id,
             'ip_address' => $audit->ip_address,

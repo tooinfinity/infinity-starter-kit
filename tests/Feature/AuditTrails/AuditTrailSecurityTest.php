@@ -51,3 +51,17 @@ test('no create update or delete endpoints exist for audit trails', function ():
         ->delete('/audit-trails/'.$record->id)
         ->assertNotFound();
 });
+
+test('audit trail records are immutable and cannot be updated via model', function (): void {
+    $record = AuditTrail::factory()->create();
+
+    expect(fn () => $record->update(['url' => 'https://evil.com']))
+        ->toThrow(RuntimeException::class, 'Audit trail records are immutable and cannot be updated.');
+});
+
+test('audit trail records cannot be individually deleted via model', function (): void {
+    $record = AuditTrail::factory()->create();
+
+    expect(fn () => $record->delete())
+        ->toThrow(RuntimeException::class, 'Audit trail records cannot be individually deleted.');
+});

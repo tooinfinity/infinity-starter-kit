@@ -214,14 +214,19 @@ final readonly class AuditReportQuery
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
-            $query->where(function (Builder $q) use ($search): void {
-                $q->where('ip_address', 'like', sprintf('%%%s%%', $search))
-                    ->orWhere('url', 'like', sprintf('%%%s%%', $search))
-                    ->orWhere('auditable_id', 'like', sprintf('%%%s%%', $search))
-                    ->orWhere('auditable_type', 'like', sprintf('%%%s%%', $search))
-                    ->orWhereHas('user', function (Builder $userQuery) use ($search): void {
-                        $userQuery->where('name', 'like', sprintf('%%%s%%', $search))
-                            ->orWhere('email', 'like', sprintf('%%%s%%', $search));
+            $escaped = addcslashes($search, '%_\\');
+            $prefix = $escaped.'%';
+            $contains = '%'.$escaped.'%';
+
+            $query->where(function (Builder $q) use ($prefix, $contains): void {
+                $q->whereRaw('ip_address LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhereRaw('auditable_id LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhereRaw('auditable_type LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhereRaw('actor_name LIKE ? ESCAPE ?', [$contains, '\\'])
+                    ->orWhereRaw('actor_email LIKE ? ESCAPE ?', [$contains, '\\'])
+                    ->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
+                        $userQuery->whereRaw('name LIKE ? ESCAPE ?', [$contains, '\\'])
+                            ->orWhereRaw('email LIKE ? ESCAPE ?', [$contains, '\\']);
                     });
             });
         }

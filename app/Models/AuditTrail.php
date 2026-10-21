@@ -13,10 +13,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use RuntimeException;
 
 /**
  * @property-read string $id
  * @property-read string|null $user_id
+ * @property-read string|null $actor_name
+ * @property-read string|null $actor_email
  * @property-read AuditEvent $event
  * @property-read string|null $auditable_type
  * @property-read string|null $auditable_id
@@ -32,6 +35,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 #[Fillable([
     'user_id',
+    'actor_name',
+    'actor_email',
     'event',
     'auditable_type',
     'auditable_id',
@@ -52,6 +57,17 @@ final class AuditTrail extends Model
 
     public const ?string UPDATED_AT = null;
 
+    public static function booted(): void
+    {
+        self::updating(function (): never {
+            throw new RuntimeException('Audit trail records are immutable and cannot be updated.');
+        });
+
+        self::deleting(function (): never {
+            throw new RuntimeException('Audit trail records cannot be individually deleted. Use the retention prune command instead.');
+        });
+    }
+
     /**
      * @return array<string, string>
      */
@@ -60,6 +76,8 @@ final class AuditTrail extends Model
         return [
             'id' => 'string',
             'user_id' => 'string',
+            'actor_name' => 'string',
+            'actor_email' => 'string',
             'event' => AuditEvent::class,
             'auditable_type' => 'string',
             'auditable_id' => 'string',

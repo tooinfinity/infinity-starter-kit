@@ -60,6 +60,8 @@ final readonly class RecordAuditTrail
         /** @var AuditTrail $record */
         $record = AuditTrail::query()->create([
             'user_id' => $actor?->id,
+            'actor_name' => $actor?->name,
+            'actor_email' => $actor?->email,
             'event' => $event,
             'auditable_type' => $type,
             'auditable_id' => $id,

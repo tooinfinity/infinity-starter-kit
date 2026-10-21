@@ -73,6 +73,23 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                                             {audit.user.email}
                                         </p>
                                     </div>
+                                ) : audit.actor_name ? (
+                                    <div>
+                                        <div className="flex items-center gap-1.5">
+                                            <p>{audit.actor_name}</p>
+                                            <Badge
+                                                variant="outline"
+                                                className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
+                                            >
+                                                Deleted
+                                            </Badge>
+                                        </div>
+                                        {audit.actor_email && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {audit.actor_email}
+                                            </p>
+                                        )}
+                                    </div>
                                 ) : (
                                     <span className="text-muted-foreground italic">
                                         System / Anonymous

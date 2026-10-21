@@ -11,6 +11,8 @@ test('audit trail can be created and casts attributes correctly', function (): v
 
     $trail = AuditTrail::factory()->create([
         'user_id' => $user->id,
+        'actor_name' => 'Alice Auditor',
+        'actor_email' => 'alice@example.com',
         'event' => AuditEvent::UserCreated,
         'auditable_type' => $user->getMorphClass(),
         'auditable_id' => $user->id,
@@ -20,6 +22,9 @@ test('audit trail can be created and casts attributes correctly', function (): v
     ]);
 
     expect($trail->id)->toBeString()
+        ->and($trail->user_id)->toBe($user->id)
+        ->and($trail->actor_name)->toBe('Alice Auditor')
+        ->and($trail->actor_email)->toBe('alice@example.com')
         ->and($trail->event)->toBe(AuditEvent::UserCreated)
         ->and($trail->old_values)->toBe(['name' => 'Old Name'])
         ->and($trail->new_values)->toBe(['name' => 'New Name'])

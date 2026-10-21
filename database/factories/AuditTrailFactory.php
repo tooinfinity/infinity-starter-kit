@@ -21,6 +21,8 @@ final class AuditTrailFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'actor_name' => fake()->name(),
+            'actor_email' => fake()->safeEmail(),
             'event' => AuditEvent::UserCreated,
             'auditable_type' => User::class,
             'auditable_id' => (string) fake()->uuid(),
@@ -44,10 +46,21 @@ final class AuditTrailFactory extends Factory
         ]);
     }
 
+    public function forUser(User $user): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'user_id' => $user->id,
+            'actor_name' => $user->name,
+            'actor_email' => $user->email,
+        ]);
+    }
+
     public function anonymous(): self
     {
         return $this->state(fn (array $attributes): array => [
             'user_id' => null,
+            'actor_name' => null,
+            'actor_email' => null,
         ]);
     }
 }
