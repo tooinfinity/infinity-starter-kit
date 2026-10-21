@@ -76,6 +76,8 @@ test('preferences are scoped per user', function (): void {
             ],
         ]);
 
+    $this->flushSession();
+
     $this->actingAs($userB)
         ->get(route('notification-preferences.edit'))
         ->assertOk()

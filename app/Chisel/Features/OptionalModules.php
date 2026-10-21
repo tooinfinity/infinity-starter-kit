@@ -245,6 +245,7 @@ final class OptionalModules
                     'app/Actions/DeleteUser.php',
                     'app/Actions/UpdateUserPassword.php',
                     'app/Actions/Users/ActivateUserAction.php',
+                    'app/Actions/Users/ChangeUserPasswordAction.php',
                     'app/Actions/Users/DeactivateUserAction.php',
                     'app/Actions/Users/DeleteUserAction.php',
                     'app/Http/Middleware/HandleInertiaRequests.php',

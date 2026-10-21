@@ -184,7 +184,10 @@ it('forbids non-super-admins from managing a super admin', function (Permission 
 
     $original = $target->only(['email', 'password', 'is_active']);
 
-    $this->actingAs($actor)->{$method}(route($route, $target), $payload($target))->assertForbidden();
+    $this->actingAs($actor)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->{$method}(route($route, $target), $payload($target))
+        ->assertForbidden();
 
     $fresh = $target->fresh();
     expect($fresh)->not->toBeNull()
@@ -200,6 +203,7 @@ it('still lets a super admin manage another super admin', function (): void {
     $target->assignRole($role);
 
     $this->actingAs($actor)
+        ->withSession(['auth.password_confirmed_at' => time()])
         ->put(route('users.password.update', $target), ['password' => 'new-secure-password123'])
         ->assertRedirect();
 });
@@ -210,6 +214,7 @@ it('still lets a delegated admin manage ordinary users', function (): void {
     $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManagePassword->value));
 
     $this->actingAs($actor)
+        ->withSession(['auth.password_confirmed_at' => time()])
         ->put(route('users.password.update', User::factory()->create()), ['password' => 'new-secure-password123'])
         ->assertRedirect();
 });

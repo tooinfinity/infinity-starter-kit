@@ -124,7 +124,9 @@ Route::middleware('auth')->group(function (): void {
         Route::put('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::patch('users/{user}/activate', ActivateUserController::class)->name('users.activate');
         Route::patch('users/{user}/deactivate', DeactivateUserController::class)->name('users.deactivate');
-        Route::put('users/{user}/password', AdminUserPasswordController::class)->name('users.password.update');
+        Route::put('users/{user}/password', AdminUserPasswordController::class)
+            ->middleware('password.confirm')
+            ->name('users.password.update');
         Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
     });
     /* @end-chisel-user-management */

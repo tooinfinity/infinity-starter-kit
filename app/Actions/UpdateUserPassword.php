@@ -12,6 +12,7 @@ use App\Models\User;
 /* @chisel-notifications */
 use App\Notifications\PasswordChanged;
 /* @end-chisel-notifications */
+use Illuminate\Support\Facades\Auth;
 use SensitiveParameter;
 
 final readonly class UpdateUserPassword
@@ -28,6 +29,10 @@ final readonly class UpdateUserPassword
         $user->update([
             'password' => $password,
         ]);
+
+        if (Auth::user()?->is($user)) {
+            Auth::logoutOtherDevices($password);
+        }
 
         /* @chisel-notifications */
         $user->notify(new PasswordChanged);
