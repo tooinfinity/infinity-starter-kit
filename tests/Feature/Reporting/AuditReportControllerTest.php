@@ -6,6 +6,7 @@ use App\Enums\AuditEvent;
 use App\Enums\Permission;
 use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
@@ -210,11 +211,11 @@ test('exports audit trails without a per-row user query', function (): void {
         ]);
     }
 
-    Illuminate\Support\Facades\DB::enableQueryLog();
+    DB::enableQueryLog();
 
     $csv = $this->actingAs($admin)->get(route('reports.audit.export'))->streamedContent();
 
-    $userQueries = collect(Illuminate\Support\Facades\DB::getQueryLog())
+    $userQueries = collect(DB::getQueryLog())
         ->filter(fn (array $q): bool => str_contains($q['query'], 'users') && str_contains($q['query'], 'id') && ! str_contains($q['query'], 'notifiable'))
         ->count();
 
