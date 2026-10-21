@@ -6,6 +6,7 @@ use App\Enums\AuditEvent;
 use App\Enums\Permission;
 use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
@@ -193,4 +194,31 @@ test('audit export report validates filters with shared rules (VAL-001)', functi
             'user_id' => 'not-a-uuid',
         ]))
         ->assertSessionHasErrors('user_id');
+});
+
+test('exports audit trails without a per-row user query', function (): void {
+    $admin = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    PermissionModel::findOrCreate(Permission::ReportsExport->value);
+    $admin->givePermissionTo(Permission::ReportsView->value);
+    $admin->givePermissionTo(Permission::ReportsExport->value);
+
+    $actors = User::factory()->count(25)->create();
+    foreach ($actors as $actor) {
+        AuditTrail::factory()->create([
+            'user_id' => $actor->id,
+            'event' => AuditEvent::UserCreated,
+        ]);
+    }
+
+    DB::enableQueryLog();
+
+    $csv = $this->actingAs($admin)->get(route('reports.audit.export'))->streamedContent();
+
+    $userQueries = collect(DB::getQueryLog())
+        ->filter(fn (array $q): bool => str_contains($q['query'], 'users') && str_contains($q['query'], 'id') && ! str_contains($q['query'], 'notifiable'))
+        ->count();
+
+    expect($userQueries)->toBeLessThanOrEqual(2)
+        ->and(mb_substr_count($csv, "\n"))->toBeGreaterThanOrEqual(26);
 });

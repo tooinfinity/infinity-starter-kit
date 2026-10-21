@@ -57,7 +57,7 @@ final readonly class ExportAuditReportStream
             ],
                 escape: '\\');
 
-            foreach ($query->cursor() as $audit) {
+            foreach ($query->lazy(500) as $audit) {
                 /** @var AuditTrail $audit */
                 $actorName = $audit->user->name ?? $audit->actor_name ?? __('reports.common.system');
                 $actorEmail = $audit->user->email ?? $audit->actor_email ?? '';

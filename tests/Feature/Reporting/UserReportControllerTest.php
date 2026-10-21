@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\Permission;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role;
@@ -195,4 +196,26 @@ test('export report returns early when date fields have invalid formats', functi
             'date_from' => 'invalid-date',
         ]))
         ->assertSessionHasErrors('date_from');
+});
+
+test('exports users without a per-row roles query', function (): void {
+    $admin = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    PermissionModel::findOrCreate(Permission::ReportsExport->value);
+    $admin->givePermissionTo(Permission::ReportsView->value);
+    $admin->givePermissionTo(Permission::ReportsExport->value);
+
+    $role = Role::findOrCreate('editor');
+    User::factory()->count(25)->create()->each(fn (User $u): User => $u->assignRole($role));
+
+    DB::enableQueryLog();
+
+    $csv = $this->actingAs($admin)->get(route('reports.users.export'))->streamedContent();
+
+    $roleQueries = collect(DB::getQueryLog())
+        ->filter(fn (array $q): bool => str_contains($q['query'], 'model_has_roles'))
+        ->count();
+
+    expect($roleQueries)->toBeLessThanOrEqual(2)
+        ->and(mb_substr_count($csv, "\n"))->toBeGreaterThanOrEqual(26);
 });
