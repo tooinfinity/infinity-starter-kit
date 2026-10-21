@@ -51,3 +51,14 @@ it('handles system appearance', function (): void {
 
     expect(View::shared('appearance'))->toBe('system');
 });
+
+it('defaults to system when appearance cookie has invalid value', function (): void {
+    $middleware = new HandleAppearance();
+
+    $request = Request::create('/', 'GET');
+    $request->cookies->set('appearance', 'malicious-or-unknown');
+
+    $middleware->handle($request, fn ($req): Response => response('OK'));
+
+    expect(View::shared('appearance'))->toBe('system');
+});

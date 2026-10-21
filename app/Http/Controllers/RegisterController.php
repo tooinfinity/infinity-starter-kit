@@ -23,6 +23,11 @@ final readonly class RegisterController
         /** @var array<string, mixed> $attributes */
         $attributes = $request->safe()->except('password');
 
+        $cookieLocale = $request->cookie('locale');
+        if (is_string($cookieLocale)) {
+            $attributes['locale'] = $cookieLocale;
+        }
+
         $user = $action->handle(
             $attributes,
             $request->string('password')->value(),

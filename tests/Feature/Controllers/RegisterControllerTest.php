@@ -40,6 +40,24 @@ it('may register a new user', function (): void {
     Event::assertDispatched(Registered::class);
 });
 
+it('persists guest locale cookie on registration', function (): void {
+    Event::fake([Registered::class]);
+
+    $this->withUnencryptedCookie('locale', 'fr')
+        ->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'French User',
+            'email' => 'french@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $user = User::query()->where('email', 'french@example.com')->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user->locale?->value)->toBe('fr');
+});
+
 it('requires name', function (): void {
     $response = $this->fromRoute('register')
         ->post(route('register.store'), [

@@ -76,15 +76,32 @@ export default function NotificationsIndex({ notifications }: Props) {
                 {notifications.links && notifications.links.length > 3 && (
                     <div className="mt-6 flex items-center justify-center gap-1">
                         {notifications.links.map((link, index) => {
+                            let label = link.label;
+                            if (
+                                label.includes('Previous') ||
+                                label.includes('&laquo;')
+                            ) {
+                                label = 'Previous';
+                            } else if (
+                                label.includes('Next') ||
+                                label.includes('&raquo;')
+                            ) {
+                                label = 'Next';
+                            } else if (
+                                label === '...' ||
+                                label === '&hellip;'
+                            ) {
+                                label = '…';
+                            }
+
                             if (!link.url) {
                                 return (
                                     <span
                                         key={index}
                                         className="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-3 text-xs text-muted-foreground opacity-50"
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
+                                    >
+                                        {label}
+                                    </span>
                                 );
                             }
 
@@ -98,10 +115,9 @@ export default function NotificationsIndex({ notifications }: Props) {
                                             ? 'bg-primary text-primary-foreground'
                                             : 'bg-muted/50 text-foreground hover:bg-muted'
                                     }`}
-                                    dangerouslySetInnerHTML={{
-                                        __html: link.label,
-                                    }}
-                                />
+                                >
+                                    {label}
+                                </Link>
                             );
                         })}
                     </div>

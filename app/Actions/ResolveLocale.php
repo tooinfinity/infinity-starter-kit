@@ -18,8 +18,6 @@ final readonly class ResolveLocale
             if ($userLocale instanceof Locale) {
                 return $userLocale;
             }
-
-            return Locale::default();
         }
 
         $cookieLocale = $request->cookie('locale');

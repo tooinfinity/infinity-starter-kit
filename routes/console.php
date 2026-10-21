@@ -2,14 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Models\User;
 /* @chisel-notifications */
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::call(function (): void {
-    User::query()->each(function (User $user): void {
-        $user->readNotifications()->delete();
-    });
+    DB::table('notifications')
+        ->whereNotNull('read_at')
+        ->where('read_at', '<', Date::now()->subDays(30))
+        ->delete();
 })->daily();
 /* @end-chisel-notifications */
 
