@@ -19,6 +19,74 @@ $cleanEnv = function (string $key): void {
     unset($GLOBALS['_ENV'][$key], $GLOBALS['_SERVER'][$key]);
 };
 
+$preserveEnv = function (string ...$keys): Closure {
+    $originalEnvironment = [];
+
+    foreach ($keys as $key) {
+        $originalEnvironment[$key] = [
+            getenv($key),
+            array_intersect_key($_ENV, [$key => true]),
+            array_intersect_key($_SERVER, [$key => true]),
+        ];
+    }
+
+    return static function () use ($originalEnvironment): void {
+        foreach ($originalEnvironment as $key => [$value, $env, $server]) {
+            putenv($value === false ? $key : $key.'='.$value);
+            unset($GLOBALS['_ENV'][$key], $GLOBALS['_SERVER'][$key]);
+            $_ENV = array_replace($_ENV, $env);
+            $_SERVER = array_replace($_SERVER, $server);
+        }
+    };
+};
+
+test('environment cleanup restores the original migration opt-in state', function (string|false $value, array $env, array $server, bool $throw) use ($cleanEnv, $preserveEnv): void {
+    $key = 'CHISEL_RUN_MIGRATIONS';
+    $restoreCallerEnv = $preserveEnv($key);
+
+    try {
+        $cleanEnv($key);
+        if ($value !== false) {
+            putenv($key.'='.$value);
+        }
+
+        $_ENV = array_replace($_ENV, $env);
+        $_SERVER = array_replace($_SERVER, $server);
+        $restoreEnv = $preserveEnv($key);
+
+        $run = function () use ($key, $throw, $restoreEnv): void {
+            try {
+                putenv($key.'=overridden');
+                $_ENV[$key] = 'overridden';
+                $_SERVER[$key] = 'overridden';
+
+                throw_if($throw, RuntimeException::class, 'Test failed.');
+            } finally {
+                $restoreEnv();
+            }
+        };
+
+        if ($throw) {
+            expect($run)->toThrow(RuntimeException::class, 'Test failed.');
+        } else {
+            $run();
+        }
+
+        expect(getenv($key))->toBe($value)
+            ->and(array_intersect_key($_ENV, [$key => true]))->toBe($env)
+            ->and(array_intersect_key($_SERVER, [$key => true]))->toBe($server);
+    } finally {
+        $restoreCallerEnv();
+    }
+})->with([
+    'unset' => [false, [], []],
+    'enabled' => ['true', ['CHISEL_RUN_MIGRATIONS' => 'true'], ['CHISEL_RUN_MIGRATIONS' => 'true']],
+    'independent values' => ['false', ['CHISEL_RUN_MIGRATIONS' => 'env'], ['CHISEL_RUN_MIGRATIONS' => 'server']],
+    'empty values' => ['', ['CHISEL_RUN_MIGRATIONS' => ''], ['CHISEL_RUN_MIGRATIONS' => '']],
+    'null and unset' => [false, ['CHISEL_RUN_MIGRATIONS' => null], []],
+    'server only' => [false, [], ['CHISEL_RUN_MIGRATIONS' => 'true']],
+])->with([false, true]);
+
 test('command fails when --answers option does not decode to a JSON object', function (): void {
     $this->artisan('install:features', ['--answers' => 'invalid-json'])
         ->assertFailed();
@@ -29,24 +97,28 @@ test('command fails when --answers option decodes to non-array scalar', function
         ->assertFailed();
 })->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
-test('command defers execution when LARAVEL_INSTALLER_DEFER_HOOKS is true and no answers given', function () use ($cleanEnv): void {
-    putenv('LARAVEL_INSTALLER_DEFER_HOOKS=true');
-    $_ENV['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
-    $_SERVER['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+test('command defers execution when LARAVEL_INSTALLER_DEFER_HOOKS is true and no answers given', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
 
     try {
+        putenv('LARAVEL_INSTALLER_DEFER_HOOKS=true');
+        $_ENV['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+        $_SERVER['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+
         $this->artisan('install:features')
             ->assertSuccessful();
     } finally {
-        $cleanEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
+        $restoreEnv();
     }
 });
 
-test('command rejects invalid dependency combination passed via answers', function () use ($cleanEnv): void {
-    putenv('LARAVEL_INSTALLER_NO_NODE=true');
-    $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+test('command rejects invalid dependency combination passed via answers', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
 
     try {
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => ['user-management'],
@@ -54,7 +126,7 @@ test('command rejects invalid dependency combination passed via answers', functi
 
         $this->artisan('install:features', ['--answers' => $answers]);
     } finally {
-        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+        $restoreEnv();
     }
 })->throws(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
 
@@ -260,19 +332,16 @@ test('non-interactive mode with authorization enabled skips admin when no creden
     expect(User::query()->count())->toBe(0);
 });
 
-test('command does not defer when LARAVEL_INSTALLER_DEFER_HOOKS is true but answers are provided', function (): void {
-    $cleanEnv = function (string $key): void {
-        putenv($key);
-        unset($GLOBALS['_ENV'][$key], $GLOBALS['_SERVER'][$key]);
-    };
-
-    putenv('LARAVEL_INSTALLER_DEFER_HOOKS=true');
-    $_ENV['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
-    $_SERVER['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
-
-    bindMockChiselScript();
+test('command does not defer when LARAVEL_INSTALLER_DEFER_HOOKS is true but answers are provided', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
 
     try {
+        putenv('LARAVEL_INSTALLER_DEFER_HOOKS=true');
+        $_ENV['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+        $_SERVER['LARAVEL_INSTALLER_DEFER_HOOKS'] = 'true';
+
+        bindMockChiselScript();
+
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => ['authorization'],
@@ -283,35 +352,43 @@ test('command does not defer when LARAVEL_INSTALLER_DEFER_HOOKS is true but answ
 
         expect(Permission::query()->count())->toBeGreaterThan(0);
     } finally {
-        $cleanEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
+        $restoreEnv();
     }
 });
 
-test('normal Node mode executes frontend install, build, and lint commands', function () use ($cleanEnv): void {
-    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => [],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->assertSuccessful();
-
-    Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'install']);
-    Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'run', 'build']);
-    Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'run', 'lint']);
-});
-
-test('LARAVEL_INSTALLER_NO_NODE mode skips all Node commands', function () use ($cleanEnv): void {
-    putenv('LARAVEL_INSTALLER_NO_NODE=true');
-    $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
-    $_SERVER['LARAVEL_INSTALLER_NO_NODE'] = 'true';
-
-    bindMockChiselScript();
+test('normal Node mode executes frontend install, build, and lint commands', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
 
     try {
+        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'install']);
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'run', 'build']);
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['bun', 'run', 'lint']);
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('LARAVEL_INSTALLER_NO_NODE mode skips all Node commands', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+        $_SERVER['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+        bindMockChiselScript();
+
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
@@ -322,7 +399,7 @@ test('LARAVEL_INSTALLER_NO_NODE mode skips all Node commands', function () use (
 
         Process::assertNotRan(fn (PendingProcess $process): bool => is_array($process->command) && in_array($process->command[0] ?? '', ['bun', 'npm', 'pnpm', 'yarn'], true));
     } finally {
-        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+        $restoreEnv();
     }
 });
 
@@ -356,61 +433,81 @@ test('failed Wayfinder generation returns non-zero exit status and outputs error
         ->assertFailed();
 });
 
-test('failed frontend installation returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
-    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
-    bindMockChiselScript([
-        '*bun*install*' => Process::result(errorOutput: 'bun install failed: network error.', exitCode: 1),
-    ]);
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => [],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->expectsOutputToContain('bun install failed: network error.')
-        ->assertFailed();
-});
-
-test('failed frontend build returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
-    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
-    bindMockChiselScript([
-        '*bun*build*' => Process::result(errorOutput: 'Vite build failed: syntax error.', exitCode: 1),
-    ]);
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => [],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->expectsOutputToContain('Vite build failed: syntax error.')
-        ->assertFailed();
-});
-
-test('failed frontend lint returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
-    $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
-    bindMockChiselScript([
-        '*bun*lint*' => Process::result(errorOutput: 'Linting failed with 1 error.', exitCode: 1),
-    ]);
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => [],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->expectsOutputToContain('Linting failed with 1 error.')
-        ->assertFailed();
-});
-
-test('CHISEL_TEST_FAIL_STAGE causes deterministic failure after chisel mutations', function () use ($cleanEnv): void {
-    putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
-    $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
-
-    bindMockChiselScript();
+test('failed frontend installation returns non-zero exit status and outputs error', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
 
     try {
+        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+        bindMockChiselScript([
+            '*bun*install*' => Process::result(errorOutput: 'bun install failed: network error.', exitCode: 1),
+        ]);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('bun install failed: network error.')
+            ->assertFailed();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failed frontend build returns non-zero exit status and outputs error', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+        bindMockChiselScript([
+            '*bun*build*' => Process::result(errorOutput: 'Vite build failed: syntax error.', exitCode: 1),
+        ]);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Vite build failed: syntax error.')
+            ->assertFailed();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failed frontend lint returns non-zero exit status and outputs error', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
+        bindMockChiselScript([
+            '*bun*lint*' => Process::result(errorOutput: 'Linting failed with 1 error.', exitCode: 1),
+        ]);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Linting failed with 1 error.')
+            ->assertFailed();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('CHISEL_TEST_FAIL_STAGE causes deterministic failure after chisel mutations', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        bindMockChiselScript();
+
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
@@ -418,7 +515,7 @@ test('CHISEL_TEST_FAIL_STAGE causes deterministic failure after chisel mutations
 
         $this->artisan('install:features', ['--answers' => $answers]);
     } finally {
-        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+        $restoreEnv();
     }
 })->throws(RuntimeException::class, 'CHISEL_TEST_FAIL_STAGE');
 
@@ -490,11 +587,8 @@ test('command fails and outputs error when chisel execution throws ProcessFailed
         ->assertFailed();
 });
 
-test('installer cleanup executes and deletes files when CHISEL_RUN_CLEANUP is enabled', function () use ($cleanEnv): void {
-    putenv('LARAVEL_INSTALLER_NO_NODE=true');
-    $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
-    putenv('CHISEL_RUN_CLEANUP=true');
-    $_ENV['CHISEL_RUN_CLEANUP'] = 'true';
+test('installer cleanup executes and deletes files when CHISEL_RUN_CLEANUP is enabled', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE', 'CHISEL_RUN_CLEANUP');
 
     $tempDir = sys_get_temp_dir().'/cleanup_orchestration_'.bin2hex(random_bytes(6));
     mkdir($tempDir.'/bootstrap', 0777, true);
@@ -530,9 +624,13 @@ return Chisel::script(__DIR__)->questions([
     $origBasePath = app()->basePath();
     app()->setBasePath($tempDir);
 
-    bindMockChiselScript();
-
     try {
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+        putenv('CHISEL_RUN_CLEANUP=true');
+        $_ENV['CHISEL_RUN_CLEANUP'] = 'true';
+        bindMockChiselScript();
+
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
@@ -544,9 +642,8 @@ return Chisel::script(__DIR__)->questions([
         expect(file_exists($tempDir.'/temp-file.txt'))->toBeFalse()
             ->and(is_dir($tempDir.'/temp-dir/empty-subdir'))->toBeFalse();
     } finally {
+        $restoreEnv();
         app()->setBasePath($origBasePath);
-        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
-        $cleanEnv('CHISEL_RUN_CLEANUP');
         $cleanup = function (string $dir) use (&$cleanup): void {
             if (! is_dir($dir)) {
                 return;
@@ -567,9 +664,8 @@ return Chisel::script(__DIR__)->questions([
     }
 });
 
-test('installer executes with unmocked script from base_path and performs cleanup', function () use ($cleanEnv): void {
-    putenv('LARAVEL_INSTALLER_NO_NODE=true');
-    $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+test('installer executes with unmocked script from base_path and performs cleanup', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_NO_NODE');
 
     $tempDir = sys_get_temp_dir().'/unmocked_script_'.bin2hex(random_bytes(6));
     mkdir($tempDir.'/bootstrap', 0777, true);
@@ -608,6 +704,9 @@ return Chisel::script(__DIR__)->questions([
     Process::fake();
 
     try {
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
@@ -619,8 +718,8 @@ return Chisel::script(__DIR__)->questions([
         expect(file_exists($tempDir.'/temp-file.txt'))->toBeFalse()
             ->and(is_dir($tempDir.'/temp-dir/empty-subdir'))->toBeFalse();
     } finally {
+        $restoreEnv();
         app()->setBasePath($origBasePath);
-        $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
         $cleanup = function (string $dir) use (&$cleanup): void {
             if (! is_dir($dir)) {
                 return;
@@ -638,6 +737,91 @@ return Chisel::script(__DIR__)->questions([
             @rmdir($dir);
         };
         $cleanup($tempDir);
+    }
+});
+
+test('database migration runs migrate:fresh --force when CHISEL_RUN_MIGRATIONS is enabled', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+        bindMockChiselScript();
+
+        $ranMigrateFresh = false;
+        Artisan::command('migrate:fresh {--force}', function () use (&$ranMigrateFresh): int {
+            $ranMigrateFresh = true;
+
+            return 0;
+        });
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect($ranMigrateFresh)->toBeTrue();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failed database migration returns non-zero exit status and outputs error', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+        bindMockChiselScript();
+
+        Artisan::command('migrate:fresh {--force}', fn (): int => 1);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Database migration failed.')
+            ->assertFailed();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('database migration exception returns non-zero exit status and outputs redacted error', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+        bindMockChiselScript();
+
+        $secretPass = 'SuperSecretDbPassword123';
+        Artisan::command('migrate:fresh {--force}', function () use ($secretPass): never {
+            throw new RuntimeException('Connection failed with password '.$secretPass);
+        });
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+            'admin' => [
+                'password' => $secretPass,
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Database migration failed: Connection failed with password [REDACTED]')
+            ->doesntExpectOutputToContain($secretPass)
+            ->assertFailed();
+    } finally {
+        $restoreEnv();
     }
 });
 

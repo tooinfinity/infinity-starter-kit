@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\Process\Process;
@@ -77,9 +78,8 @@ function createRealGeneratedProjectFixture(): string
             ->mustRun();
     }
 
-    // Prepare SQLite database schema for real authorization/admin setup during installation.
+    // Prepare SQLite database schema for real installation.
     runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'key:generate', '--no-interaction'], [], 60)->mustRun();
-    runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'migrate', '--force', '--no-interaction'], [], 60)->mustRun();
 
     return $tempDir;
 }
@@ -284,6 +284,24 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 ->and($authData['hasRole'])->toBeTrue()
                 ->and($authData['passOk'])->toBeTrue();
 
+            // Verify database schema matches all selected features
+            $verifySchemaProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                .'echo json_encode(['
+                .('    "audit_trails" => '.Schema::class.'::hasTable("audit_trails"),')
+                .('    "two_factor_secret" => '.Schema::class.'::hasColumn("users", "two_factor_secret"),')
+                .('    "locale" => '.Schema::class.'::hasColumn("users", "locale"),')
+                .']);',
+            ]);
+            expect($verifySchemaProcess->getExitCode())->toBe(0, $verifySchemaProcess->getErrorOutput());
+            $schemaData = json_decode($verifySchemaProcess->getOutput(), true);
+            expect($schemaData)->toBeArray()
+                ->and($schemaData['audit_trails'])->toBeTrue()
+                ->and($schemaData['two_factor_secret'])->toBeTrue()
+                ->and($schemaData['locale'])->toBeTrue();
+
             // Composer validate and install
             $composerValidate = runInGeneratedProject($tempDir, ['composer', 'validate', '--no-check-publish']);
             expect($composerValidate->getExitCode())->toBe(0, $composerValidate->getOutput()."\n".$composerValidate->getErrorOutput());
@@ -381,6 +399,32 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             expect($userCountProcess->getExitCode())->toBe(0, $userCountProcess->getOutput()."\n".$userCountProcess->getErrorOutput())
                 ->and(mb_trim($userCountProcess->getOutput()))->toBe('0');
 
+            // Verify database schema matches minimal selected features (pruned tables/columns absent)
+            $verifySchemaProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                .'echo json_encode(['
+                .('    "audit_trails" => '.Schema::class.'::hasTable("audit_trails"),')
+                .('    "two_factor_secret" => '.Schema::class.'::hasColumn("users", "two_factor_secret"),')
+                .('    "locale" => '.Schema::class.'::hasColumn("users", "locale"),')
+                .('    "notifications" => '.Schema::class.'::hasTable("notifications"),')
+                .('    "roles" => '.Schema::class.'::hasTable("roles"),')
+                .('    "settings" => '.Schema::class.'::hasTable("settings"),')
+                .('    "users" => '.Schema::class.'::hasTable("users"),')
+                .']);',
+            ]);
+            expect($verifySchemaProcess->getExitCode())->toBe(0, $verifySchemaProcess->getErrorOutput());
+            $schemaData = json_decode($verifySchemaProcess->getOutput(), true);
+            expect($schemaData)->toBeArray()
+                ->and($schemaData['audit_trails'])->toBeFalse()
+                ->and($schemaData['two_factor_secret'])->toBeFalse()
+                ->and($schemaData['locale'])->toBeFalse()
+                ->and($schemaData['notifications'])->toBeFalse()
+                ->and($schemaData['roles'])->toBeFalse()
+                ->and($schemaData['settings'])->toBeFalse()
+                ->and($schemaData['users'])->toBeTrue();
+
             // Verify composer validate and composer install succeed with updated composer.lock
             $composerValidate = runInGeneratedProject($tempDir, ['composer', 'validate', '--no-check-publish']);
             expect($composerValidate->getExitCode())->toBe(0, $composerValidate->getOutput()."\n".$composerValidate->getErrorOutput());
@@ -471,6 +515,28 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             ]);
             expect(mb_trim($verifyRoleProcess->getOutput()))->toBe('yes');
 
+            // Verify database schema: audit_trails and authorization tables present; notifications, 2FA, locale absent
+            $verifySchemaProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                .'echo json_encode(['
+                .('    "audit_trails" => '.Schema::class.'::hasTable("audit_trails"),')
+                .('    "roles" => '.Schema::class.'::hasTable("roles"),')
+                .('    "two_factor_secret" => '.Schema::class.'::hasColumn("users", "two_factor_secret"),')
+                .('    "locale" => '.Schema::class.'::hasColumn("users", "locale"),')
+                .('    "notifications" => '.Schema::class.'::hasTable("notifications"),')
+                .']);',
+            ]);
+            expect($verifySchemaProcess->getExitCode())->toBe(0, $verifySchemaProcess->getErrorOutput());
+            $schemaData = json_decode($verifySchemaProcess->getOutput(), true);
+            expect($schemaData)->toBeArray()
+                ->and($schemaData['audit_trails'])->toBeTrue()
+                ->and($schemaData['roles'])->toBeTrue()
+                ->and($schemaData['two_factor_secret'])->toBeFalse()
+                ->and($schemaData['locale'])->toBeFalse()
+                ->and($schemaData['notifications'])->toBeFalse();
+
             // Verify the generated project remains installable and buildable later
             $composerValidate = runInGeneratedProject($tempDir, ['composer', 'validate', '--no-check-publish']);
             expect($composerValidate->getExitCode())->toBe(0, $composerValidate->getOutput()."\n".$composerValidate->getErrorOutput());
@@ -492,6 +558,56 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
 
             $phpstan = runInGeneratedProject($tempDir, ['vendor/bin/phpstan', 'analyse', '--no-progress', '--memory-limit=512M']);
             expect($phpstan->getExitCode())->toBe(0, $phpstan->getOutput()."\n".$phpstan->getErrorOutput());
+        } finally {
+            removeRealGeneratedProjectFixture($tempDir);
+        }
+    });
+
+    it('generates a schema that matches the selected features even if migrated before installation', function (): void {
+        $tempDir = createRealGeneratedProjectFixture();
+
+        // Simulate an early migration before install:features runs (the bug condition reported in #33)
+        runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'migrate', '--force', '--no-interaction'], [], 60)->mustRun();
+
+        try {
+            $installProcess = runInGeneratedProject(
+                $tempDir,
+                [
+                    PHP_BINARY,
+                    'artisan',
+                    'install:features',
+                    '--answers='.json_encode([
+                        'auth_features' => ['login', 'logout'],
+                        'optional_modules' => ['authorization'],
+                    ], JSON_THROW_ON_ERROR),
+                    '--no-interaction',
+                ],
+                ['LARAVEL_INSTALLER_NO_NODE' => 'true']
+            );
+
+            expect($installProcess->getExitCode())->toBe(0, $installProcess->getOutput()."\n".$installProcess->getErrorOutput());
+
+            $verifySchemaProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                .'echo json_encode(['
+                .('    "audit_trails" => '.Schema::class.'::hasTable("audit_trails"),')
+                .('    "two_factor_secret" => '.Schema::class.'::hasColumn("users", "two_factor_secret"),')
+                .('    "locale" => '.Schema::class.'::hasColumn("users", "locale"),')
+                .('    "roles" => '.Schema::class.'::hasTable("roles"),')
+                .('    "users" => '.Schema::class.'::hasTable("users"),')
+                .']);',
+            ]);
+
+            expect($verifySchemaProcess->getExitCode())->toBe(0, $verifySchemaProcess->getErrorOutput());
+            $schemaData = json_decode($verifySchemaProcess->getOutput(), true);
+            expect($schemaData)->toBeArray()
+                ->and($schemaData['audit_trails'])->toBeFalse()
+                ->and($schemaData['two_factor_secret'])->toBeFalse()
+                ->and($schemaData['locale'])->toBeFalse()
+                ->and($schemaData['roles'])->toBeTrue()
+                ->and($schemaData['users'])->toBeTrue();
         } finally {
             removeRealGeneratedProjectFixture($tempDir);
         }
