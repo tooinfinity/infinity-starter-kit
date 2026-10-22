@@ -6,11 +6,13 @@ use App\Enums\NotificationType;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 
 test('PasswordChanged notification implements ShouldQueue', function (): void {
     $notification = new PasswordChanged;
 
-    expect($notification)->toBeInstanceOf(ShouldQueue::class);
+    expect($notification)->toBeInstanceOf(ShouldQueue::class)
+        ->and($notification)->toBeInstanceOf(ShouldQueueAfterCommit::class);
 });
 
 test('PasswordChanged notification uses database channel', function (): void {

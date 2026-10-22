@@ -6,10 +6,10 @@ namespace App\Notifications;
 
 use App\Enums\NotificationType;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Notification;
 
-final class PasswordChanged extends Notification implements ShouldQueue
+final class PasswordChanged extends Notification implements ShouldQueueAfterCommit
 {
     use Queueable;
 
