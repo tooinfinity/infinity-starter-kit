@@ -9,6 +9,9 @@ use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
+use Laravel\Fortify\Features;
 
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\text;
@@ -90,8 +93,13 @@ final class SetupAdminUserCommand extends Command
         }
 
         if (is_string($optionPassword) && $optionPassword !== '') {
-            if (mb_strlen($optionPassword) < 8) {
-                $this->components->error('The administrator password must be at least 8 characters.');
+            $validator = Validator::make(
+                ['password' => $optionPassword],
+                ['password' => ['required', 'string', Password::defaults()]],
+            );
+
+            if ($validator->fails()) {
+                $this->components->error($validator->errors()->first('password'));
 
                 return self::FAILURE;
             }
@@ -101,10 +109,10 @@ final class SetupAdminUserCommand extends Command
             $inputPassword = password(
                 label: 'Password',
                 required: true,
-                validate: ['password' => ['required', 'string', 'min:8']],
+                validate: ['password' => ['required', 'string', Password::defaults()]],
             );
         } else {
-            $this->components->error('A password of at least 8 characters is required to create an administrator user in non-interactive mode.');
+            $this->components->error('A valid password is required to create an administrator user in non-interactive mode.');
 
             return self::FAILURE;
         }
@@ -114,6 +122,10 @@ final class SetupAdminUserCommand extends Command
             'email' => $email,
             'password' => $inputPassword,
         ]);
+
+        if (Features::enabled(Features::emailVerification())) {
+            $user->markEmailAsVerified();
+        }
 
         $user->assignRole(Role::SuperAdmin->value);
 

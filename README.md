@@ -117,7 +117,7 @@ useAuthorization() hook / <Can> component ── UI helpers
 
 - **No Policies** — All authorization uses `Gate::before()` for super-admin bypass, Spatie permission checks, and Form Request `authorize()` methods.
 - **PHP Enums** — `App\Enums\Permission` and `App\Enums\Role` are the single source of truth for permission/role identifiers. No magic strings.
-- **Two Setup Commands** — Separation of concerns: `authorization:setup` manages permissions/roles, `admin:setup` manages users.
+- **Dedicated Setup Command** — `authorization:setup` synchronizes permissions and roles from PHP enums to the database. Administrator setup is handled during installation (or via Tinker).
 - **Frontend UI Helpers** — `useAuthorization()` hook and `<Can>` component read shared Inertia props. These are UI helpers only; server-side authorization is the actual security boundary.
 
 #### Permission Enum
