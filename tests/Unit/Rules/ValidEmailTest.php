@@ -116,4 +116,26 @@ it('fails with invalid email', function (string $email): void {
     'user@localdomain',
     'user@sub.-domain.com',
     '𝓊𝓃𝒾𝒸ℴ𝒹ℯ@𝒹ℴ𝓂𝒶𝒾𝓃.𝒸ℴ𝓂',
+
+    // Unanchored injection attempts
+    'prefix user@example.com',
+    'user@example.com suffix',
+    'prefix user@example.com suffix',
+]);
+
+it('fails with non-string values', function (mixed $value): void {
+    $rule = new ValidEmail;
+
+    $failed = false;
+
+    $rule->validate('email', $value, function () use (&$failed): void {
+        $failed = true;
+    });
+
+    expect($failed)->toBeTrue();
+})->with([
+    [null],
+    [12345],
+    [['user@example.com']],
+    [(object) ['email' => 'user@example.com']],
 ]);

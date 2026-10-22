@@ -69,7 +69,7 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
+        href: 'https://github.com/tooinfinity/infinity-starter-kit',
         icon: FolderGit2,
     },
     {

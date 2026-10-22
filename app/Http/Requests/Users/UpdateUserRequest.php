@@ -12,7 +12,6 @@ use App\Rules\CanAssignRoles;
 use App\Rules\NotLastSuperAdmin;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -57,7 +56,7 @@ final class UpdateUserRequest extends FormRequest
                 new CanAssignRoles($this->user(), $target),
                 new NotLastSuperAdmin($target, SuperAdminRestrictionOperation::RemoveRole),
             ],
-            'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
+            'roles.*' => ['string', Rule::exists('roles', 'name')],
         ];
     }
 

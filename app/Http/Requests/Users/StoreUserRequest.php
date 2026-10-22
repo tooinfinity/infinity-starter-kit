@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Rules\CanAssignRoles;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -43,7 +42,7 @@ final class StoreUserRequest extends FormRequest
             ],
             'is_active' => ['sometimes', 'boolean'],
             'roles' => ['sometimes', 'array', new CanAssignRoles($this->user())],
-            'roles.*' => ['string', ...(Schema::hasTable('roles') ? ['exists:roles,name'] : [])],
+            'roles.*' => ['string', Rule::exists('roles', 'name')],
         ];
     }
 

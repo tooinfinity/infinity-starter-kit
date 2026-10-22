@@ -17,7 +17,7 @@ test('resolves authenticated user explicit locale', function (): void {
     expect($action->handle($request))->toBe(Locale::French);
 });
 
-test('resolves to default locale when authenticated user has null locale', function (): void {
+test('resolves to default locale when authenticated user has null locale and no cookie', function (): void {
     $user = User::factory()->create(['locale' => null]);
     $request = Request::create('/');
     $request->setUserResolver(fn () => $user);
@@ -25,6 +25,17 @@ test('resolves to default locale when authenticated user has null locale', funct
     $action = resolve(ResolveLocale::class);
 
     expect($action->handle($request))->toBe(Locale::default());
+});
+
+test('resolves to cookie locale when authenticated user has null locale', function (): void {
+    $user = User::factory()->create(['locale' => null]);
+    $request = Request::create('/');
+    $request->setUserResolver(fn () => $user);
+    $request->cookies->set('locale', 'fr');
+
+    $action = resolve(ResolveLocale::class);
+
+    expect($action->handle($request))->toBe(Locale::French);
 });
 
 test('resolves guest locale from valid cookie', function (): void {
