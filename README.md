@@ -243,7 +243,7 @@ The Infinity Starter Kit features a deterministic, declarative feature configura
 - **Core (Permanent)**: Authentication foundation (Laravel Fortify), base layout, Inertia v3 infrastructure, React 19 application shell, shared UI primitives (shadcn/ui), TypeScript configs, and SQLite database foundation. Core functionality is never pruned.
 - **Optional Modules**:
   1. **Authorization** (`authorization`): Spatie Roles & Permissions, PHP enums, Gate super-admin bypass, frontend `<Can>` component and `useAuthorization` hook.
-  2. **Settings** (`settings`): Key-value application settings storage, `Setting` model, settings controllers, forms, and pages.
+  2. **Settings** (`settings`): Key-value application settings storage, `Setting` model, settings controllers, forms, and pages. Settings (such as application name and display timezone) are dynamically applied per web request via `HandleSettings` middleware using a cached payload (`settings.all`); CLI commands and queued background workers rely on base environment configuration (`.env` / `config/app.php`).
   3. **User Management** (`user-management`): Administrative user directory, creation/edit modals, role assignment, user activation/deactivation.
   4. **Localization** (`localization`): Trilingual support (EN, FR, AR), RTL layout switching, `Locale` enum, `LanguageSelector` component, and `@erag/lang-sync-inertia`.
   5. **Notifications** (`notifications`): Database and email notification center, user preference toggles, notification dropdown and bell.

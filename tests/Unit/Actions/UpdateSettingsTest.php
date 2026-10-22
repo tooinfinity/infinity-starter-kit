@@ -7,6 +7,7 @@ use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 test('UpdateSettings persists a single setting', function (): void {
     $action = resolve(UpdateSettings::class);
@@ -63,13 +64,33 @@ test('UpdateSettings invalidates cache', function (): void {
 
     $getSetting->handle(SettingKey::ApplicationName);
 
-    expect(Cache::has('settings.application.name'))->toBeTrue();
+    expect(Cache::has('settings.all'))->toBeTrue();
 
     $updateSettings->handle([
         SettingKey::ApplicationName->value => 'After Update',
     ]);
 
-    expect(Cache::has('settings.application.name'))->toBeFalse();
+    expect(Cache::has('settings.all'))->toBeFalse();
+});
+
+test('UpdateSettings invalidates cache after its transaction completes', function (): void {
+    Setting::query()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Before Update',
+    ]);
+
+    $transactionLevel = DB::transactionLevel();
+
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with('settings.all')
+        ->andReturnUsing(function () use ($transactionLevel): bool {
+            expect(DB::transactionLevel())->toBe($transactionLevel);
+
+            return true;
+        });
+
+    resolve(UpdateSettings::class)->set(SettingKey::ApplicationName, 'After Update');
 });
 
 test('UpdateSettings set method works with SettingKey enum', function (): void {
