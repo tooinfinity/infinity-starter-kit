@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
 use App\Queries\Reporting\ExportAuditReportStream;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 test('audit report query handles empty dataset gracefully', function (): void {
@@ -184,4 +185,31 @@ it('exports audit report stream using configured display timezone', function ():
     $response = $stream->handle();
 
     expect($response)->toBeInstanceOf(StreamedResponse::class);
+});
+
+it('does not load every row to build the time series', function (): void {
+    AuditTrail::factory()->count(50)->create();
+    DB::enableQueryLog();
+
+    resolve(AuditReportQuery::class)->handle([]);
+
+    $hasPluckQuery = collect(DB::getQueryLog())
+        ->contains(fn (array $q): bool => str_contains($q['query'], 'select "created_at" from') || str_contains($q['query'], 'select `created_at` from'));
+
+    $hasHourlyGroupQuery = collect(DB::getQueryLog())
+        ->contains(fn (array $q): bool => str_contains(mb_strtolower($q['query']), 'group by') && str_contains(mb_strtolower($q['query']), 'bucket'));
+
+    expect($hasPluckQuery)->toBeFalse()
+        ->and($hasHourlyGroupQuery)->toBeTrue();
+});
+
+test('hourlyBucketSql returns expected expressions across database drivers', function (): void {
+    $query = new AuditReportQuery;
+
+    expect($query->hourlyBucketSql('sqlite'))->toBe("strftime('%Y-%m-%d %H:00:00', created_at)")
+        ->and($query->hourlyBucketSql('pgsql'))->toBe("to_char(created_at, 'YYYY-MM-DD HH24:00:00')")
+        ->and($query->hourlyBucketSql('sqlsrv'))->toBe("FORMAT(created_at, 'yyyy-MM-dd HH:00:00')")
+        ->and($query->hourlyBucketSql('mysql'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')")
+        ->and($query->hourlyBucketSql('mariadb'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')")
+        ->and($query->hourlyBucketSql('unknown'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')");
 });

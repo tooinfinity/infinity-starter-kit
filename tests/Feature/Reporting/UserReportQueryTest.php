@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Queries\Reporting\ExportUserReportStream;
 use App\Queries\Reporting\UserReportQuery;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 test('user report query handles empty dataset gracefully', function (): void {
@@ -194,4 +195,27 @@ it('exports report stream using configured display timezone', function (): void 
     $response = $stream->handle();
 
     expect($response)->toBeInstanceOf(StreamedResponse::class);
+});
+
+it('does not load every row to build the time series', function (): void {
+    User::factory()->count(50)->create();
+    DB::enableQueryLog();
+
+    resolve(UserReportQuery::class)->handle([]);
+
+    $series = collect(DB::getQueryLog())
+        ->first(fn (array $q): bool => str_contains(mb_strtolower($q['query']), 'group by'));
+
+    expect($series)->not->toBeNull();
+});
+
+test('hourlyBucketSql returns expected expressions across database drivers', function (): void {
+    $query = new UserReportQuery;
+
+    expect($query->hourlyBucketSql('sqlite'))->toBe("strftime('%Y-%m-%d %H:00:00', created_at)")
+        ->and($query->hourlyBucketSql('pgsql'))->toBe("to_char(created_at, 'YYYY-MM-DD HH24:00:00')")
+        ->and($query->hourlyBucketSql('sqlsrv'))->toBe("FORMAT(created_at, 'yyyy-MM-dd HH:00:00')")
+        ->and($query->hourlyBucketSql('mysql'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')")
+        ->and($query->hourlyBucketSql('mariadb'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')")
+        ->and($query->hourlyBucketSql('unknown'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')");
 });

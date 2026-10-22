@@ -22,6 +22,7 @@ final readonly class ExportUserReportStream
     public function handle(array $filters = []): StreamedResponse
     {
         $timezone = $this->resolveTimezone();
+        $storedTimezone = config()->string('app.timezone', 'UTC');
 
         $dateFromStr = ! empty($filters['date_from'])
             ? $filters['date_from']
@@ -31,8 +32,8 @@ final readonly class ExportUserReportStream
             ? $filters['date_to']
             : Date::now($timezone)->toDateString();
 
-        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->utc();
-        $to = Date::parse($dateToStr, $timezone)->endOfDay()->utc();
+        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->setTimezone($storedTimezone);
+        $to = Date::parse($dateToStr, $timezone)->endOfDay()->setTimezone($storedTimezone);
 
         /** @var Builder<User> $query */
         $query = $this->reportQuery->buildFilteredQuery($filters, $from, $to)->latest('created_at');
