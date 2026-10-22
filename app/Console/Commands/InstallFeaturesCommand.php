@@ -55,6 +55,10 @@ final class InstallFeaturesCommand extends Command
             return self::FAILURE;
         }
 
+        if (! $this->migrateDatabase($context)) {
+            return self::FAILURE;
+        }
+
         $configStatus = GeneratedApplicationConfigurator::configure($this, $context, $this->components);
         if ($configStatus !== self::SUCCESS) {
             return $configStatus;
@@ -81,6 +85,31 @@ final class InstallFeaturesCommand extends Command
             return true;
         } catch (ProcessFailedException|RuntimeException $e) {
             $this->components->error($context->redact($e->getMessage()));
+
+            return false;
+        }
+    }
+
+    private function migrateDatabase(InstallerContext $context): bool
+    {
+        if (($context->isMockedScript || app()->runningUnitTests()) && ! InstallerContextResolver::installerFlag('CHISEL_RUN_MIGRATIONS')) {
+            return true;
+        }
+
+        try {
+            $status = $this->call('migrate:fresh', [
+                '--force' => true,
+            ]);
+
+            if ($status !== self::SUCCESS) {
+                $this->components->error('Database migration failed.');
+
+                return false;
+            }
+
+            return true;
+        } catch (Throwable $throwable) {
+            $this->components->error('Database migration failed: '.$context->redact($throwable->getMessage()));
 
             return false;
         }

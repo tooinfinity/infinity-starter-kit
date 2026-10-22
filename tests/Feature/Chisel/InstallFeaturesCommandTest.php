@@ -641,6 +641,85 @@ return Chisel::script(__DIR__)->questions([
     }
 });
 
+test('database migration runs migrate:fresh --force when CHISEL_RUN_MIGRATIONS is enabled', function () use ($cleanEnv): void {
+    putenv('CHISEL_RUN_MIGRATIONS=true');
+    $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+    bindMockChiselScript();
+
+    $ranMigrateFresh = false;
+    Artisan::command('migrate:fresh {--force}', function () use (&$ranMigrateFresh): int {
+        $ranMigrateFresh = true;
+
+        return 0;
+    });
+
+    try {
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect($ranMigrateFresh)->toBeTrue();
+    } finally {
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+    }
+});
+
+test('failed database migration returns non-zero exit status and outputs error', function () use ($cleanEnv): void {
+    putenv('CHISEL_RUN_MIGRATIONS=true');
+    $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+    bindMockChiselScript();
+
+    Artisan::command('migrate:fresh {--force}', fn (): int => 1);
+
+    try {
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Database migration failed.')
+            ->assertFailed();
+    } finally {
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+    }
+});
+
+test('database migration exception returns non-zero exit status and outputs redacted error', function () use ($cleanEnv): void {
+    putenv('CHISEL_RUN_MIGRATIONS=true');
+    $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+    bindMockChiselScript();
+
+    $secretPass = 'SuperSecretDbPassword123';
+    Artisan::command('migrate:fresh {--force}', function () use ($secretPass): never {
+        throw new RuntimeException('Connection failed with password '.$secretPass);
+    });
+
+    try {
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+            'admin' => [
+                'password' => $secretPass,
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Database migration failed: Connection failed with password [REDACTED]')
+            ->doesntExpectOutputToContain($secretPass)
+            ->assertFailed();
+    } finally {
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+    }
+});
+
 /**
  * @param  array<string, mixed>  $processFakes
  */
