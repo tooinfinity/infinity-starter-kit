@@ -49,9 +49,9 @@ final readonly class UpdateSettings
                 );
                 /* @end-chisel-audit-trails */
             }
-
-            Cache::forget('settings.all');
         });
+
+        Cache::forget('settings.all');
     }
 
     public function set(SettingKey $key, mixed $value): void

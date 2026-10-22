@@ -19,7 +19,9 @@ final readonly class GetSetting
             'settings.all',
             now()->addHour(),
             /** @return array<string, mixed> */
-            fn (): array => Setting::all()
+            fn (): array => Setting::query()
+                ->whereIn('key', SettingKey::values())
+                ->get()
                 ->mapWithKeys(fn (Setting $setting): array => [
                     $setting->key->value => $setting->value,
                 ])

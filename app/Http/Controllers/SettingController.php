@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\GetSetting;
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Http\Requests\UpdateSettingsRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final readonly class SettingController
 {
-    public function edit(GetSetting $getSetting): Response
+    public function edit(Request $request): Response
     {
-        $settings = $getSetting->all();
+        /** @var array<string, mixed> $settings */
+        $settings = $request->attributes->get('settings', []);
 
         return Inertia::render('settings/application/edit', [
             'settings' => [

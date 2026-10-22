@@ -30,6 +30,8 @@ final readonly class HandleSettings
         try {
             $settings = $this->getSetting->all();
 
+            $request->attributes->set('settings', $settings);
+
             $name = $settings[SettingKey::ApplicationName->value] ?? null;
 
             if (is_string($name) && $name !== '') {
