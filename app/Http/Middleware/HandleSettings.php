@@ -7,10 +7,17 @@ namespace App\Http\Middleware;
 use App\Actions\GetSetting;
 use App\Enums\SettingKey;
 use Closure;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
 
+/**
+ * Applies dynamic application settings per web request.
+ *
+ * Dynamic settings (such as application name and display timezone) are applied
+ * during the web middleware lifecycle. CLI commands and queued background workers
+ * use the base environment configuration (e.g. .env and config/app.php).
+ */
 final readonly class HandleSettings
 {
     public function __construct(private GetSetting $getSetting) {}
@@ -21,19 +28,21 @@ final readonly class HandleSettings
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            $name = $this->getSetting->handle(SettingKey::ApplicationName);
+            $settings = $this->getSetting->all();
+
+            $name = $settings[SettingKey::ApplicationName->value] ?? null;
 
             if (is_string($name) && $name !== '') {
                 config(['app.name' => $name]);
             }
 
-            $timezone = $this->getSetting->handle(SettingKey::ApplicationTimezone);
+            $timezone = $settings[SettingKey::ApplicationTimezone->value] ?? null;
 
             if (is_string($timezone) && $timezone !== '') {
                 config(['app.display_timezone' => $timezone]);
             }
-        } catch (Throwable) {
-            // Keep default configuration if settings cannot be loaded.
+        } catch (QueryException) {
+            // Keep default configuration if settings cannot be loaded (e.g. table not migrated yet).
         }
 
         return $next($request);

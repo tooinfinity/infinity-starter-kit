@@ -7,6 +7,7 @@ use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Http\Middleware\HandleSettings;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
@@ -55,8 +56,15 @@ it('never mutates app.timezone at runtime', function (): void {
     expect(config('app.timezone'))->toBe($originalTimezone);
 });
 
-it('retains default config when loading settings throws an exception', function (): void {
-    Cache::shouldReceive('remember')->andThrow(new RuntimeException('Settings unreadable'));
+it('reads application settings with a single cache lookup per request', function (): void {
+    Cache::spy();
+    $this->get(route('home'))->assertOk();
+
+    Cache::shouldHaveReceived('remember')->once();
+});
+
+it('retains default config when loading settings throws a query exception', function (): void {
+    Cache::shouldReceive('remember')->andThrow(new QueryException('sqlite', 'select * from settings', [], new Exception('table not found')));
 
     $originalName = config('app.name');
     $originalTimezone = config('app.timezone');
@@ -69,6 +77,16 @@ it('retains default config when loading settings throws an exception', function 
     expect($response->getContent())->toBe('OK')
         ->and(config('app.name'))->toBe($originalName)
         ->and(config('app.timezone'))->toBe($originalTimezone);
+});
+
+it('does not swallow non-query exceptions', function (): void {
+    Cache::shouldReceive('remember')->andThrow(new RuntimeException('Settings unreadable'));
+
+    $middleware = resolve(HandleSettings::class);
+    $request = Request::create('/', 'GET');
+
+    expect(fn () => $middleware->handle($request, fn (Request $req): Response => new Response('OK')))
+        ->toThrow(RuntimeException::class, 'Settings unreadable');
 });
 
 it('does not override config when settings are empty strings or not strings', function (): void {

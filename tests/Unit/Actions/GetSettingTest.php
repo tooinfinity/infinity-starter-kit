@@ -39,5 +39,18 @@ test('GetSetting caches the result', function (): void {
     $action = resolve(GetSetting::class);
     $action->handle(SettingKey::ApplicationName);
 
-    expect(Cache::has('settings.application.name'))->toBeTrue();
+    expect(Cache::has('settings.all'))->toBeTrue();
+});
+
+test('GetSetting all returns stored settings', function (): void {
+    Setting::query()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Custom App',
+    ]);
+
+    $action = resolve(GetSetting::class);
+
+    expect($action->all())->toBe([
+        SettingKey::ApplicationName->value => 'Custom App',
+    ]);
 });

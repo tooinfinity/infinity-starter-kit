@@ -10,14 +10,25 @@ use Illuminate\Support\Facades\Cache;
 
 final readonly class GetSetting
 {
-    public function handle(SettingKey $key): mixed
+    /**
+     * @return array<string, mixed>
+     */
+    public function all(): array
     {
         return Cache::remember(
-            'settings.'.$key->value,
+            'settings.all',
             now()->addHour(),
-            fn (): mixed => Setting::query()
-                ->where('key', $key->value)
-                ->value('value') ?? $key->defaultValue(),
+            /** @return array<string, mixed> */
+            fn (): array => Setting::all()
+                ->mapWithKeys(fn (Setting $setting): array => [
+                    $setting->key->value => $setting->value,
+                ])
+                ->all(),
         );
+    }
+
+    public function handle(SettingKey $key): mixed
+    {
+        return $this->all()[$key->value] ?? $key->defaultValue();
     }
 }

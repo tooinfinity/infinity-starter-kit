@@ -63,13 +63,13 @@ test('UpdateSettings invalidates cache', function (): void {
 
     $getSetting->handle(SettingKey::ApplicationName);
 
-    expect(Cache::has('settings.application.name'))->toBeTrue();
+    expect(Cache::has('settings.all'))->toBeTrue();
 
     $updateSettings->handle([
         SettingKey::ApplicationName->value => 'After Update',
     ]);
 
-    expect(Cache::has('settings.application.name'))->toBeFalse();
+    expect(Cache::has('settings.all'))->toBeFalse();
 });
 
 test('UpdateSettings set method works with SettingKey enum', function (): void {

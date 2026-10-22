@@ -16,10 +16,12 @@ final readonly class SettingController
 {
     public function edit(GetSetting $getSetting): Response
     {
+        $settings = $getSetting->all();
+
         return Inertia::render('settings/application/edit', [
             'settings' => [
-                SettingKey::ApplicationName->value => $getSetting->handle(SettingKey::ApplicationName),
-                SettingKey::ApplicationTimezone->value => $getSetting->handle(SettingKey::ApplicationTimezone),
+                SettingKey::ApplicationName->value => $settings[SettingKey::ApplicationName->value] ?? SettingKey::ApplicationName->defaultValue(),
+                SettingKey::ApplicationTimezone->value => $settings[SettingKey::ApplicationTimezone->value] ?? SettingKey::ApplicationTimezone->defaultValue(),
             ],
         ]);
     }

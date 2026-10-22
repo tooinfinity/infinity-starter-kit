@@ -39,8 +39,6 @@ final readonly class UpdateSettings
                     ['value' => $value],
                 );
 
-                Cache::forget('settings.'.$key);
-
                 /* @chisel-audit-trails */
                 $this->auditTrail->handle(
                     event: AuditEvent::SettingsUpdated,
@@ -51,6 +49,8 @@ final readonly class UpdateSettings
                 );
                 /* @end-chisel-audit-trails */
             }
+
+            Cache::forget('settings.all');
         });
     }
 
