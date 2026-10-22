@@ -51,6 +51,9 @@ export function NotificationDropdown({ onClose }: Props) {
             {},
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['notifications.recent'] });
+                },
             },
         );
     };
