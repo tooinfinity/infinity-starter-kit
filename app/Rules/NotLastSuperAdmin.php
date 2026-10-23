@@ -30,7 +30,7 @@ final readonly class NotLastSuperAdmin implements ValidationRule
             return;
         }
 
-        if (User::query()->role(Role::SuperAdmin->value)->count() <= 1) {
+        if (self::hasAtMostOneActiveSuperAdmin(lock: true)) {
             match ($operation) {
                 SuperAdminRestrictionOperation::Deactivate => throw ValidationException::withMessages([
                     $errorField => __('Cannot deactivate the last Super Admin.'),
@@ -59,7 +59,7 @@ final readonly class NotLastSuperAdmin implements ValidationRule
             return;
         }
 
-        if (User::query()->role(Role::SuperAdmin->value)->count() <= 1) {
+        if (self::hasAtMostOneActiveSuperAdmin()) {
             $message = match ($operation) {
                 SuperAdminRestrictionOperation::Deactivate => __('Cannot deactivate the last Super Admin.'),
                 SuperAdminRestrictionOperation::RemoveRole => __('Cannot remove the Super Admin role from the last Super Admin.'),
@@ -93,12 +93,27 @@ final readonly class NotLastSuperAdmin implements ValidationRule
             }
         }
 
-        if (User::query()->role(Role::SuperAdmin->value)->count() <= 1) {
+        if (self::hasAtMostOneActiveSuperAdmin()) {
             match ($this->operation) {
                 SuperAdminRestrictionOperation::Deactivate => $fail(__('Cannot deactivate the last Super Admin.')),
                 SuperAdminRestrictionOperation::RemoveRole => $fail(__('Cannot remove the Super Admin role from the last Super Admin.')),
                 SuperAdminRestrictionOperation::Delete => $fail(__('Cannot delete the last Super Admin.')),
             };
         }
+    }
+
+    private static function hasAtMostOneActiveSuperAdmin(bool $lock = false): bool
+    {
+        $query = User::query()
+            ->role(Role::SuperAdmin->value)
+            ->where('is_active', true);
+
+        if ($lock) {
+            $superAdmins = $query->lockForUpdate()->get(['users.id']);
+
+            return count($superAdmins) <= 1;
+        }
+
+        return $query->count() <= 1;
     }
 }

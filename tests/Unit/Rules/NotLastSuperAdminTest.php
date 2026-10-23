@@ -171,3 +171,54 @@ test('NotLastSuperAdmin validateRequest passes when multiple super admins exist'
 
     expect($validator->errors()->isEmpty())->toBeTrue();
 });
+
+test('NotLastSuperAdmin validate fails when only one active super admin exists and an inactive one exists', function (): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user1 = User::factory()->create();
+    $user1->assignRole($role);
+
+    $user2 = User::factory()->create(['is_active' => false]);
+    $user2->assignRole($role);
+
+    $rule = new NotLastSuperAdmin($user1, SuperAdminRestrictionOperation::Delete);
+
+    $failed = false;
+    $rule->validate('user', $user1, function () use (&$failed): void {
+        $failed = true;
+    });
+
+    expect($failed)->toBeTrue();
+});
+
+test('NotLastSuperAdmin check throws when only one active super admin exists and an inactive one exists', function (SuperAdminRestrictionOperation $operation): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user1 = User::factory()->create();
+    $user1->assignRole($role);
+
+    $user2 = User::factory()->create(['is_active' => false]);
+    $user2->assignRole($role);
+
+    NotLastSuperAdmin::check($user1, $operation);
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+])->throws(ValidationException::class);
+
+test('NotLastSuperAdmin validateRequest adds error when only one active super admin exists and an inactive one exists', function (SuperAdminRestrictionOperation $operation): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user1 = User::factory()->create();
+    $user1->assignRole($role);
+
+    $user2 = User::factory()->create(['is_active' => false]);
+    $user2->assignRole($role);
+
+    $validator = Validator::make([], []);
+    NotLastSuperAdmin::validateRequest($user1, $operation, $validator);
+
+    expect($validator->errors()->has('user'))->toBeTrue();
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+]);

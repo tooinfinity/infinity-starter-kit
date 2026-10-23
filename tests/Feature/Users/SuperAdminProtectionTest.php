@@ -56,6 +56,24 @@ it('allows removing super admin role if multiple super admins exist', function (
         ->and($superAdmin1->fresh()->hasRole('editor'))->toBeTrue();
 });
 
+it('does not count inactive super admins as remaining', function (): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $actor = User::factory()->create();
+    $actor->assignRole($role);
+    RoleModel::findOrCreate('editor');
+    User::factory()->create(['is_active' => false])->assignRole($role);
+
+    $this->actingAs($actor)
+        ->put(route('users.update', $actor), [
+            'name' => $actor->name,
+            'email' => $actor->email,
+            'roles' => ['editor'],
+        ])
+        ->assertSessionHasErrors('roles');
+
+    expect($actor->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
+});
+
 it('NotLastSuperAdmin throws validation exception when only one super admin exists', function (SuperAdminRestrictionOperation $operation): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     $superAdmin = User::factory()->create();
