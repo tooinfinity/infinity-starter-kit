@@ -68,7 +68,7 @@ final class HandleInertiaRequests extends Middleware
                     ? once(fn (): int => $user->unreadNotifications()->count())
                     : 0,
                 'recent' => $user instanceof User
-                    ? Inertia::defer(fn (): array => $user->notifications()
+                    ? Inertia::optional(fn (): array => $user->notifications()
                         ->latest()
                         ->limit(5)
                         ->get()

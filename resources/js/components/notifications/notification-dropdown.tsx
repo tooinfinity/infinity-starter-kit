@@ -1,4 +1,4 @@
-import { Deferred, Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { CheckCheck } from 'lucide-react';
 import { NotificationEmptyState } from '@/components/notifications/notification-empty-state';
 import { NotificationItem } from '@/components/notifications/notification-item';
@@ -41,7 +41,7 @@ type Props = {
 
 export function NotificationDropdown({ onClose }: Props) {
     const { notifications } = usePage().props;
-    const recent = notifications?.recent ?? [];
+    const recent = notifications?.recent;
     const unreadCount = notifications?.unreadCount ?? 0;
 
     const handleMarkAllAsRead = (e: React.MouseEvent) => {
@@ -51,6 +51,9 @@ export function NotificationDropdown({ onClose }: Props) {
             {},
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['notifications.recent'] });
+                },
             },
         );
     };
@@ -84,27 +87,24 @@ export function NotificationDropdown({ onClose }: Props) {
             </div>
 
             <div className="max-h-[350px] divide-y divide-border/40 overflow-y-auto p-1">
-                <Deferred
-                    data="notifications.recent"
-                    fallback={<NotificationDropdownSkeleton />}
-                >
-                    {recent.length === 0 ? (
-                        <NotificationEmptyState
-                            title="No notifications"
-                            description="You are caught up with all notifications."
-                            className="py-8"
+                {recent === undefined ? (
+                    <NotificationDropdownSkeleton />
+                ) : recent.length === 0 ? (
+                    <NotificationEmptyState
+                        title="No notifications"
+                        description="You are caught up with all notifications."
+                        className="py-8"
+                    />
+                ) : (
+                    recent.map((item) => (
+                        <NotificationItem
+                            key={item.id}
+                            notification={item}
+                            compact
+                            onActionClick={onClose}
                         />
-                    ) : (
-                        recent.map((item) => (
-                            <NotificationItem
-                                key={item.id}
-                                notification={item}
-                                compact
-                                onActionClick={onClose}
-                            />
-                        ))
-                    )}
-                </Deferred>
+                    ))
+                )}
             </div>
 
             <DropdownMenuSeparator className="m-0" />
