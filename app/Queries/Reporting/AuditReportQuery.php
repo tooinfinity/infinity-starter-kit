@@ -14,7 +14,6 @@ use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
@@ -42,6 +41,7 @@ final readonly class AuditReportQuery
     public function handle(array $filters = [], int $perPage = 15): array
     {
         $timezone = $this->resolveTimezone();
+        $storedTimezone = config()->string('app.timezone', 'UTC');
 
         $dateFromStr = ! empty($filters['date_from'])
             ? $filters['date_from']
@@ -51,8 +51,8 @@ final readonly class AuditReportQuery
             ? $filters['date_to']
             : Date::now($timezone)->toDateString();
 
-        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->utc();
-        $to = Date::parse($dateToStr, $timezone)->endOfDay()->utc();
+        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->setTimezone($storedTimezone);
+        $to = Date::parse($dateToStr, $timezone)->endOfDay()->setTimezone($storedTimezone);
 
         // 1. Summary Cards
         $totalEvents = AuditTrail::query()->whereBetween('created_at', [$from, $to])->count();
@@ -121,19 +121,23 @@ final readonly class AuditReportQuery
         // 2. Time-series (events per day in display timezone)
         /** @var array<string, int> $countsByDate */
         $countsByDate = [];
-        /** @var Collection<int, string> $rawCreatedAts */
-        $rawCreatedAts = DB::table('audit_trails')
+        $hourlySql = $this->hourlyBucketSql();
+
+        /** @var list<object{bucket: string, count: int|string}> $rawSeries */
+        $rawSeries = DB::table('audit_trails')
+            ->selectRaw("{$hourlySql} as bucket, count(*) as count")
             ->whereBetween('created_at', [$from, $to])
-            ->pluck('created_at');
+            ->groupBy(DB::raw($hourlySql))
+            ->orderBy('bucket')
+            ->get()
+            ->all();
 
-        $storedTimezone = config()->string('app.timezone', 'UTC');
-
-        foreach ($rawCreatedAts as $createdAt) {
-            $dateKey = Date::parse($createdAt, $storedTimezone)
+        foreach ($rawSeries as $row) {
+            $dateKey = Date::parse((string) $row->bucket, $storedTimezone)
                 ->setTimezone($timezone)
                 ->toDateString();
 
-            $countsByDate[$dateKey] = ($countsByDate[$dateKey] ?? 0) + 1;
+            $countsByDate[$dateKey] = ($countsByDate[$dateKey] ?? 0) + (int) $row->count;
         }
 
         $series = [];
@@ -232,6 +236,21 @@ final readonly class AuditReportQuery
         }
 
         return $query;
+    }
+
+    /**
+     * @return literal-string
+     */
+    public function hourlyBucketSql(?string $driver = null): string
+    {
+        $driver ??= DB::connection()->getDriverName();
+
+        return match ($driver) {
+            'sqlite' => "strftime('%Y-%m-%d %H:00:00', created_at)",
+            'pgsql' => "to_char(created_at, 'YYYY-MM-DD HH24:00:00')",
+            'sqlsrv' => "FORMAT(created_at, 'yyyy-MM-dd HH:00:00')",
+            default => "DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')",
+        };
     }
 
     private function resolveTimezone(): string
