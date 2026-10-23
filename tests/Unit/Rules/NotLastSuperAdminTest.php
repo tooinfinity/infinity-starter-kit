@@ -10,6 +10,33 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role as RoleModel;
 
+test('NotLastSuperAdmin permits restricting an inactive super admin', function (SuperAdminRestrictionOperation $operation, bool $hasActiveSuperAdmin): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user = User::factory()->inactive()->create();
+    $user->assignRole($role);
+
+    if ($hasActiveSuperAdmin) {
+        User::factory()->active()->create()->assignRole($role);
+    }
+
+    NotLastSuperAdmin::check($user, $operation);
+
+    $validator = Validator::make([], []);
+    NotLastSuperAdmin::validateRequest($user, $operation, $validator);
+
+    $failed = false;
+    new NotLastSuperAdmin($user, $operation)->validate('user', [], function () use (&$failed): void {
+        $failed = true;
+    });
+
+    expect($failed)->toBeFalse()
+        ->and($validator->errors()->isEmpty())->toBeTrue();
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+])->with([true, false]);
+
 test('NotLastSuperAdmin passes if user is not super admin', function (): void {
     $user = User::factory()->create();
 
@@ -171,3 +198,54 @@ test('NotLastSuperAdmin validateRequest passes when multiple super admins exist'
 
     expect($validator->errors()->isEmpty())->toBeTrue();
 });
+
+test('NotLastSuperAdmin validate fails when only one active super admin exists and an inactive one exists', function (): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user1 = User::factory()->create();
+    $user1->assignRole($role);
+
+    $user2 = User::factory()->create(['is_active' => false]);
+    $user2->assignRole($role);
+
+    $rule = new NotLastSuperAdmin($user1, SuperAdminRestrictionOperation::Delete);
+
+    $failed = false;
+    $rule->validate('user', $user1, function () use (&$failed): void {
+        $failed = true;
+    });
+
+    expect($failed)->toBeTrue();
+});
+
+test('NotLastSuperAdmin check throws when only one active super admin exists and an inactive one exists', function (SuperAdminRestrictionOperation $operation): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user1 = User::factory()->create();
+    $user1->assignRole($role);
+
+    $user2 = User::factory()->create(['is_active' => false]);
+    $user2->assignRole($role);
+
+    NotLastSuperAdmin::check($user1, $operation);
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+])->throws(ValidationException::class);
+
+test('NotLastSuperAdmin validateRequest adds error when only one active super admin exists and an inactive one exists', function (SuperAdminRestrictionOperation $operation): void {
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user1 = User::factory()->create();
+    $user1->assignRole($role);
+
+    $user2 = User::factory()->create(['is_active' => false]);
+    $user2->assignRole($role);
+
+    $validator = Validator::make([], []);
+    NotLastSuperAdmin::validateRequest($user1, $operation, $validator);
+
+    expect($validator->errors()->has('user'))->toBeTrue();
+})->with([
+    SuperAdminRestrictionOperation::Delete,
+    SuperAdminRestrictionOperation::Deactivate,
+    SuperAdminRestrictionOperation::RemoveRole,
+]);

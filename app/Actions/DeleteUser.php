@@ -9,11 +9,13 @@ use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 /* @chisel-roles-permissions */
-use App\Enums\Role;
+use App\Enums\SuperAdminRestrictionOperation;
 /* @end-chisel-roles-permissions */
 use App\Models\User;
+/* @chisel-roles-permissions */
+use App\Rules\NotLastSuperAdmin;
+/* @end-chisel-roles-permissions */
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
 
@@ -32,19 +34,7 @@ final readonly class DeleteUser
     {
         DB::transaction(function () use ($user): void {
             /* @chisel-roles-permissions */
-            if (trait_exists(HasRoles::class) && enum_exists(Role::class) && $user->hasRole(Role::SuperAdmin->value)) {
-                $superAdmins = User::query()
-                    ->role(Role::SuperAdmin->value)
-                    ->lockForUpdate()
-                    ->get(['users.id']);
-
-                if (count($superAdmins) <= 1) {
-                    throw ValidationException::withMessages([
-                        'user' => __('Cannot delete the last Super Admin.'),
-                    ]);
-                }
-            }
-
+            NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Delete);
             /* @end-chisel-roles-permissions */
 
             /* @chisel-audit-trails */

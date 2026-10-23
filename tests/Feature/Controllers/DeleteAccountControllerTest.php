@@ -77,6 +77,24 @@ it('prevents sole super admin from deleting their own account (SEC-002)', functi
     $this->assertAuthenticatedAs($superAdmin);
 });
 
+it('blocks self-deletion of the last active super admin even if an inactive one exists', function (): void {
+    $role = Role::findOrCreate(App\Enums\Role::SuperAdmin->value);
+    $actor = User::factory()->create([
+        'password' => Hash::make('password'),
+    ]);
+    $actor->assignRole($role);
+    User::factory()->create(['is_active' => false])->assignRole($role);
+
+    $this->actingAs($actor)
+        ->fromRoute('user-profile.edit')
+        ->delete(route('user.destroy'), [
+            'password' => 'password',
+        ])
+        ->assertSessionHasErrors(['user' => __('Cannot delete the last Super Admin.')]);
+
+    expect(User::query()->whereKey($actor->id)->exists())->toBeTrue();
+});
+
 it('prunes notifications when user account is deleted (DATA-001)', function (): void {
     $user = User::factory()->create([
         'password' => Hash::make('password'),
