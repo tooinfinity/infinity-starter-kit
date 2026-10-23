@@ -11,7 +11,10 @@ use App\Data\Users\UpdateUserData;
 /* @chisel-audit-trails */
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
+use App\Enums\Role;
+use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
+use App\Rules\NotLastSuperAdmin;
 use Illuminate\Support\Facades\DB;
 
 final readonly class UpdateUserAction
@@ -27,6 +30,10 @@ final readonly class UpdateUserAction
     public function handle(User $user, UpdateUserData $data): User
     {
         return DB::transaction(function () use ($user, $data): User {
+            if ($data->roles !== null && enum_exists(Role::class) && ! in_array(Role::SuperAdmin->value, $data->roles, true)) {
+                NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::RemoveRole, 'roles');
+            }
+
             /* @chisel-audit-trails */
             $oldValues = $this->snapshotUserAuditData->handle($user);
             /* @end-chisel-audit-trails */
