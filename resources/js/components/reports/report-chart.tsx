@@ -30,7 +30,9 @@ export function ReportChart({
     series,
     metricLabel = 'Count',
 }: ReportChartProps) {
-    const { locale } = usePage().props;
+    const pageLocale = usePage().props.locale;
+    const locale =
+        typeof pageLocale === 'string' && pageLocale ? pageLocale : undefined;
     const { __ } = useTranslation();
     const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 

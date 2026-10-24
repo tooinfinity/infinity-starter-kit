@@ -121,7 +121,10 @@ export function useTranslation(): TranslationHelpers {
         replaces?: TranslationReplacements,
     ): string {
         const line = __(key);
-        const chosen = choosePluralLine(line, count, page.props.locale || 'en');
+        const pageLocale = page.props.locale;
+        const locale =
+            typeof pageLocale === 'string' && pageLocale ? pageLocale : 'en';
+        const chosen = choosePluralLine(line, count, locale);
         return formatString(chosen, { ...replaces, count });
     }
 
