@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions;
+namespace App\Queries;
 
 use App\Enums\SettingKey;
 use App\Models\Setting;

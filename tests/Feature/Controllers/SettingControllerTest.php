@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Enums\Permission;
 use App\Enums\SettingKey;
+use App\Http\Middleware\HandleSettings;
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Support\SessionKey;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -26,25 +26,22 @@ it('renders settings page for authorized user', function (): void {
             ->has('settings'));
 });
 
-it('reads settings with a single cache lookup on the settings page', function (): void {
+it('shows stored values without the handle settings middleware', function (): void {
+    Setting::query()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Custom App',
+    ]);
+
     $user = User::factory()->create();
     $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
     $user->givePermissionTo($permission);
 
-    Cache::spy();
-    Cache::shouldReceive('remember')->andReturn([
-        SettingKey::ApplicationName->value => 'Custom App',
-    ]);
-
     $this->actingAs($user)
+        ->withoutMiddleware(HandleSettings::class)
         ->get(route('settings.edit'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('settings', fn ($settings): bool => $settings['application.name'] === 'Custom App'));
-
-    Cache::shouldHaveReceived('remember')
-        ->with('settings.all', Mockery::any(), Mockery::type(Closure::class))
-        ->once();
 });
 
 it('forbids settings page for user without permission', function (): void {

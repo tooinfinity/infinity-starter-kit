@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Actions\GetSetting;
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Http\Middleware\HandleSettings;
 use App\Models\User;
+use App\Queries\GetSetting;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;

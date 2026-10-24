@@ -13,4 +13,6 @@ arch('controllers')
     ->expect('App\Http\Controllers')
     ->not->toBeUsed();
 
-//
+arch('actions are not read-only')
+    ->expect('App\Actions')
+    ->not->toHavePrefix('Get');

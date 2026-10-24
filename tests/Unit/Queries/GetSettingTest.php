@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Actions\GetSetting;
 use App\Enums\SettingKey;
 use App\Models\Setting;
+use App\Queries\GetSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,21 +15,21 @@ test('GetSetting returns stored value', function (): void {
         'value' => 'Custom App',
     ]);
 
-    $action = resolve(GetSetting::class);
+    $query = resolve(GetSetting::class);
 
-    expect($action->handle(SettingKey::ApplicationName))->toBe('Custom App');
+    expect($query->handle(SettingKey::ApplicationName))->toBe('Custom App');
 });
 
 test('GetSetting returns default when setting is not stored', function (): void {
-    $action = resolve(GetSetting::class);
+    $query = resolve(GetSetting::class);
 
-    expect($action->handle(SettingKey::ApplicationName))->toBe(config('app.name', 'Laravel'));
+    expect($query->handle(SettingKey::ApplicationName))->toBe(config('app.name', 'Laravel'));
 });
 
 test('GetSetting returns default when setting is not stored for timezone', function (): void {
-    $action = resolve(GetSetting::class);
+    $query = resolve(GetSetting::class);
 
-    expect($action->handle(SettingKey::ApplicationTimezone))->toBe(config('app.timezone', 'UTC'));
+    expect($query->handle(SettingKey::ApplicationTimezone))->toBe(config('app.timezone', 'UTC'));
 });
 
 test('GetSetting caches the result', function (): void {
@@ -38,8 +38,8 @@ test('GetSetting caches the result', function (): void {
         'value' => 'Cached App',
     ]);
 
-    $action = resolve(GetSetting::class);
-    $action->handle(SettingKey::ApplicationName);
+    $query = resolve(GetSetting::class);
+    $query->handle(SettingKey::ApplicationName);
 
     expect(Cache::has('settings.all'))->toBeTrue();
 });
@@ -50,9 +50,9 @@ test('GetSetting all returns stored settings', function (): void {
         'value' => 'Custom App',
     ]);
 
-    $action = resolve(GetSetting::class);
+    $query = resolve(GetSetting::class);
 
-    expect($action->all())->toBe([
+    expect($query->all())->toBe([
         SettingKey::ApplicationName->value => 'Custom App',
     ]);
 });

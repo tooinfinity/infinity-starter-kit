@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Actions\GetSetting;
 use App\Enums\SettingKey;
+use App\Queries\GetSetting;
 use Closure;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -29,8 +29,6 @@ final readonly class HandleSettings
     {
         try {
             $settings = $this->getSetting->all();
-
-            $request->attributes->set('settings', $settings);
 
             $name = $settings[SettingKey::ApplicationName->value] ?? null;
 
