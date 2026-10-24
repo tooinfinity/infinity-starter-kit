@@ -45,7 +45,7 @@ export function NotificationItem({
     compact = false,
     onActionClick,
 }: Props) {
-    const { locale } = usePage().props;
+    const { locale, timezone } = usePage().props;
     const { __ } = useTranslation();
     const isUnread = notification.read_at === null;
 
@@ -98,7 +98,11 @@ export function NotificationItem({
                         {notification.title}
                     </p>
                     <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                        {formatRelativeTime(notification.created_at, locale)}
+                        {formatRelativeTime(
+                            notification.created_at,
+                            locale,
+                            timezone,
+                        )}
                     </span>
                 </div>
 

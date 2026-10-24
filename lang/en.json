@@ -320,5 +320,6 @@
     "records": "records",
     "to": "to",
     "user": "user",
-    "users": "users"
+    "users": "users",
+    "users.total": "{one} :count user|{other} :count users"
 }

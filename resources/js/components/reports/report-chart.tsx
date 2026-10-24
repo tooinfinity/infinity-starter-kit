@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import { BarChart2, Table as TableIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export function ReportChart({
     series,
     metricLabel = 'Count',
 }: ReportChartProps) {
+    const { locale } = usePage().props;
     const { __ } = useTranslation();
     const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
@@ -130,7 +132,7 @@ export function ReportChart({
                             <span>{series[0]?.date}</span>
                             <span className="font-medium text-foreground">
                                 {__('Total: :total', {
-                                    total: totalValue.toLocaleString(),
+                                    total: totalValue.toLocaleString(locale),
                                 })}
                             </span>
                             <span>{series[series.length - 1]?.date}</span>

@@ -72,7 +72,7 @@ export default function UsersIndex({
     availableRoles: string[];
 }) {
     const { locale, timezone } = usePage().props;
-    const { __ } = useTranslation();
+    const { __, transChoice } = useTranslation();
     const [search, setSearch] = useState(filters.search ?? '');
     const [status, setStatus] = useState(filters.status ?? 'all');
     const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
@@ -195,8 +195,9 @@ export default function UsersIndex({
                                 variant="secondary"
                                 className="text-xs font-medium"
                             >
-                                {users.total ?? 0}{' '}
-                                {users.total === 1 ? __('user') : __('users')}
+                                {transChoice('users.total', users.total ?? 0, {
+                                    count: users.total ?? 0,
+                                })}
                             </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">

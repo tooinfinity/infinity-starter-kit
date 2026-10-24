@@ -92,7 +92,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                                                 variant="outline"
                                                 className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
                                             >
-                                                {__('Delete User')}
+                                                {__('Deleted')}
                                             </Badge>
                                         </div>
                                         {audit.actor_email && (

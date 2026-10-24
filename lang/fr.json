@@ -320,5 +320,6 @@
     "records": "enregistrements",
     "to": "à",
     "user": "utilisateur",
-    "users": "utilisateurs"
+    "users": "utilisateurs",
+    "users.total": "{one} :count utilisateur|{other} :count utilisateurs"
 }

@@ -320,5 +320,6 @@
     "records": "سجلات",
     "to": "إلى",
     "user": "مستخدم",
-    "users": "مستخدمين"
+    "users": "مستخدمين",
+    "users.total": "{zero} :count مستخدم|{one} :count مستخدم|{two} :count مستخدمان|{few} :count مستخدمين|{many} :count مستخدمًا|{other} :count مستخدم"
 }

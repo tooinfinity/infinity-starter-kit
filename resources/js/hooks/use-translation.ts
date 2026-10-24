@@ -38,7 +38,7 @@ function formatString(
     );
 }
 
-function choosePluralLine(line: string, count: number): string {
+function choosePluralLine(line: string, count: number, locale: string): string {
     const parts = line.split('|');
     if (parts.length === 1) {
         return parts[0];
@@ -59,6 +59,14 @@ function choosePluralLine(line: string, count: number): string {
             }
         }
     }
+    const category = new Intl.PluralRules(locale).select(count);
+    const categoryLine =
+        parts.find((part) => part.startsWith(`{${category}}`)) ??
+        parts.find((part) => part.startsWith('{other}'));
+    if (categoryLine) {
+        return categoryLine.replace(/^\{\w+\}\s*/, '');
+    }
+
     return count === 1 ? parts[0] : parts[parts.length - 1];
 }
 
@@ -113,7 +121,7 @@ export function useTranslation(): TranslationHelpers {
         replaces?: TranslationReplacements,
     ): string {
         const line = __(key);
-        const chosen = choosePluralLine(line, count);
+        const chosen = choosePluralLine(line, count, page.props.locale || 'en');
         return formatString(chosen, { ...replaces, count });
     }
 

@@ -1,6 +1,7 @@
 export function formatRelativeTime(
     dateString: string | null | undefined,
     locale?: unknown,
+    timezone?: string,
 ): string {
     if (!dateString) {
         return '';
@@ -24,21 +25,21 @@ export function formatRelativeTime(
     }
 
     const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
+    if (Math.abs(diffInMinutes) < 60) {
         return rtf.format(-diffInMinutes, 'minute');
     }
 
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
+    if (Math.abs(diffInHours) < 24) {
         return rtf.format(-diffInHours, 'hour');
     }
 
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) {
+    if (Math.abs(diffInDays) < 7) {
         return rtf.format(-diffInDays, 'day');
     }
 
-    return date.toLocaleDateString(resolvedLocale);
+    return date.toLocaleDateString(resolvedLocale, { timeZone: timezone });
 }
 
 export function formatDateTime(
