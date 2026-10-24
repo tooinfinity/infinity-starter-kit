@@ -824,11 +824,8 @@ test('re-run after a simulated mid-install failure does not lose data', function
             'optional_modules' => [],
         ], JSON_THROW_ON_ERROR);
 
-        try {
-            $this->artisan('install:features', ['--answers' => $answers]);
-        } catch (RuntimeException $e) {
-            expect($e->getMessage())->toContain('CHISEL_TEST_FAIL_STAGE');
-        }
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers])->run())
+            ->toThrow(RuntimeException::class, 'CHISEL_TEST_FAIL_STAGE');
 
         expect(User::query()->where('email', 'preserved@example.com')->exists())->toBeTrue();
 
