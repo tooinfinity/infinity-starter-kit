@@ -7,17 +7,16 @@ namespace App\Http\Controllers;
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Http\Requests\UpdateSettingsRequest;
+use App\Queries\GetSetting;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final readonly class SettingController
 {
-    public function edit(Request $request): Response
+    public function edit(GetSetting $query): Response
     {
-        /** @var array<string, mixed> $settings */
-        $settings = $request->attributes->get('settings', []);
+        $settings = $query->all();
 
         return Inertia::render('settings/application/edit', [
             'settings' => [

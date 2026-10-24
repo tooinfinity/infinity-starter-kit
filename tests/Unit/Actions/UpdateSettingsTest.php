@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Actions\GetSetting;
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Models\Setting;
+use App\Queries\GetSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 

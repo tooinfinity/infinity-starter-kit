@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Actions\GetSetting;
 use App\Enums\SettingKey;
+use App\Queries\GetSetting;
 use Closure;
+use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,8 +31,6 @@ final readonly class HandleSettings
         try {
             $settings = $this->getSetting->all();
 
-            $request->attributes->set('settings', $settings);
-
             $name = $settings[SettingKey::ApplicationName->value] ?? null;
 
             if (is_string($name) && $name !== '') {
@@ -43,8 +42,8 @@ final readonly class HandleSettings
             if (is_string($timezone) && $timezone !== '') {
                 config(['app.display_timezone' => $timezone]);
             }
-        } catch (QueryException) {
-            // Keep default configuration if settings cannot be loaded (e.g. table not migrated yet).
+        } catch (QueryException|Exception $e) {
+            report($e);
         }
 
         return $next($request);
