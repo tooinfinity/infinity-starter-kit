@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Data;
-
 use App\Data\Reporting\ReportDateRange;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
