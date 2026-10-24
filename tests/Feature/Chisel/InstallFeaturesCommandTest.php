@@ -8,6 +8,7 @@ use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
@@ -740,7 +741,139 @@ return Chisel::script(__DIR__)->questions([
     }
 });
 
-test('database migration runs migrate:fresh --force when CHISEL_RUN_MIGRATIONS is enabled', function () use ($preserveEnv): void {
+test('installer on an empty DB migrates and succeeds', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS', 'LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect(Schema::hasTable('users'))->toBeTrue()
+            ->and(Schema::hasTable('migrations'))->toBeTrue();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('installer on a DB with existing rows in users does not drop tables', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS', 'LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+        bindMockChiselScript();
+
+        $user = User::query()->create([
+            'name' => 'Existing User',
+            'email' => 'existing@example.com',
+            'password' => Hash::make('password123'),
+        ]);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect(User::query()->where('email', 'existing@example.com')->exists())->toBeTrue()
+            ->and(Schema::hasTable('users'))->toBeTrue();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('re-run after a simulated mid-install failure does not lose data', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS', 'LARAVEL_INSTALLER_NO_NODE', 'CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+        bindMockChiselScript();
+
+        $user = User::query()->create([
+            'name' => 'Preserved User',
+            'email' => 'preserved@example.com',
+            'password' => Hash::make('password123'),
+        ]);
+
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        try {
+            $this->artisan('install:features', ['--answers' => $answers]);
+        } catch (RuntimeException $e) {
+            expect($e->getMessage())->toContain('CHISEL_TEST_FAIL_STAGE');
+        }
+
+        expect(User::query()->where('email', 'preserved@example.com')->exists())->toBeTrue();
+
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect(User::query()->where('email', 'preserved@example.com')->exists())->toBeTrue();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('database migration runs migrate --force by default when CHISEL_RUN_MIGRATIONS is enabled', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS');
+
+    try {
+        putenv('CHISEL_RUN_MIGRATIONS=true');
+        $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+        bindMockChiselScript();
+
+        $ranMigrate = false;
+        Artisan::command('migrate {--force}', function () use (&$ranMigrate): int {
+            $ranMigrate = true;
+
+            return 0;
+        });
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect($ranMigrate)->toBeTrue();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('database migration runs migrate:fresh --force when --fresh is passed and CHISEL_RUN_MIGRATIONS is enabled', function () use ($preserveEnv): void {
     $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS');
 
     try {
@@ -761,7 +894,7 @@ test('database migration runs migrate:fresh --force when CHISEL_RUN_MIGRATIONS i
             'optional_modules' => [],
         ], JSON_THROW_ON_ERROR);
 
-        $this->artisan('install:features', ['--answers' => $answers])
+        $this->artisan('install:features', ['--answers' => $answers, '--fresh' => true])
             ->assertSuccessful();
 
         expect($ranMigrateFresh)->toBeTrue();
@@ -779,7 +912,7 @@ test('failed database migration returns non-zero exit status and outputs error',
 
         bindMockChiselScript();
 
-        Artisan::command('migrate:fresh {--force}', fn (): int => 1);
+        Artisan::command('migrate {--force}', fn (): int => 1);
 
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
@@ -804,7 +937,7 @@ test('database migration exception returns non-zero exit status and outputs reda
         bindMockChiselScript();
 
         $secretPass = 'SuperSecretDbPassword123';
-        Artisan::command('migrate:fresh {--force}', function () use ($secretPass): never {
+        Artisan::command('migrate {--force}', function () use ($secretPass): never {
             throw new RuntimeException('Connection failed with password '.$secretPass);
         });
 
