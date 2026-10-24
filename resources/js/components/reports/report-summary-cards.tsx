@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/hooks/use-translation';
 import type { ReportSummaryCard } from '@/types/reports';
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
@@ -29,6 +30,8 @@ interface ReportSummaryCardsProps {
 }
 
 export function ReportSummaryCards({ cards }: ReportSummaryCardsProps) {
+    const { __ } = useTranslation();
+
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {cards.map((card) => {
@@ -45,7 +48,7 @@ export function ReportSummaryCards({ cards }: ReportSummaryCardsProps) {
                     >
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">
-                                {card.title}
+                                {__(card.title)}
                             </CardTitle>
                             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <IconComponent className="size-4" />
@@ -56,7 +59,7 @@ export function ReportSummaryCards({ cards }: ReportSummaryCardsProps) {
                                 {displayValue}
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                {card.description}
+                                {__(card.description)}
                             </p>
                         </CardContent>
                     </Card>

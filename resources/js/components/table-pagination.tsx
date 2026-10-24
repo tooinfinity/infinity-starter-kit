@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/hooks/use-translation';
 import { cn } from '@/lib/utils';
 
 export type PaginationLink = {
@@ -26,6 +27,8 @@ export function TablePagination({
     itemName = 'records',
     className,
 }: TablePaginationProps) {
+    const { __ } = useTranslation();
+
     if (!links || links.length <= 3) {
         return null;
     }
@@ -42,15 +45,15 @@ export function TablePagination({
             )}
         >
             <div className="text-xs text-muted-foreground">
-                Showing{' '}
+                {__('Showing')}{' '}
                 <span className="font-medium text-foreground">{from ?? 0}</span>{' '}
-                to{' '}
+                {__('to')}{' '}
                 <span className="font-medium text-foreground">{to ?? 0}</span>{' '}
-                of{' '}
+                {__('of')}{' '}
                 <span className="font-medium text-foreground">
                     {total ?? 0}
                 </span>{' '}
-                {itemName}
+                {__(itemName)}
             </div>
 
             <div className="flex items-center gap-1 self-center sm:self-auto">
@@ -62,7 +65,7 @@ export function TablePagination({
                         disabled={!previousLink.url}
                         asChild={Boolean(previousLink.url)}
                         className="h-8 gap-1 px-2.5 text-xs"
-                        aria-label="Go to previous page"
+                        aria-label={__('Go to previous page')}
                     >
                         {previousLink.url ? (
                             <Link
@@ -70,16 +73,16 @@ export function TablePagination({
                                 preserveScroll
                                 preserveState
                             >
-                                <ChevronLeft className="size-3.5" />
+                                <ChevronLeft className="size-3.5 rtl:rotate-180" />
                                 <span className="hidden sm:inline">
-                                    Previous
+                                    {__('Previous')}
                                 </span>
                             </Link>
                         ) : (
                             <span>
-                                <ChevronLeft className="size-3.5" />
+                                <ChevronLeft className="size-3.5 rtl:rotate-180" />
                                 <span className="hidden sm:inline">
-                                    Previous
+                                    {__('Previous')}
                                 </span>
                             </span>
                         )}
@@ -137,7 +140,7 @@ export function TablePagination({
                         disabled={!nextLink.url}
                         asChild={Boolean(nextLink.url)}
                         className="h-8 gap-1 px-2.5 text-xs"
-                        aria-label="Go to next page"
+                        aria-label={__('Go to next page')}
                     >
                         {nextLink.url ? (
                             <Link
@@ -145,13 +148,17 @@ export function TablePagination({
                                 preserveScroll
                                 preserveState
                             >
-                                <span className="hidden sm:inline">Next</span>
-                                <ChevronRight className="size-3.5" />
+                                <span className="hidden sm:inline">
+                                    {__('Next')}
+                                </span>
+                                <ChevronRight className="size-3.5 rtl:rotate-180" />
                             </Link>
                         ) : (
                             <span>
-                                <span className="hidden sm:inline">Next</span>
-                                <ChevronRight className="size-3.5" />
+                                <span className="hidden sm:inline">
+                                    {__('Next')}
+                                </span>
+                                <ChevronRight className="size-3.5 rtl:rotate-180" />
                             </span>
                         )}
                     </Button>

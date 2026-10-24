@@ -21,6 +21,7 @@ declare module '@inertiajs/core' {
             locale: string;
             direction: Direction;
             supportedLocales: LocaleOption[];
+            lang?: Record<string, unknown>;
             /* @end-chisel-localization */
             /* @chisel-notifications */
             notifications: NotificationsSharedData;

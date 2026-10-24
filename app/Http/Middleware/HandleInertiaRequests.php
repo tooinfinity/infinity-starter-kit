@@ -61,6 +61,7 @@ final class HandleInertiaRequests extends Middleware
             'locale' => app()->getLocale(),
             'direction' => Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr',
             'supportedLocales' => Locale::toOptions(),
+            'lang' => $this->resolveTranslations(...),
             /* @end-chisel-localization */
             /* @chisel-notifications */
             'notifications' => [
@@ -88,4 +89,38 @@ final class HandleInertiaRequests extends Middleware
             /* @end-chisel-notifications */
         ];
     }
+
+    /* @chisel-localization */
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveTranslations(): array
+    {
+        $locale = app()->getLocale();
+        /** @var array<string, mixed> $translations */
+        $translations = [];
+
+        $jsonPath = lang_path("{$locale}.json");
+        if (file_exists($jsonPath)) {
+            $decoded = json_decode((string) file_get_contents($jsonPath), true);
+            if (is_array($decoded)) {
+                /** @var array<string, mixed> $decoded */
+                $translations = $decoded;
+            }
+        }
+
+        $groups = ['common', 'localization', 'notifications', 'reports', 'audit'];
+        $groupTranslations = [];
+        if (function_exists('syncLangFiles')) {
+            $groupTranslations = syncLangFiles($groups);
+        }
+
+        foreach ($groupTranslations as $key => $value) {
+            $translations[$key] = $value;
+        }
+
+        return $translations;
+    }
+
+    /* @end-chisel-localization */
 }

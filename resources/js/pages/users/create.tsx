@@ -8,26 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import { create, index } from '@/routes/users';
 import type { BreadcrumbItem } from '@/types';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'User Management',
-        href: index(),
-    },
-    {
-        title: 'Add User',
-        href: create(),
-    },
-];
 
 export default function UsersCreate({
     availableRoles,
 }: {
     availableRoles: string[];
 }) {
+    const { __ } = useTranslation();
     const form = useForm({
         name: '',
         email: '',
@@ -36,6 +27,17 @@ export default function UsersCreate({
         roles: [] as string[],
     });
 
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('User Management'),
+            href: index(),
+        },
+        {
+            title: __('Add User'),
+            href: create(),
+        },
+    ];
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         form.post(UserController.store.url());
@@ -43,17 +45,19 @@ export default function UsersCreate({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Add User" />
+            <Head title={__('Add User')} />
 
             <div className="max-w-2xl space-y-6">
                 <Heading
-                    title="Add User"
-                    description="Create a new administrative or standard user account."
+                    title={__('Add User')}
+                    description={__(
+                        'Create a new administrative or standard user account.',
+                    )}
                 />
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="user-name">Name</Label>
+                        <Label htmlFor="user-name">{__('Name')}</Label>
                         <Input
                             id="user-name"
                             name="name"
@@ -68,7 +72,9 @@ export default function UsersCreate({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="user-email">Email Address</Label>
+                        <Label htmlFor="user-email">
+                            {__('Email Address')}
+                        </Label>
                         <Input
                             id="user-email"
                             name="email"
@@ -84,7 +90,7 @@ export default function UsersCreate({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="user-password">Password</Label>
+                        <Label htmlFor="user-password">{__('Password')}</Label>
                         <Input
                             id="user-password"
                             name="password"
@@ -99,7 +105,7 @@ export default function UsersCreate({
                         <InputError message={form.errors.password} />
                     </div>
 
-                    <div className="flex items-center space-x-2 pt-2">
+                    <div className="flex items-center gap-2 pt-2">
                         <Checkbox
                             id="user-is-active"
                             name="is_active"
@@ -112,7 +118,7 @@ export default function UsersCreate({
                             htmlFor="user-is-active"
                             className="cursor-pointer"
                         >
-                            Active account (allow login)
+                            {__('Active account (allow login)')}
                         </Label>
                         <InputError message={form.errors.is_active} />
                     </div>
@@ -120,7 +126,7 @@ export default function UsersCreate({
                     <Can permission="users.manage-roles">
                         {availableRoles.length > 0 && (
                             <div className="space-y-3 pt-2">
-                                <Label>Assign Roles</Label>
+                                <Label>{__('Assign Roles')}</Label>
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     {availableRoles.map((role) => {
                                         const isChecked =
@@ -129,7 +135,7 @@ export default function UsersCreate({
                                         return (
                                             <div
                                                 key={role}
-                                                className="flex items-center space-x-2 rounded-lg border p-3"
+                                                className="flex items-center gap-2 rounded-lg border p-3"
                                             >
                                                 <Checkbox
                                                     id={`role-${role}`}
@@ -171,11 +177,11 @@ export default function UsersCreate({
 
                     <div className="flex items-center gap-4 pt-4">
                         <Button type="submit" disabled={form.processing}>
-                            Create User
+                            {__('Create User')}
                         </Button>
 
                         <Button type="button" variant="outline" asChild>
-                            <Link href={index.url()}>Cancel</Link>
+                            <Link href={index.url()}>{__('Cancel')}</Link>
                         </Button>
                     </div>
                 </form>
