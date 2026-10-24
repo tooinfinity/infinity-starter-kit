@@ -83,7 +83,7 @@ final class HandleInertiaRequests extends Middleware
                             'read_at' => $notification->read_at?->toISOString(),
                             'created_at' => $notification->created_at?->toISOString() ?? '',
                         ])
-                        ->all())
+                        ->all())->once()
                     : [],
             ],
             /* @end-chisel-notifications */

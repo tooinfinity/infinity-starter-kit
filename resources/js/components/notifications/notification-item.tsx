@@ -57,6 +57,11 @@ export function NotificationItem({
             {},
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    if (compact) {
+                        router.reload({ only: ['notifications.recent'] });
+                    }
+                },
             },
         );
     };
@@ -97,7 +102,7 @@ export function NotificationItem({
                     >
                         {notification.title}
                     </p>
-                    <span className="text-[10px] whitespace-nowrap text-muted-foreground">
+                    <span className="text-[10px] whitespace-nowrap text-muted-foreground tabular-nums">
                         {formatRelativeTime(
                             notification.created_at,
                             locale,

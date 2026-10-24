@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { CheckCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { NotificationEmptyState } from '@/components/notifications/notification-empty-state';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import { Button } from '@/components/ui/button';
@@ -8,26 +9,40 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { index, markAllRead } from '@/routes/notifications';
 
 function NotificationItemSkeleton() {
     return (
         <div className="flex items-start gap-3 rounded-lg p-3">
             <Skeleton className="mt-0.5 h-8 w-8 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center justify-between gap-2">
                     <Skeleton className="h-3.5 w-24" />
                     <Skeleton className="h-3 w-12" />
                 </div>
-                <Skeleton className="h-3 w-3/4" />
+                <div className="space-y-1 pt-0.5">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                </div>
             </div>
+            <Skeleton className="h-7 w-7 shrink-0 rounded-md" />
         </div>
     );
 }
 
-function NotificationDropdownSkeleton() {
+function NotificationDropdownSkeleton({
+    className,
+    'aria-hidden': ariaHidden,
+}: {
+    className?: string;
+    'aria-hidden'?: boolean | 'true' | 'false';
+}) {
     return (
-        <div className="divide-y divide-border/40">
+        <div
+            className={cn('divide-y divide-border/40', className)}
+            aria-hidden={ariaHidden}
+        >
             <NotificationItemSkeleton />
             <NotificationItemSkeleton />
             <NotificationItemSkeleton />
@@ -43,14 +58,34 @@ export function NotificationDropdown({ onClose }: Props) {
     const { notifications } = usePage().props;
     const recent = notifications?.recent;
     const unreadCount = notifications?.unreadCount ?? 0;
+    const [showSkeleton, setShowSkeleton] = useState(false);
+    const [isMarkingAll, setIsMarkingAll] = useState(false);
+
+    useEffect(() => {
+        if (recent !== undefined) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setShowSkeleton(true);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [recent]);
+
+    const isSkeletonVisible = recent === undefined && showSkeleton;
 
     const handleMarkAllAsRead = (e: React.MouseEvent) => {
         e.preventDefault();
+        setIsMarkingAll(true);
         router.patch(
             markAllRead().url,
             {},
             {
                 preserveScroll: true,
+                onFinish: () => {
+                    setIsMarkingAll(false);
+                },
                 onSuccess: () => {
                     router.reload({ only: ['notifications.recent'] });
                 },
@@ -68,7 +103,7 @@ export function NotificationDropdown({ onClose }: Props) {
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">Notifications</span>
                     {unreadCount > 0 && (
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary tabular-nums">
                             {unreadCount} unread
                         </span>
                     )}
@@ -77,6 +112,7 @@ export function NotificationDropdown({ onClose }: Props) {
                     <Button
                         variant="ghost"
                         size="sm"
+                        disabled={isMarkingAll}
                         className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                         onClick={handleMarkAllAsRead}
                     >
@@ -88,7 +124,10 @@ export function NotificationDropdown({ onClose }: Props) {
 
             <div className="max-h-[350px] divide-y divide-border/40 overflow-y-auto p-1">
                 {recent === undefined ? (
-                    <NotificationDropdownSkeleton />
+                    <NotificationDropdownSkeleton
+                        className={isSkeletonVisible ? undefined : 'invisible'}
+                        aria-hidden={!isSkeletonVisible}
+                    />
                 ) : recent.length === 0 ? (
                     <NotificationEmptyState
                         title="No notifications"
