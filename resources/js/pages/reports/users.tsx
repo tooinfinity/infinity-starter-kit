@@ -20,7 +20,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
+import { formatDate } from '@/lib/formatters';
 import { index as reportsIndex, users as reportsUsers } from '@/routes/reports';
 import { exportMethod as reportsUsersExport } from '@/routes/reports/users';
 import type { BreadcrumbItem } from '@/types';
@@ -30,17 +32,6 @@ import type {
     ReportTimeSeriesPoint,
     UserReportFilters,
 } from '@/types/reports';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Reports',
-        href: reportsIndex(),
-    },
-    {
-        title: 'User Activity & Growth',
-        href: reportsUsers(),
-    },
-];
 
 interface UserReportPageProps {
     summary: ReportSummaryCard[];
@@ -55,11 +46,23 @@ export default function UserReportPage({
     users,
     filters,
 }: UserReportPageProps) {
-    const { timezone } = usePage().props;
+    const { timezone, locale } = usePage().props;
+    const { __ } = useTranslation();
     const [dateFrom, setDateFrom] = useState(filters.date_from);
     const [dateTo, setDateTo] = useState(filters.date_to);
     const [status, setStatus] = useState(filters.status ?? 'all');
     const [search, setSearch] = useState(filters.search ?? '');
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Reports'),
+            href: reportsIndex(),
+        },
+        {
+            title: __('User Activity & Growth'),
+            href: reportsUsers(),
+        },
+    ];
 
     const handleFilterSubmit = (e?: FormEvent) => {
         if (e) {
@@ -97,13 +100,15 @@ export default function UserReportPage({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="User Activity & Growth Report" />
+            <Head title={__('User Activity & Growth Report')} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <Heading
-                        title="User Activity & Growth"
-                        description="Analyze user registrations, active states, and growth patterns."
+                        title={__('User Activity & Growth')}
+                        description={__(
+                            'Analyze user registrations, active states, and growth patterns.',
+                        )}
                     />
 
                     <Can permission="reports.export">
@@ -115,7 +120,7 @@ export default function UserReportPage({
                         >
                             <a href={exportUrl} download>
                                 <Download className="size-4" />
-                                <span>Export CSV</span>
+                                <span>{__('Export CSV')}</span>
                             </a>
                         </Button>
                     </Can>
@@ -126,10 +131,12 @@ export default function UserReportPage({
 
                 {/* Visual Trend Chart */}
                 <ReportChart
-                    title="User Registrations Over Time"
-                    description="Daily count of new user accounts created during the selected period"
+                    title={__('User Registrations Over Time')}
+                    description={__(
+                        'Daily count of new user accounts created during the selected period',
+                    )}
                     series={series}
-                    metricLabel="Users"
+                    metricLabel={__('Users')}
                 />
 
                 {/* Filter Controls */}
@@ -151,7 +158,7 @@ export default function UserReportPage({
                                     htmlFor="user-status-filter"
                                     className="text-xs"
                                 >
-                                    Status
+                                    {__('Status')}
                                 </Label>
                                 <Select
                                     value={status}
@@ -161,17 +168,19 @@ export default function UserReportPage({
                                         id="user-status-filter"
                                         className="h-9 text-xs"
                                     >
-                                        <SelectValue placeholder="Status" />
+                                        <SelectValue
+                                            placeholder={__('Status')}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">
-                                            All Statuses
+                                            {__('All Statuses')}
                                         </SelectItem>
                                         <SelectItem value="active">
-                                            Active
+                                            {__('Active')}
                                         </SelectItem>
                                         <SelectItem value="inactive">
-                                            Inactive
+                                            {__('Inactive')}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -182,26 +191,28 @@ export default function UserReportPage({
                                     htmlFor="user-search-filter"
                                     className="text-xs"
                                 >
-                                    Search
+                                    {__('Search')}
                                 </Label>
                                 <div className="relative">
-                                    <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+                                    <Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" />
                                     <Input
                                         id="user-search-filter"
                                         type="text"
-                                        placeholder="Search by name or email..."
+                                        placeholder={__(
+                                            'Search by name or email...',
+                                        )}
                                         value={search}
                                         onChange={(e) =>
                                             setSearch(e.target.value)
                                         }
-                                        className="h-9 pl-9 text-xs"
+                                        className="h-9 ps-9 text-xs"
                                     />
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <Button type="submit" size="sm" className="h-9">
-                                    Filter
+                                    {__('Filter')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -211,7 +222,7 @@ export default function UserReportPage({
                                     className="h-9 gap-1.5"
                                 >
                                     <FilterX className="size-3.5" />
-                                    <span>Reset</span>
+                                    <span>{__('Reset')}</span>
                                 </Button>
                             </div>
                         </form>
@@ -220,16 +231,20 @@ export default function UserReportPage({
 
                 {/* Tabular Records */}
                 <div className="overflow-x-auto rounded-xl border border-sidebar-border/70 bg-card dark:border-sidebar-border">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full text-start text-sm">
                         <thead className="border-b bg-muted/40 text-xs text-muted-foreground uppercase">
                             <tr>
-                                <th className="px-4 py-3 font-medium">User</th>
                                 <th className="px-4 py-3 font-medium">
-                                    Status
+                                    {__('User')}
                                 </th>
-                                <th className="px-4 py-3 font-medium">Roles</th>
+                                <th className="px-4 py-3 font-medium">
+                                    {__('Status')}
+                                </th>
+                                <th className="px-4 py-3 font-medium">
+                                    {__('Roles')}
+                                </th>
                                 <th className="px-4 py-3 text-end font-medium">
-                                    Registered
+                                    {__('Registered')}
                                 </th>
                             </tr>
                         </thead>
@@ -239,8 +254,10 @@ export default function UserReportPage({
                                     <td colSpan={4} className="h-48 p-0">
                                         <TableEmptyState
                                             icon={UsersIcon}
-                                            title="No users found"
-                                            description="No user registrations match the selected filters."
+                                            title={__('No users found')}
+                                            description={__(
+                                                'No user registrations match the selected filters.',
+                                            )}
                                         />
                                     </td>
                                 </tr>
@@ -264,14 +281,14 @@ export default function UserReportPage({
                                                     variant="outline"
                                                     className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                                                 >
-                                                    Active
+                                                    {__('Active')}
                                                 </Badge>
                                             ) : (
                                                 <Badge
                                                     variant="outline"
                                                     className="border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
                                                 >
-                                                    Inactive
+                                                    {__('Inactive')}
                                                 </Badge>
                                             )}
                                         </td>
@@ -295,14 +312,11 @@ export default function UserReportPage({
                                             </div>
                                         </td>
                                         <td className="px-4 py-3.5 text-end text-xs text-muted-foreground">
-                                            {new Date(
+                                            {formatDate(
                                                 user.created_at,
-                                            ).toLocaleDateString(undefined, {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric',
-                                                timeZone: timezone || undefined,
-                                            })}
+                                                locale,
+                                                timezone,
+                                            )}
                                         </td>
                                     </tr>
                                 ))

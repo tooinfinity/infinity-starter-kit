@@ -16,7 +16,9 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useInitials } from '@/hooks/use-initials';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
+import { formatDateTime } from '@/lib/formatters';
 import { index as auditTrailsIndex } from '@/routes/audit-trails';
 import type { BreadcrumbItem } from '@/types';
 import type {
@@ -26,13 +28,6 @@ import type {
     AvailableEvent,
     PaginatedAuditTrails,
 } from '@/types/audit-trails';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Audit Trails',
-        href: auditTrailsIndex(),
-    },
-];
 
 type Props = {
     auditTrails: PaginatedAuditTrails;
@@ -45,7 +40,8 @@ export default function AuditTrailsIndex({
     filters,
     availableEvents,
 }: Props) {
-    const { timezone } = usePage().props;
+    const { locale, timezone } = usePage().props;
+    const { __ } = useTranslation();
     const [search, setSearch] = useState(filters.search ?? '');
     const [event, setEvent] = useState(filters.event ?? 'all');
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? '');
@@ -53,6 +49,13 @@ export default function AuditTrailsIndex({
     const [selectedAudit, setSelectedAudit] = useState<AuditTrailItem | null>(
         null,
     );
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Audit Trails'),
+            href: auditTrailsIndex(),
+        },
+    ];
 
     const getInitials = useInitials();
 
@@ -154,7 +157,7 @@ export default function AuditTrailsIndex({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Audit Trails" />
+            <Head title={__('Audit Trails')} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
@@ -162,19 +165,22 @@ export default function AuditTrailsIndex({
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
                             <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                                Audit Trails
+                                {__('Audit Trails')}
                             </h1>
                             <Badge
                                 variant="secondary"
                                 className="text-xs font-medium"
                             >
                                 {auditTrails.total ?? 0}{' '}
-                                {auditTrails.total === 1 ? 'record' : 'records'}
+                                {auditTrails.total === 1
+                                    ? __('record')
+                                    : __('records')}
                             </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            Track and monitor administrative and security
-                            events.
+                            {__(
+                                'Track and monitor administrative and security events.',
+                            )}
                         </p>
                     </div>
                 </div>
@@ -184,20 +190,22 @@ export default function AuditTrailsIndex({
                     <form onSubmit={handleFilterSubmit} className="space-y-3">
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <div className="relative">
-                                <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+                                <Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by IP, target ID, or user..."
+                                    placeholder={__(
+                                        'Search by IP, target ID, or user...',
+                                    )}
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="pr-8 pl-8"
+                                    className="ps-8 pe-8"
                                     data-test="audit-search-input"
                                 />
                                 {search && (
                                     <button
                                         type="button"
                                         onClick={handleClearSearch}
-                                        className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground"
-                                        aria-label="Clear search"
+                                        className="absolute end-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                                        aria-label={__('Clear search')}
                                     >
                                         <X className="size-4" />
                                     </button>
@@ -215,18 +223,20 @@ export default function AuditTrailsIndex({
                                         className="w-full"
                                         data-test="audit-event-select"
                                     >
-                                        <SelectValue placeholder="All Events" />
+                                        <SelectValue
+                                            placeholder={__('All Events')}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">
-                                            All Events
+                                            {__('All Events')}
                                         </SelectItem>
                                         {availableEvents.map((evt) => (
                                             <SelectItem
                                                 key={evt.value}
                                                 value={evt.value}
                                             >
-                                                {evt.label}
+                                                {__(evt.label)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -236,12 +246,12 @@ export default function AuditTrailsIndex({
                             <div>
                                 <Input
                                     type="date"
-                                    placeholder="From Date"
+                                    placeholder={__('From Date')}
                                     value={dateFrom}
                                     onChange={(e) =>
                                         setDateFrom(e.target.value)
                                     }
-                                    aria-label="From Date"
+                                    aria-label={__('From Date')}
                                     data-test="audit-date-from"
                                 />
                             </div>
@@ -249,10 +259,10 @@ export default function AuditTrailsIndex({
                             <div>
                                 <Input
                                     type="date"
-                                    placeholder="To Date"
+                                    placeholder={__('To Date')}
                                     value={dateTo}
                                     onChange={(e) => setDateTo(e.target.value)}
-                                    aria-label="To Date"
+                                    aria-label={__('To Date')}
                                     data-test="audit-date-to"
                                 />
                             </div>
@@ -269,7 +279,7 @@ export default function AuditTrailsIndex({
                                     data-test="audit-reset-filters"
                                 >
                                     <FilterX className="size-3.5" />
-                                    Reset
+                                    {__('Reset')}
                                 </Button>
                             )}
                             <Button
@@ -278,7 +288,7 @@ export default function AuditTrailsIndex({
                                 className="text-xs"
                                 data-test="audit-filter-submit"
                             >
-                                Apply Filters
+                                {__('Apply Filters')}
                             </Button>
                         </div>
                     </form>
@@ -287,16 +297,26 @@ export default function AuditTrailsIndex({
                 {/* Audit Trails Table */}
                 <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full text-start text-sm">
                             <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 <tr>
-                                    <th className="px-4 py-3.5">Event</th>
-                                    <th className="px-4 py-3.5">Actor</th>
-                                    <th className="px-4 py-3.5">Target</th>
-                                    <th className="px-4 py-3.5">IP Address</th>
-                                    <th className="px-4 py-3.5">Timestamp</th>
-                                    <th className="px-4 py-3.5 text-right">
-                                        Actions
+                                    <th className="px-4 py-3.5">
+                                        {__('Event')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('Actor')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('Target')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('IP Address')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('Timestamp')}
+                                    </th>
+                                    <th className="px-4 py-3.5 text-end">
+                                        {__('Actions')}
                                     </th>
                                 </tr>
                             </thead>
@@ -308,13 +328,21 @@ export default function AuditTrailsIndex({
                                                 icon={History}
                                                 title={
                                                     hasActiveFilters
-                                                        ? 'No matching audit records'
-                                                        : 'No audit trails found'
+                                                        ? __(
+                                                              'No matching audit records',
+                                                          )
+                                                        : __(
+                                                              'No audit trails found',
+                                                          )
                                                 }
                                                 description={
                                                     hasActiveFilters
-                                                        ? 'No events matched your filter criteria. Try changing or clearing your filters.'
-                                                        : 'Events will appear here as system actions are performed.'
+                                                        ? __(
+                                                              'No events matched your filter criteria. Try changing or clearing your filters.',
+                                                          )
+                                                        : __(
+                                                              'Events will appear here as system actions are performed.',
+                                                          )
                                                 }
                                                 action={
                                                     hasActiveFilters ? (
@@ -328,7 +356,9 @@ export default function AuditTrailsIndex({
                                                             className="gap-1.5 text-xs"
                                                         >
                                                             <FilterX className="size-3.5" />
-                                                            Reset filters
+                                                            {__(
+                                                                'Reset filters',
+                                                            )}
                                                         </Button>
                                                     ) : undefined
                                                 }
@@ -347,7 +377,9 @@ export default function AuditTrailsIndex({
                                                     <div>
                                                         {renderEventBadge(
                                                             audit.event,
-                                                            audit.event_label,
+                                                            __(
+                                                                audit.event_label,
+                                                            ),
                                                         )}
                                                     </div>
                                                     <span className="font-mono text-xs text-muted-foreground">
@@ -402,7 +434,9 @@ export default function AuditTrailsIndex({
                                                                     variant="outline"
                                                                     className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
                                                                 >
-                                                                    Deleted
+                                                                    {__(
+                                                                        'Deleted',
+                                                                    )}
                                                                 </Badge>
                                                             </div>
                                                             {audit.actor_email && (
@@ -419,7 +453,7 @@ export default function AuditTrailsIndex({
                                                         variant="secondary"
                                                         className="text-xs font-normal"
                                                     >
-                                                        System
+                                                        {__('System')}
                                                     </Badge>
                                                 )}
                                             </td>
@@ -446,15 +480,14 @@ export default function AuditTrailsIndex({
                                             </td>
 
                                             <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                                                {new Date(
+                                                {formatDateTime(
                                                     audit.created_at,
-                                                ).toLocaleString(undefined, {
-                                                    timeZone:
-                                                        timezone || undefined,
-                                                })}
+                                                    locale,
+                                                    timezone,
+                                                )}
                                             </td>
 
-                                            <td className="px-4 py-3.5 text-right">
+                                            <td className="px-4 py-3.5 text-end">
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -465,7 +498,7 @@ export default function AuditTrailsIndex({
                                                     data-test={`view-audit-${audit.id}`}
                                                 >
                                                     <Eye className="size-3.5" />
-                                                    Details
+                                                    {__('Details')}
                                                 </Button>
                                             </td>
                                         </tr>

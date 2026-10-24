@@ -51,7 +51,9 @@ import {
 } from '@/components/ui/select';
 import { UserStatusBadge } from '@/components/users/user-status-badge';
 import { useInitials } from '@/hooks/use-initials';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
+import { formatDate } from '@/lib/formatters';
 import { create, edit, index } from '@/routes/users';
 import type {
     BreadcrumbItem,
@@ -59,13 +61,6 @@ import type {
     UserFilters,
     UserListItem,
 } from '@/types';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'User Management',
-        href: index(),
-    },
-];
 
 export default function UsersIndex({
     users,
@@ -76,13 +71,21 @@ export default function UsersIndex({
     filters: UserFilters;
     availableRoles: string[];
 }) {
-    const { timezone } = usePage().props;
+    const { locale, timezone } = usePage().props;
+    const { __, transChoice } = useTranslation();
     const [search, setSearch] = useState(filters.search ?? '');
     const [status, setStatus] = useState(filters.status ?? 'all');
     const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
     const [passwordTarget, setPasswordTarget] = useState<UserListItem | null>(
         null,
     );
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('User Management'),
+            href: index(),
+        },
+    ];
 
     const getInitials = useInitials();
 
@@ -186,27 +189,29 @@ export default function UsersIndex({
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
                             <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                                User Management
+                                {__('User Management')}
                             </h1>
                             <Badge
                                 variant="secondary"
                                 className="text-xs font-medium"
                             >
-                                {users.total ?? 0}{' '}
-                                {users.total === 1 ? 'user' : 'users'}
+                                {transChoice('users.total', users.total ?? 0, {
+                                    count: users.total ?? 0,
+                                })}
                             </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            Manage user accounts, roles, permissions, and
-                            security.
+                            {__(
+                                'Manage user accounts, roles, permissions, and security.',
+                            )}
                         </p>
                     </div>
 
                     <Can permission="users.create">
                         <Button asChild className="self-start sm:self-auto">
                             <Link href={create.url()}>
-                                <Plus className="mr-2 size-4" />
-                                Add User
+                                <Plus className="me-2 size-4" />
+                                {__('Add User')}
                             </Link>
                         </Button>
                     </Can>
@@ -218,19 +223,21 @@ export default function UsersIndex({
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {/* Search */}
                             <div className="relative lg:col-span-2">
-                                <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+                                <Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by name or email..."
+                                    placeholder={__(
+                                        'Search by name or email...',
+                                    )}
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="pr-8 pl-8"
+                                    className="ps-8 pe-8"
                                 />
                                 {search && (
                                     <button
                                         type="button"
                                         onClick={handleClearSearch}
-                                        className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground"
-                                        aria-label="Clear search"
+                                        className="absolute end-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                                        aria-label={__('Clear search')}
                                     >
                                         <X className="size-4" />
                                     </button>
@@ -246,17 +253,19 @@ export default function UsersIndex({
                                     }
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="All Statuses" />
+                                        <SelectValue
+                                            placeholder={__('All Statuses')}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">
-                                            All Statuses
+                                            {__('All Statuses')}
                                         </SelectItem>
                                         <SelectItem value="active">
-                                            Active
+                                            {__('Active')}
                                         </SelectItem>
                                         <SelectItem value="inactive">
-                                            Inactive
+                                            {__('Inactive')}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -273,11 +282,11 @@ export default function UsersIndex({
                                     className="gap-1 text-xs"
                                 >
                                     <FilterX className="size-3.5" />
-                                    Reset
+                                    {__('Reset')}
                                 </Button>
                             )}
                             <Button type="submit" size="sm" className="text-xs">
-                                Apply Filters
+                                {__('Apply Filters')}
                             </Button>
                         </div>
                     </form>
@@ -286,15 +295,23 @@ export default function UsersIndex({
                 {/* Table */}
                 <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full text-start text-sm">
                             <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 <tr>
-                                    <th className="px-4 py-3.5">User</th>
-                                    <th className="px-4 py-3.5">Status</th>
-                                    <th className="px-4 py-3.5">Roles</th>
-                                    <th className="px-4 py-3.5">Joined</th>
-                                    <th className="px-4 py-3.5 text-right">
-                                        Actions
+                                    <th className="px-4 py-3.5">
+                                        {__('User')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('Status')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('Roles')}
+                                    </th>
+                                    <th className="px-4 py-3.5">
+                                        {__('Joined')}
+                                    </th>
+                                    <th className="px-4 py-3.5 text-end">
+                                        {__('Actions')}
                                     </th>
                                 </tr>
                             </thead>
@@ -306,13 +323,19 @@ export default function UsersIndex({
                                                 icon={Users}
                                                 title={
                                                     hasActiveFilters
-                                                        ? 'No matching users found'
-                                                        : 'No users yet'
+                                                        ? __(
+                                                              'No matching users found',
+                                                          )
+                                                        : __('No users yet')
                                                 }
                                                 description={
                                                     hasActiveFilters
-                                                        ? 'Try adjusting or clearing your search or filter options.'
-                                                        : 'Get started by creating your first user account.'
+                                                        ? __(
+                                                              'Try adjusting or clearing your search or filter options.',
+                                                          )
+                                                        : __(
+                                                              'Get started by creating your first user account.',
+                                                          )
                                                 }
                                                 action={
                                                     hasActiveFilters ? (
@@ -326,7 +349,9 @@ export default function UsersIndex({
                                                             className="gap-1.5 text-xs"
                                                         >
                                                             <FilterX className="size-3.5" />
-                                                            Reset filters
+                                                            {__(
+                                                                'Reset filters',
+                                                            )}
                                                         </Button>
                                                     ) : (
                                                         <Can permission="users.create">
@@ -339,7 +364,9 @@ export default function UsersIndex({
                                                                     href={create.url()}
                                                                 >
                                                                     <Plus className="size-3.5" />
-                                                                    Add User
+                                                                    {__(
+                                                                        'Add User',
+                                                                    )}
                                                                 </Link>
                                                             </Button>
                                                         </Can>
@@ -392,7 +419,7 @@ export default function UsersIndex({
                                                                     variant="secondary"
                                                                     className="text-xs font-normal"
                                                                 >
-                                                                    <Shield className="mr-1 size-3 text-muted-foreground" />
+                                                                    <Shield className="me-1 size-3 text-muted-foreground" />
                                                                     {role}
                                                                 </Badge>
                                                             ),
@@ -401,18 +428,13 @@ export default function UsersIndex({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                                                {new Date(
+                                                {formatDate(
                                                     user.created_at,
-                                                ).toLocaleDateString(
-                                                    undefined,
-                                                    {
-                                                        timeZone:
-                                                            timezone ||
-                                                            undefined,
-                                                    },
+                                                    locale,
+                                                    timezone,
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3.5 text-right">
+                                            <td className="px-4 py-3.5 text-end">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
                                                         asChild
@@ -424,7 +446,9 @@ export default function UsersIndex({
                                                         >
                                                             <MoreHorizontal className="size-4" />
                                                             <span className="sr-only">
-                                                                Open menu
+                                                                {__(
+                                                                    'Open menu',
+                                                                )}
                                                             </span>
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -443,8 +467,10 @@ export default function UsersIndex({
                                                                         },
                                                                     )}
                                                                 >
-                                                                    <Edit className="mr-2 size-4" />
-                                                                    Edit User
+                                                                    <Edit className="me-2 size-4" />
+                                                                    {__(
+                                                                        'Edit User',
+                                                                    )}
                                                                 </Link>
                                                             </DropdownMenuItem>
                                                         </Can>
@@ -457,8 +483,10 @@ export default function UsersIndex({
                                                                     )
                                                                 }
                                                             >
-                                                                <KeyRound className="mr-2 size-4" />
-                                                                Change Password
+                                                                <KeyRound className="me-2 size-4" />
+                                                                {__(
+                                                                    'Change Password',
+                                                                )}
                                                             </DropdownMenuItem>
                                                         </Can>
 
@@ -471,8 +499,10 @@ export default function UsersIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <UserX className="mr-2 size-4 text-amber-500" />
-                                                                    Deactivate
+                                                                    <UserX className="me-2 size-4 text-amber-500" />
+                                                                    {__(
+                                                                        'Deactivate',
+                                                                    )}
                                                                 </DropdownMenuItem>
                                                             ) : (
                                                                 <DropdownMenuItem
@@ -482,8 +512,10 @@ export default function UsersIndex({
                                                                         )
                                                                     }
                                                                 >
-                                                                    <UserCheck className="mr-2 size-4 text-emerald-500" />
-                                                                    Activate
+                                                                    <UserCheck className="me-2 size-4 text-emerald-500" />
+                                                                    {__(
+                                                                        'Activate',
+                                                                    )}
                                                                 </DropdownMenuItem>
                                                             )}
                                                         </Can>
@@ -498,8 +530,10 @@ export default function UsersIndex({
                                                                 }
                                                                 className="text-destructive focus:text-destructive"
                                                             >
-                                                                <Trash2 className="mr-2 size-4" />
-                                                                Delete User
+                                                                <Trash2 className="me-2 size-4" />
+                                                                {__(
+                                                                    'Delete User',
+                                                                )}
                                                             </DropdownMenuItem>
                                                         </Can>
                                                     </DropdownMenuContent>
@@ -530,13 +564,11 @@ export default function UsersIndex({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Change Password</DialogTitle>
+                        <DialogTitle>{__('Change Password')}</DialogTitle>
                         <DialogDescription>
-                            Set a new password for{' '}
-                            <span className="font-semibold text-foreground">
-                                {passwordTarget?.name}
-                            </span>
-                            .
+                            {__('Set a new password for :name.', {
+                                name: passwordTarget?.name ?? '',
+                            })}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -546,7 +578,7 @@ export default function UsersIndex({
                     >
                         <div className="space-y-2">
                             <Label htmlFor="admin-new-password">
-                                New Password
+                                {__('New Password')}
                             </Label>
                             <Input
                                 id="admin-new-password"
@@ -572,13 +604,13 @@ export default function UsersIndex({
                                 variant="outline"
                                 onClick={() => setPasswordTarget(null)}
                             >
-                                Cancel
+                                {__('Cancel')}
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={passwordForm.processing}
                             >
-                                Update Password
+                                {__('Update Password')}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -592,13 +624,12 @@ export default function UsersIndex({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete User</DialogTitle>
+                        <DialogTitle>{__('Delete User')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete{' '}
-                            <span className="font-semibold text-foreground">
-                                {deleteTarget?.name}
-                            </span>
-                            ? This action cannot be undone.
+                            {__(
+                                'Are you sure you want to delete :name? This action cannot be undone.',
+                                { name: deleteTarget?.name ?? '' },
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -607,14 +638,14 @@ export default function UsersIndex({
                             variant="outline"
                             onClick={() => setDeleteTarget(null)}
                         >
-                            Cancel
+                            {__('Cancel')}
                         </Button>
                         <Button
                             type="button"
                             variant="destructive"
                             onClick={handleDeleteConfirm}
                         >
-                            Delete
+                            {__('Delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

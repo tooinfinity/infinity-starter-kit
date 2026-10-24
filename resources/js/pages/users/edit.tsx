@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserStatusBadge } from '@/components/users/user-status-badge';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import { edit, index } from '@/routes/users';
 import type { BreadcrumbItem, UserListItem } from '@/types';
@@ -29,15 +30,16 @@ export default function UsersEdit({
     user: UserListItem;
     availableRoles: string[];
 }) {
+    const { __ } = useTranslation();
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'User Management',
+            title: __('User Management'),
             href: index(),
         },
         {
-            title: `Edit ${user.name}`,
+            title: __('Edit :name', { name: user.name }),
             href: edit.url({ user: user.id }),
         },
     ];
@@ -70,20 +72,22 @@ export default function UsersEdit({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Edit ${user.name}`} />
+            <Head title={__('Edit :name', { name: user.name })} />
 
             <div className="max-w-2xl space-y-8">
                 <div className="flex items-center justify-between">
                     <Heading
-                        title={`Edit ${user.name}`}
-                        description="Update account information and role assignments."
+                        title={__('Edit :name', { name: user.name })}
+                        description={__(
+                            'Update account information and role assignments.',
+                        )}
                     />
                     <UserStatusBadge isActive={user.is_active} />
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="user-name">Name</Label>
+                        <Label htmlFor="user-name">{__('Name')}</Label>
                         <Input
                             id="user-name"
                             name="name"
@@ -98,7 +102,9 @@ export default function UsersEdit({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="user-email">Email Address</Label>
+                        <Label htmlFor="user-email">
+                            {__('Email Address')}
+                        </Label>
                         <Input
                             id="user-email"
                             name="email"
@@ -116,7 +122,7 @@ export default function UsersEdit({
                     <Can permission="users.manage-roles">
                         {availableRoles.length > 0 && (
                             <div className="space-y-3 pt-2">
-                                <Label>Assigned Roles</Label>
+                                <Label>{__('Assigned Roles')}</Label>
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     {availableRoles.map((role) => {
                                         const isChecked =
@@ -125,7 +131,7 @@ export default function UsersEdit({
                                         return (
                                             <div
                                                 key={role}
-                                                className="flex items-center space-x-2 rounded-lg border p-3"
+                                                className="flex items-center gap-2 rounded-lg border p-3"
                                             >
                                                 <Checkbox
                                                     id={`role-${role}`}
@@ -168,11 +174,11 @@ export default function UsersEdit({
                     <div className="flex items-center justify-between border-t pt-4">
                         <div className="flex items-center gap-4">
                             <Button type="submit" disabled={form.processing}>
-                                Save Changes
+                                {__('Save Changes')}
                             </Button>
 
                             <Button type="button" variant="outline" asChild>
-                                <Link href={index.url()}>Cancel</Link>
+                                <Link href={index.url()}>{__('Cancel')}</Link>
                             </Button>
                         </div>
 
@@ -182,7 +188,7 @@ export default function UsersEdit({
                                 variant="secondary"
                                 onClick={() => setIsPasswordModalOpen(true)}
                             >
-                                Change Password
+                                {__('Change Password')}
                             </Button>
                         </Can>
                     </div>
@@ -196,13 +202,11 @@ export default function UsersEdit({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Change Password</DialogTitle>
+                        <DialogTitle>{__('Change Password')}</DialogTitle>
                         <DialogDescription>
-                            Set a new password for{' '}
-                            <span className="font-semibold text-foreground">
-                                {user.name}
-                            </span>
-                            .
+                            {__('Set a new password for :name.', {
+                                name: user.name,
+                            })}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -212,7 +216,7 @@ export default function UsersEdit({
                     >
                         <div className="space-y-2">
                             <Label htmlFor="admin-new-password">
-                                New Password
+                                {__('New Password')}
                             </Label>
                             <Input
                                 id="admin-new-password"
@@ -238,13 +242,13 @@ export default function UsersEdit({
                                 variant="outline"
                                 onClick={() => setIsPasswordModalOpen(false)}
                             >
-                                Cancel
+                                {__('Cancel')}
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={passwordForm.processing}
                             >
-                                Update Password
+                                {__('Update Password')}
                             </Button>
                         </DialogFooter>
                     </form>

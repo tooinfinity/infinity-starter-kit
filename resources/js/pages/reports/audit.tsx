@@ -26,7 +26,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
+import { formatDateTime } from '@/lib/formatters';
 import { audit as reportsAudit, index as reportsIndex } from '@/routes/reports';
 import { exportMethod as reportsAuditExport } from '@/routes/reports/audit';
 import type { BreadcrumbItem } from '@/types';
@@ -38,17 +40,6 @@ import type {
     ReportSummaryCard,
     ReportTimeSeriesPoint,
 } from '@/types/reports';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Reports',
-        href: reportsIndex(),
-    },
-    {
-        title: 'Audit Trail Activity',
-        href: reportsAudit(),
-    },
-];
 
 interface AuditReportPageProps {
     summary: ReportSummaryCard[];
@@ -67,11 +58,23 @@ export default function AuditReportPage({
     availableEvents,
     filters,
 }: AuditReportPageProps) {
-    const { timezone } = usePage().props;
+    const { timezone, locale } = usePage().props;
+    const { __ } = useTranslation();
     const [dateFrom, setDateFrom] = useState(filters.date_from);
     const [dateTo, setDateTo] = useState(filters.date_to);
     const [event, setEvent] = useState(filters.event ?? 'all');
     const [search, setSearch] = useState(filters.search ?? '');
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Reports'),
+            href: reportsIndex(),
+        },
+        {
+            title: __('Audit Trail Activity'),
+            href: reportsAudit(),
+        },
+    ];
 
     const handleFilterSubmit = (e?: FormEvent) => {
         if (e) {
@@ -109,13 +112,15 @@ export default function AuditReportPage({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Audit Trail Activity Report" />
+            <Head title={__('Audit Trail Activity Report')} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <Heading
-                        title="Audit Trail Activity"
-                        description="Track administrative actions, user security events, and audit volume."
+                        title={__('Audit Trail Activity')}
+                        description={__(
+                            'Track administrative actions, user security events, and audit volume.',
+                        )}
                     />
 
                     <Can permission="reports.export">
@@ -127,7 +132,7 @@ export default function AuditReportPage({
                         >
                             <a href={exportUrl} download>
                                 <Download className="size-4" />
-                                <span>Export CSV</span>
+                                <span>{__('Export CSV')}</span>
                             </a>
                         </Button>
                     </Can>
@@ -140,27 +145,30 @@ export default function AuditReportPage({
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <div className="lg:col-span-2">
                         <ReportChart
-                            title="Audit Events Over Time"
-                            description="Daily count of logged events across the application"
+                            title={__('Audit Events Over Time')}
+                            description={__(
+                                'Daily count of logged events across the application',
+                            )}
                             series={series}
-                            metricLabel="Events"
+                            metricLabel={__('Events')}
                         />
                     </div>
 
                     <Card className="border-sidebar-border/70 dark:border-sidebar-border">
                         <CardHeader>
                             <CardTitle className="text-base font-semibold">
-                                Event Distribution
+                                {__('Event Distribution')}
                             </CardTitle>
                             <CardDescription>
-                                Breakdown of events by category during the
-                                selected period
+                                {__(
+                                    'Breakdown of events by category during the selected period',
+                                )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {breakdown.length === 0 ? (
                                 <p className="text-xs text-muted-foreground">
-                                    No event breakdown data available.
+                                    {__('No event breakdown data available.')}
                                 </p>
                             ) : (
                                 breakdown.map((item) => (
@@ -208,18 +216,20 @@ export default function AuditReportPage({
                                     htmlFor="audit-event-filter"
                                     className="text-xs"
                                 >
-                                    Event Type
+                                    {__('Event Type')}
                                 </Label>
                                 <Select value={event} onValueChange={setEvent}>
                                     <SelectTrigger
                                         id="audit-event-filter"
                                         className="h-9 text-xs"
                                     >
-                                        <SelectValue placeholder="Event Type" />
+                                        <SelectValue
+                                            placeholder={__('Event Type')}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">
-                                            All Events
+                                            {__('All Events')}
                                         </SelectItem>
                                         {availableEvents.map((evt) => (
                                             <SelectItem
@@ -238,26 +248,28 @@ export default function AuditReportPage({
                                     htmlFor="audit-search-filter"
                                     className="text-xs"
                                 >
-                                    Search
+                                    {__('Search')}
                                 </Label>
                                 <div className="relative">
-                                    <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+                                    <Search className="absolute start-2.5 top-2.5 size-4 text-muted-foreground" />
                                     <Input
                                         id="audit-search-filter"
                                         type="text"
-                                        placeholder="Search by IP, URL, or resource..."
+                                        placeholder={__(
+                                            'Search by IP, URL, or resource...',
+                                        )}
                                         value={search}
                                         onChange={(e) =>
                                             setSearch(e.target.value)
                                         }
-                                        className="h-9 pl-9 text-xs"
+                                        className="h-9 ps-9 text-xs"
                                     />
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <Button type="submit" size="sm" className="h-9">
-                                    Filter
+                                    {__('Filter')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -267,7 +279,7 @@ export default function AuditReportPage({
                                     className="h-9 gap-1.5"
                                 >
                                     <FilterX className="size-3.5" />
-                                    <span>Reset</span>
+                                    <span>{__('Reset')}</span>
                                 </Button>
                             </div>
                         </form>
@@ -276,19 +288,23 @@ export default function AuditReportPage({
 
                 {/* Tabular Records */}
                 <div className="overflow-x-auto rounded-xl border border-sidebar-border/70 bg-card dark:border-sidebar-border">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full text-start text-sm">
                         <thead className="border-b bg-muted/40 text-xs text-muted-foreground uppercase">
                             <tr>
-                                <th className="px-4 py-3 font-medium">Event</th>
-                                <th className="px-4 py-3 font-medium">Actor</th>
                                 <th className="px-4 py-3 font-medium">
-                                    Target Resource
+                                    {__('Event')}
                                 </th>
                                 <th className="px-4 py-3 font-medium">
-                                    IP Address
+                                    {__('Actor')}
+                                </th>
+                                <th className="px-4 py-3 font-medium">
+                                    {__('Target Resource')}
+                                </th>
+                                <th className="px-4 py-3 font-medium">
+                                    {__('IP Address')}
                                 </th>
                                 <th className="px-4 py-3 text-end font-medium">
-                                    Timestamp
+                                    {__('Timestamp')}
                                 </th>
                             </tr>
                         </thead>
@@ -298,8 +314,10 @@ export default function AuditReportPage({
                                     <td colSpan={5} className="h-48 p-0">
                                         <TableEmptyState
                                             icon={Activity}
-                                            title="No audit events found"
-                                            description="No audit events recorded for the selected filters."
+                                            title={__('No audit events found')}
+                                            description={__(
+                                                'No audit events recorded for the selected filters.',
+                                            )}
                                         />
                                     </td>
                                 </tr>
@@ -329,7 +347,7 @@ export default function AuditReportPage({
                                                 </div>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground italic">
-                                                    System
+                                                    {__('System')}
                                                 </span>
                                             )}
                                         </td>
@@ -356,11 +374,11 @@ export default function AuditReportPage({
                                             {item.ip_address ?? '-'}
                                         </td>
                                         <td className="px-4 py-3.5 text-end text-xs text-muted-foreground">
-                                            {new Date(
+                                            {formatDateTime(
                                                 item.created_at,
-                                            ).toLocaleString(undefined, {
-                                                timeZone: timezone || undefined,
-                                            })}
+                                                locale,
+                                                timezone,
+                                            )}
                                         </td>
                                     </tr>
                                 ))
