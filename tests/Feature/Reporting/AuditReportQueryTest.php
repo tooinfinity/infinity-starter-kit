@@ -206,10 +206,80 @@ it('does not load every row to build the time series', function (): void {
 test('hourlyBucketSql returns expected expressions across database drivers', function (): void {
     $query = new AuditReportQuery;
 
-    expect($query->hourlyBucketSql('sqlite'))->toBe("strftime('%Y-%m-%d %H:00:00', created_at)")
-        ->and($query->hourlyBucketSql('pgsql'))->toBe("to_char(created_at, 'YYYY-MM-DD HH24:00:00')")
-        ->and($query->hourlyBucketSql('sqlsrv'))->toBe("FORMAT(created_at, 'yyyy-MM-dd HH:00:00')")
-        ->and($query->hourlyBucketSql('mysql'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')")
-        ->and($query->hourlyBucketSql('mariadb'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')")
-        ->and($query->hourlyBucketSql('unknown'))->toBe("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')");
+    expect($query->hourlyBucketSql('sqlite'))->toBe("strftime('%Y-%m-%d %H:', created_at) || printf('%02d:00', strftime('%M', created_at) - (strftime('%M', created_at) % 15))")
+        ->and($query->hourlyBucketSql('pgsql'))->toBe("to_char(created_at, 'YYYY-MM-DD HH24:') || lpad((extract(minute from created_at)::integer - (extract(minute from created_at)::integer % 15))::text, 2, '0') || ':00'")
+        ->and($query->hourlyBucketSql('sqlsrv'))->toBe("FORMAT(DATEADD(minute, -(DATEPART(minute, created_at) % 15), created_at), 'yyyy-MM-dd HH:mm:00')")
+        ->and($query->hourlyBucketSql('mysql'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
+        ->and($query->hourlyBucketSql('mariadb'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
+        ->and($query->hourlyBucketSql('unknown'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')");
+});
+
+it('correctly attributes events around midnight for half-hour timezones like Asia/Kolkata', function (): void {
+    config(['app.display_timezone' => 'Asia/Kolkata']);
+
+    AuditTrail::query()->delete();
+
+    // 18:29 UTC on Oct 17 -> 23:59 IST on Oct 17 (day N)
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:29:00']);
+    // 18:31 UTC on Oct 17 -> 00:01 IST on Oct 18 (day N+1)
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:31:00']);
+    // 18:59 UTC on Oct 17 -> 00:29 IST on Oct 18 (day N+1)
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:59:00']);
+
+    $result = resolve(AuditReportQuery::class)->handle([
+        'date_from' => '2026-10-17',
+        'date_to' => '2026-10-18',
+    ]);
+
+    $series = collect($result['series']);
+    expect($series->firstWhere('date', '2026-10-17')->value)->toBe(1)
+        ->and($series->firstWhere('date', '2026-10-18')->value)->toBe(2);
+
+    $seriesTotal = $series->sum('value');
+    $summaryTotalEvents = collect($result['summary'])->firstWhere('id', 'total_events')?->value;
+    expect($seriesTotal)->toBe($summaryTotalEvents);
+});
+
+it('correctly attributes events around midnight for 45-minute timezones like Asia/Kathmandu', function (): void {
+    config(['app.display_timezone' => 'Asia/Kathmandu']);
+
+    AuditTrail::query()->delete();
+
+    // 18:14 UTC on Oct 17 -> 23:59 NPT on Oct 17 (day N)
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:14:00']);
+    // 18:16 UTC on Oct 17 -> 00:01 NPT on Oct 18 (day N+1)
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:16:00']);
+
+    $result = resolve(AuditReportQuery::class)->handle([
+        'date_from' => '2026-10-17',
+        'date_to' => '2026-10-18',
+    ]);
+
+    $series = collect($result['series']);
+    expect($series->firstWhere('date', '2026-10-17')->value)->toBe(1)
+        ->and($series->firstWhere('date', '2026-10-18')->value)->toBe(1);
+
+    $seriesTotal = $series->sum('value');
+    $summaryTotalEvents = collect($result['summary'])->firstWhere('id', 'total_events')?->value;
+    expect($seriesTotal)->toBe($summaryTotalEvents);
+});
+
+it('correctly attributes events for whole-hour timezones like Europe/Paris', function (): void {
+    config(['app.display_timezone' => 'Europe/Paris']);
+
+    AuditTrail::query()->delete();
+
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 21:59:00']);
+    AuditTrail::factory()->create(['created_at' => '2026-10-17 22:01:00']);
+
+    $result = resolve(AuditReportQuery::class)->handle([
+        'date_from' => '2026-10-17',
+        'date_to' => '2026-10-18',
+    ]);
+
+    $series = collect($result['series']);
+    $seriesTotal = $series->sum('value');
+    $summaryTotalEvents = collect($result['summary'])->firstWhere('id', 'total_events')?->value;
+    expect($seriesTotal)->toBe(2)
+        ->and($seriesTotal)->toBe($summaryTotalEvents);
 });

@@ -405,6 +405,7 @@ final class OptionalModules
                 exclusiveFiles: [
                     'app/Enums/ReportCategory.php',
                     'app/Enums/ReportType.php',
+                    'app/Data/Reporting/ReportDateRange.php',
                     'app/Data/Reporting/ReportSummaryCardData.php',
                     'app/Data/Reporting/ReportTimeSeriesPointData.php',
                     'app/Data/Reporting/ReportBreakdownItemData.php',
@@ -433,6 +434,7 @@ final class OptionalModules
                     'resources/js/types/reports.ts',
                     'tests/Unit/Enums/ReportTypeTest.php',
                     'tests/Unit/Enums/ReportCategoryTest.php',
+                    'tests/Feature/Reporting/ReportDateRangeTest.php',
                     'tests/Feature/Reporting/UserReportQueryTest.php',
                     'tests/Feature/Reporting/AuditReportQueryTest.php',
                     'tests/Feature/Reporting/ReportIndexControllerTest.php',

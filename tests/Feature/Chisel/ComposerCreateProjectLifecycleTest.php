@@ -21,6 +21,7 @@ function createComposerGitRepositorySource(string $baseTempDir): string
     new Process(['git', 'init', '-b', 'main'], $sourceDir)->mustRun();
     new Process(['git', 'config', 'user.email', 'integration-test@example.com'], $sourceDir)->mustRun();
     new Process(['git', 'config', 'user.name', 'Integration Test Runner'], $sourceDir)->mustRun();
+    new Process(['git', 'config', 'gc.auto', '0'], $sourceDir)->mustRun();
 
     $filesOutput = new Process(['git', '-C', $root, 'ls-files', '-c', '-o', '--exclude-standard'], $root)->mustRun()->getOutput();
     $files = array_filter(explode("\n", mb_trim($filesOutput)));
