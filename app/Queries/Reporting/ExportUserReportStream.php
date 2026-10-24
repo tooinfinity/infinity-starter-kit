@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Queries\Reporting;
 
+use App\Data\Reporting\ReportDateRange;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
@@ -21,22 +22,10 @@ final readonly class ExportUserReportStream
      */
     public function handle(array $filters = []): StreamedResponse
     {
-        $timezone = $this->resolveTimezone();
-        $storedTimezone = config()->string('app.timezone', 'UTC');
-
-        $dateFromStr = ! empty($filters['date_from'])
-            ? $filters['date_from']
-            : Date::now($timezone)->subDays(29)->toDateString();
-
-        $dateToStr = ! empty($filters['date_to'])
-            ? $filters['date_to']
-            : Date::now($timezone)->toDateString();
-
-        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->setTimezone($storedTimezone);
-        $to = Date::parse($dateToStr, $timezone)->endOfDay()->setTimezone($storedTimezone);
+        $range = ReportDateRange::fromFilters($filters);
 
         /** @var Builder<User> $query */
-        $query = $this->reportQuery->buildFilteredQuery($filters, $from, $to)->latest('created_at');
+        $query = $this->reportQuery->buildFilteredQuery($filters, $range->from, $range->to)->latest('created_at');
 
         $fileName = sprintf('users-report-%s.csv', Date::now()->format('Y-m-d-His'));
 
@@ -95,16 +84,5 @@ final readonly class ExportUserReportStream
         }
 
         return $value;
-    }
-
-    private function resolveTimezone(): string
-    {
-        $timezone = config('app.display_timezone');
-
-        if (is_string($timezone) && $timezone !== '') {
-            return $timezone;
-        }
-
-        return config()->string('app.timezone', 'UTC');
     }
 }

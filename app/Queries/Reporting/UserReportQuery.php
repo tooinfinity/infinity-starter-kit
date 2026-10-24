@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Queries\Reporting;
 
+use App\Data\Reporting\ReportDateRange;
 use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
-use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -39,19 +38,9 @@ final readonly class UserReportQuery
      */
     public function handle(array $filters = [], int $perPage = 15): array
     {
-        $timezone = $this->resolveTimezone();
-        $storedTimezone = config()->string('app.timezone', 'UTC');
-
-        $dateFromStr = ! empty($filters['date_from'])
-            ? $filters['date_from']
-            : Date::now($timezone)->subDays(29)->toDateString();
-
-        $dateToStr = ! empty($filters['date_to'])
-            ? $filters['date_to']
-            : Date::now($timezone)->toDateString();
-
-        $from = Date::parse($dateFromStr, $timezone)->startOfDay()->setTimezone($storedTimezone);
-        $to = Date::parse($dateToStr, $timezone)->endOfDay()->setTimezone($storedTimezone);
+        $range = ReportDateRange::fromFilters($filters);
+        $from = $range->from;
+        $to = $range->to;
 
         // 1. Summary Cards
         $totalUsers = User::query()->count();
@@ -93,33 +82,25 @@ final readonly class UserReportQuery
         // 2. Time-series (registrations per day in display timezone)
         /** @var array<string, int> $countsByDate */
         $countsByDate = [];
-        $hourlySql = $this->hourlyBucketSql();
+        $bucketSql = $this->timeBucketSql();
 
         /** @var list<object{bucket: string, count: int|string}> $rawSeries */
         $rawSeries = DB::table('users')
-            ->selectRaw("{$hourlySql} as bucket, count(*) as count")
+            ->selectRaw("{$bucketSql} as bucket, count(*) as count")
             ->whereBetween('created_at', [$from, $to])
-            ->groupBy(DB::raw($hourlySql))
+            ->groupBy(DB::raw($bucketSql))
             ->orderBy('bucket')
             ->get()
             ->all();
 
         foreach ($rawSeries as $row) {
-            $dateKey = Date::parse((string) $row->bucket, $storedTimezone)
-                ->setTimezone($timezone)
-                ->toDateString();
+            $dateKey = $range->bucketDate($row->bucket);
 
             $countsByDate[$dateKey] = ($countsByDate[$dateKey] ?? 0) + (int) $row->count;
         }
 
         $series = [];
-        $period = CarbonPeriod::create(
-            Date::parse($dateFromStr, $timezone)->startOfDay(),
-            '1 day',
-            Date::parse($dateToStr, $timezone)->startOfDay(),
-        );
-
-        foreach ($period as $date) {
+        foreach ($range->period() as $date) {
             /** @var Carbon $date */
             $key = $date->toDateString();
             $series[] = new ReportTimeSeriesPointData(
@@ -140,8 +121,8 @@ final readonly class UserReportQuery
             'summary' => $summary,
             'series' => $series,
             'paginated' => $paginated,
-            'date_from' => $dateFromStr,
-            'date_to' => $dateToStr,
+            'date_from' => $range->dateFrom,
+            'date_to' => $range->dateTo,
         ];
     }
 
@@ -182,26 +163,16 @@ final readonly class UserReportQuery
     /**
      * @return literal-string
      */
-    public function hourlyBucketSql(?string $driver = null): string
+    public function timeBucketSql(?string $driver = null): string
     {
-        $driver ??= DB::connection()->getDriverName();
-
-        return match ($driver) {
-            'sqlite' => "strftime('%Y-%m-%d %H:00:00', created_at)",
-            'pgsql' => "to_char(created_at, 'YYYY-MM-DD HH24:00:00')",
-            'sqlsrv' => "FORMAT(created_at, 'yyyy-MM-dd HH:00:00')",
-            default => "DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')",
-        };
+        return ReportDateRange::timeBucketSql($driver);
     }
 
-    private function resolveTimezone(): string
+    /**
+     * @return literal-string
+     */
+    public function hourlyBucketSql(?string $driver = null): string
     {
-        $timezone = config('app.display_timezone');
-
-        if (is_string($timezone) && $timezone !== '') {
-            return $timezone;
-        }
-
-        return config()->string('app.timezone', 'UTC');
+        return $this->timeBucketSql($driver);
     }
 }
