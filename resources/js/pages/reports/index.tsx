@@ -10,23 +10,26 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import { index as reportsIndex } from '@/routes/reports';
 import type { BreadcrumbItem } from '@/types';
 import type { ReportMetadata } from '@/types/reports';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Reports',
-        href: reportsIndex(),
-    },
-];
 
 interface ReportsIndexProps {
     reports: ReportMetadata[];
 }
 
 export default function ReportsIndex({ reports }: ReportsIndexProps) {
+    const { __ } = useTranslation();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Reports'),
+            href: reportsIndex(),
+        },
+    ];
+
     const getIcon = (identifier: string) => {
         switch (identifier) {
             case 'user_activity':
@@ -40,13 +43,15 @@ export default function ReportsIndex({ reports }: ReportsIndexProps) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Reports" />
+            <Head title={__('Reports')} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <div>
                     <Heading
-                        title="Reports & Analytics"
-                        description="Access pre-defined system and administrative reports."
+                        title={__('Reports & Analytics')}
+                        description={__(
+                            'Access pre-defined system and administrative reports.',
+                        )}
                     />
                 </div>
 
@@ -78,8 +83,8 @@ export default function ReportsIndex({ reports }: ReportsIndexProps) {
                             <CardFooter className="pt-2">
                                 <Button asChild className="w-full gap-2">
                                     <Link href={report.route}>
-                                        <span>View Report</span>
-                                        <ArrowRight className="size-4" />
+                                        <span>{__('View Report')}</span>
+                                        <ArrowRight className="size-4 rtl:rotate-180" />
                                     </Link>
                                 </Button>
                             </CardFooter>

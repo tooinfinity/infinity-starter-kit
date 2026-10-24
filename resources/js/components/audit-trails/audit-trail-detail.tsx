@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -7,6 +8,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { useTranslation } from '@/hooks/use-translation';
+import { formatDateTime } from '@/lib/formatters';
 import type { AuditTrailItem } from '@/types/audit-trails';
 
 type Props = {
@@ -16,6 +19,9 @@ type Props = {
 };
 
 export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
+    const { locale, timezone } = usePage().props;
+    const { __ } = useTranslation();
+
     if (!audit) {
         return null;
     }
@@ -53,8 +59,13 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                         </Badge>
                     </div>
                     <DialogDescription>
-                        Recorded at{' '}
-                        {new Date(audit.created_at).toLocaleString()}
+                        {__('Recorded at :time', {
+                            time: formatDateTime(
+                                audit.created_at,
+                                locale,
+                                timezone,
+                            ),
+                        })}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -63,7 +74,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                     <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2">
                         <div>
                             <span className="text-xs font-medium text-muted-foreground">
-                                Actor
+                                {__('Actor')}
                             </span>
                             <div className="mt-1 font-medium">
                                 {audit.user ? (
@@ -81,7 +92,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                                                 variant="outline"
                                                 className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
                                             >
-                                                Deleted
+                                                {__('Delete User')}
                                             </Badge>
                                         </div>
                                         {audit.actor_email && (
@@ -92,7 +103,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                                     </div>
                                 ) : (
                                     <span className="text-muted-foreground italic">
-                                        System / Anonymous
+                                        {__('System')}
                                     </span>
                                 )}
                             </div>
@@ -100,7 +111,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
 
                         <div>
                             <span className="text-xs font-medium text-muted-foreground">
-                                Target
+                                {__('Target')}
                             </span>
                             <div className="mt-1">
                                 {audit.auditable_type ? (
@@ -124,7 +135,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
 
                         <div>
                             <span className="text-xs font-medium text-muted-foreground">
-                                IP Address
+                                {__('IP Address')}
                             </span>
                             <p className="mt-1 font-mono text-xs">
                                 {audit.ip_address ?? '—'}
@@ -133,7 +144,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
 
                         <div>
                             <span className="text-xs font-medium text-muted-foreground">
-                                URL
+                                {__('URL')}
                             </span>
                             <p className="mt-1 font-mono text-xs break-all">
                                 {audit.url ?? '—'}
@@ -174,24 +185,26 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                     {/* Changes Diff Table */}
                     <div>
                         <h4 className="mb-3 text-sm font-semibold">
-                            Changes Diff
+                            {__('Event Details')}
                         </h4>
                         {allKeys.length === 0 ? (
                             <p className="text-xs text-muted-foreground italic">
-                                No property changes recorded for this event.
+                                {__('No records found')}
                             </p>
                         ) : (
                             <div className="overflow-hidden rounded-md border">
-                                <table className="w-full text-left text-xs">
+                                <table className="w-full text-start text-xs">
                                     <thead className="border-b bg-muted/50 font-medium text-muted-foreground">
                                         <tr>
-                                            <th className="px-3 py-2">Field</th>
                                             <th className="px-3 py-2">
-                                                Old Value
+                                                {__('Field')}
+                                            </th>
+                                            <th className="px-3 py-2">
+                                                {__('Old Values')}
                                             </th>
                                             <th className="px-3 py-2"></th>
                                             <th className="px-3 py-2">
-                                                New Value
+                                                {__('New Values')}
                                             </th>
                                         </tr>
                                     </thead>

@@ -1,3 +1,4 @@
+import { useLang } from '@erag/lang-sync-inertia/react';
 import { router, usePage } from '@inertiajs/react';
 import { Check, Globe, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -18,6 +19,7 @@ import type { LocaleOption } from '@/types';
 
 export function LanguageSelector() {
     const { locale, supportedLocales } = usePage().props;
+    const { __ } = useLang();
     const [isLoading, setIsLoading] = useState(false);
 
     const currentLocale = supportedLocales.find(
@@ -56,7 +58,7 @@ export function LanguageSelector() {
                             aria-label={
                                 currentLocale
                                     ? `${currentLocale.nativeName}`
-                                    : 'Language'
+                                    : __('Language')
                             }
                             data-test="language-selector"
                         >
@@ -69,7 +71,7 @@ export function LanguageSelector() {
                     </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p>{currentLocale?.nativeName ?? 'Language'}</p>
+                    <p>{currentLocale?.nativeName ?? __('Language')}</p>
                 </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">

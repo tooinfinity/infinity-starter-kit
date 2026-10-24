@@ -8,6 +8,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface ReportDateRangeFilterProps {
     dateFrom: string;
@@ -36,6 +37,8 @@ export function ReportDateRangeFilter({
     onDateFromChange,
     onDateToChange,
 }: ReportDateRangeFilterProps) {
+    const { __ } = useTranslation();
+
     const handlePresetChange = (preset: string) => {
         if (preset === 'custom') {
             return;
@@ -60,26 +63,32 @@ export function ReportDateRangeFilter({
         <div className="flex flex-wrap items-end gap-3">
             <div className="w-36">
                 <Label htmlFor="date-preset" className="text-xs">
-                    Range Preset
+                    {__('Range Preset')}
                 </Label>
                 <Select onValueChange={handlePresetChange} defaultValue="30d">
                     <SelectTrigger id="date-preset" className="h-9 text-xs">
-                        <Calendar className="mr-1.5 size-3.5 opacity-70" />
-                        <SelectValue placeholder="Preset" />
+                        <Calendar className="me-1.5 size-3.5 opacity-70" />
+                        <SelectValue placeholder={__('Preset')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="7d">Last 7 Days</SelectItem>
-                        <SelectItem value="30d">Last 30 Days</SelectItem>
-                        <SelectItem value="90d">Last 90 Days</SelectItem>
-                        <SelectItem value="365d">Last 365 Days</SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
+                        <SelectItem value="7d">{__('Last 7 Days')}</SelectItem>
+                        <SelectItem value="30d">
+                            {__('Last 30 Days')}
+                        </SelectItem>
+                        <SelectItem value="90d">
+                            {__('Last 90 Days')}
+                        </SelectItem>
+                        <SelectItem value="365d">
+                            {__('Last 365 Days')}
+                        </SelectItem>
+                        <SelectItem value="custom">{__('Custom')}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
 
             <div className="w-36">
                 <Label htmlFor="report-date-from" className="text-xs">
-                    From
+                    {__('From')}
                 </Label>
                 <Input
                     id="report-date-from"
@@ -92,7 +101,7 @@ export function ReportDateRangeFilter({
 
             <div className="w-36">
                 <Label htmlFor="report-date-to" className="text-xs">
-                    To
+                    {__('To')}
                 </Label>
                 <Input
                     id="report-date-to"

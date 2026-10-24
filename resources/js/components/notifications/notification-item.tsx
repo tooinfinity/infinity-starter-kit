@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     Check,
     Info,
@@ -9,35 +9,11 @@ import {
     ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/hooks/use-translation';
+import { formatRelativeTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { destroy, markRead } from '@/routes/notifications';
 import type { NotificationItem as NotificationItemType } from '@/types/notifications';
-
-function formatRelativeTime(dateString: string): string {
-    if (!dateString) {
-        return '';
-    }
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) {
-        return 'just now';
-    }
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
-        return `${diffInMinutes}m ago`;
-    }
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
-        return `${diffInHours}h ago`;
-    }
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) {
-        return `${diffInDays}d ago`;
-    }
-    return date.toLocaleDateString();
-}
 
 function getNotificationIcon(type: string | null) {
     switch (type) {
@@ -69,6 +45,8 @@ export function NotificationItem({
     compact = false,
     onActionClick,
 }: Props) {
+    const { locale } = usePage().props;
+    const { __ } = useTranslation();
     const isUnread = notification.read_at === null;
 
     const handleMarkAsRead = (e: React.MouseEvent) => {
@@ -120,7 +98,7 @@ export function NotificationItem({
                         {notification.title}
                     </p>
                     <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                        {formatRelativeTime(notification.created_at)}
+                        {formatRelativeTime(notification.created_at, locale)}
                     </span>
                 </div>
 
@@ -136,7 +114,8 @@ export function NotificationItem({
                             className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                         >
                             <span>
-                                {notification.action.label || 'View details'}
+                                {notification.action.label ||
+                                    __('View Details')}
                             </span>
                             <ExternalLink className="h-3 w-3" />
                         </Link>
@@ -150,11 +129,11 @@ export function NotificationItem({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        title="Mark as read"
+                        title={__('Mark as read')}
                         onClick={handleMarkAsRead}
                     >
                         <Check className="h-3.5 w-3.5" />
-                        <span className="sr-only">Mark as read</span>
+                        <span className="sr-only">{__('Mark as read')}</span>
                     </Button>
                 )}
                 {!compact && (
@@ -162,11 +141,13 @@ export function NotificationItem({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
-                        title="Delete notification"
+                        title={__('Delete notification')}
                         onClick={handleDelete}
                     >
                         <Trash2 className="h-3.5 w-3.5" />
-                        <span className="sr-only">Delete</span>
+                        <span className="sr-only">
+                            {__('Delete notification')}
+                        </span>
                     </Button>
                 )}
             </div>

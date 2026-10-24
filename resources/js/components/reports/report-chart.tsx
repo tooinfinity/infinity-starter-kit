@@ -13,6 +13,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTranslation } from '@/hooks/use-translation';
 import type { ReportTimeSeriesPoint } from '@/types/reports';
 
 interface ReportChartProps {
@@ -28,6 +29,7 @@ export function ReportChart({
     series,
     metricLabel = 'Count',
 }: ReportChartProps) {
+    const { __ } = useTranslation();
     const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
     const totalValue = series.reduce((acc, point) => acc + point.value, 0);
@@ -48,20 +50,20 @@ export function ReportChart({
                         size="sm"
                         onClick={() => setViewMode('chart')}
                         className="h-8 gap-1.5 text-xs"
-                        aria-label="Chart view"
+                        aria-label={__('Chart view')}
                     >
                         <BarChart2 className="size-3.5" />
-                        <span className="hidden sm:inline">Chart</span>
+                        <span className="hidden sm:inline">{__('Chart')}</span>
                     </Button>
                     <Button
                         variant={viewMode === 'table' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => setViewMode('table')}
                         className="h-8 gap-1.5 text-xs"
-                        aria-label="Table view"
+                        aria-label={__('Table view')}
                     >
                         <TableIcon className="size-3.5" />
-                        <span className="hidden sm:inline">Table</span>
+                        <span className="hidden sm:inline">{__('Table')}</span>
                     </Button>
                 </div>
             </CardHeader>
@@ -69,7 +71,9 @@ export function ReportChart({
             <CardContent>
                 {series.length === 0 ? (
                     <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-                        No time-series data available for the selected period.
+                        {__(
+                            'No time-series data available for the selected period.',
+                        )}
                     </div>
                 ) : viewMode === 'chart' ? (
                     <div className="space-y-3">
@@ -125,18 +129,20 @@ export function ReportChart({
                         <div className="flex justify-between border-t pt-2 text-xs text-muted-foreground">
                             <span>{series[0]?.date}</span>
                             <span className="font-medium text-foreground">
-                                Total: {totalValue.toLocaleString()}
+                                {__('Total: :total', {
+                                    total: totalValue.toLocaleString(),
+                                })}
                             </span>
                             <span>{series[series.length - 1]?.date}</span>
                         </div>
                     </div>
                 ) : (
                     <div className="max-h-64 overflow-y-auto rounded-md border">
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full text-start text-sm">
                             <thead className="border-b bg-muted/40 text-xs text-muted-foreground uppercase">
                                 <tr>
                                     <th className="px-4 py-2.5 font-medium">
-                                        Date
+                                        {__('Date')}
                                     </th>
                                     <th className="px-4 py-2.5 text-end font-medium">
                                         {metricLabel}

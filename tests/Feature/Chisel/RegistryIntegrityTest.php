@@ -167,7 +167,13 @@ test('all localization and language files are consistently declared and accounte
         }
 
         $relPath = str_replace(base_path().'/', '', $file->getPathname());
-        if ($relPath === 'lang/en/common.php') {
+        if (in_array($relPath, [
+            'lang/en/common.php',
+            'lang/en/auth.php',
+            'lang/en/passwords.php',
+            'lang/en/pagination.php',
+            'lang/en/validation.php',
+        ], true)) {
             continue; // Base application fallback
         }
 
