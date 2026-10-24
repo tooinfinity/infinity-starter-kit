@@ -563,7 +563,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
         }
     });
 
-    it('generates a schema that matches the selected features even if migrated before installation', function (): void {
+    it('generates a schema that matches the selected features even if migrated before installation when --fresh is specified', function (): void {
         $tempDir = createRealGeneratedProjectFixture();
 
         // Simulate an early migration before install:features runs (the bug condition reported in #33)
@@ -576,6 +576,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                     PHP_BINARY,
                     'artisan',
                     'install:features',
+                    '--fresh',
                     '--answers='.json_encode([
                         'auth_features' => ['login', 'logout'],
                         'optional_modules' => ['authorization'],

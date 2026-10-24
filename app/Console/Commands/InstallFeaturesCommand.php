@@ -25,7 +25,8 @@ use Throwable;
         {--answers= : JSON string of answers to skip interactive prompts}
         {--admin-name= : Name of the administrator user}
         {--admin-email= : Email of the administrator user}
-        {--admin-password= : Password for the administrator user}')]
+        {--admin-password= : Password for the administrator user}
+        {--fresh : Drop all tables and re-run all migrations}')]
 final class InstallFeaturesCommand extends Command
 {
     /**
@@ -97,7 +98,9 @@ final class InstallFeaturesCommand extends Command
         }
 
         try {
-            $status = $this->call('migrate:fresh', [
+            $command = (bool) $this->option('fresh') ? 'migrate:fresh' : 'migrate';
+
+            $status = $this->call($command, [
                 '--force' => true,
             ]);
 
