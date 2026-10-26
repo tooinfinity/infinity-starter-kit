@@ -20,11 +20,11 @@ php artisan key:generate
 - **`APP_URL=https://your-domain.com`**: Must use `https://` to ensure generated URLs match secure protocol expectations.
 - **`SESSION_SECURE_COOKIE=true`**: Enforces the `Secure` flag on session cookies so they are transmitted solely over HTTPS.
 - **`TRUSTED_PROXIES`**: Required when hosting behind load balancers or reverse proxies (AWS ALB/ELB, Cloudflare, Traefik, Nginx, Caddy).
-  - Use `*` to trust all reverse proxies forwarding traffic to the container/server:
+  - Leave unset by default. Use `*` only when origin access is restricted to a trusted ingress that replaces client-supplied forwarding headers:
     ```ini
     TRUSTED_PROXIES=*
     ```
-  - Or specify explicit comma-separated IP addresses or CIDR blocks:
+  - Otherwise, specify the trusted proxies' explicit comma-separated IP addresses or CIDR blocks:
     ```ini
     TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     ```
