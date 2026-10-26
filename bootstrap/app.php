@@ -13,10 +13,12 @@ use App\Http\Middleware\HandleLocale;
 /* @chisel-settings */
 use App\Http\Middleware\HandleSettings;
 /* @end-chisel-settings */
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Support\Env;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,11 +26,15 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $trustedProxies = Env::get('TRUSTED_PROXIES');
+        $middleware->trustProxies(at: is_string($trustedProxies) ? $trustedProxies : null);
+
         $middleware->authenticateSessions();
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state'/* @chisel-localization */, 'locale'/* @end-chisel-localization */]);
 
         $middleware->web(append: [
+            SecurityHeaders::class,
             /* @chisel-settings */
             HandleSettings::class,
             /* @end-chisel-settings */
