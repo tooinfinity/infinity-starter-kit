@@ -7,6 +7,8 @@ use App\Enums\SettingKey;
 use App\Http\Middleware\HandleSettings;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Exceptions;
 use Inertia\Support\SessionKey;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -42,6 +44,29 @@ it('shows stored values without the handle settings middleware', function (): vo
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('settings', fn ($settings): bool => $settings['application.name'] === 'Custom App'));
+});
+
+it('renders settings page with defaults and reports error when cache failure occurs', function (): void {
+    Exceptions::fake();
+    Cache::shouldReceive('remember')->andThrow(new RuntimeException('Cache store unavailable'));
+
+    $user = User::factory()->create();
+    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
+    $user->givePermissionTo($permission);
+
+    $response = $this->actingAs($user)
+        ->fromRoute('dashboard')
+        ->get(route('settings.edit'));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('settings/application/edit')
+            ->where('settings', [
+                'application.name' => config('app.name', 'Laravel'),
+                'application.timezone' => config('app.timezone', 'UTC'),
+            ]));
+
+    Exceptions::assertReported(RuntimeException::class);
 });
 
 it('forbids settings page for user without permission', function (): void {

@@ -71,6 +71,50 @@ it('formats content security policy strictly in production', function (): void {
         ->and($csp)->toContain("connect-src 'self';");
 });
 
+it('can disable content security policy via config', function (): void {
+    config(['security.csp.enabled' => false]);
+
+    $this->get(route('home'))
+        ->assertHeaderMissing('Content-Security-Policy')
+        ->assertHeaderMissing('Content-Security-Policy-Report-Only');
+});
+
+it('supports content security policy report-only mode and report-uri', function (): void {
+    config([
+        'security.csp.report_only' => true,
+        'security.csp.report_uri' => 'https://example.com/csp-report',
+    ]);
+
+    $response = $this->get(route('home'));
+
+    $response->assertHeaderMissing('Content-Security-Policy');
+    $response->assertHeader('Content-Security-Policy-Report-Only');
+
+    $csp = (string) $response->headers->get('Content-Security-Policy-Report-Only');
+    expect($csp)->toContain('report-uri https://example.com/csp-report');
+});
+
+it('merges extra sources from security config into content security policy', function (): void {
+    config([
+        'security.csp.extra_sources' => [
+            'script_src' => ['https://scripts.example.com'],
+            'connect_src' => ['https://api.example.com'],
+            'img_src' => ['https://images.example.com'],
+            'frame_src' => ['https://embed.example.com'],
+        ],
+    ]);
+
+    $response = $this->get(route('home'));
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->toContain("script-src 'self' 'nonce-")
+        ->and($csp)->toContain('https://scripts.example.com')
+        ->and($csp)->toContain('connect-src')
+        ->and($csp)->toContain('https://api.example.com')
+        ->and($csp)->toContain('https://images.example.com')
+        ->and($csp)->toContain("frame-src 'self' https://embed.example.com");
+});
+
 it('does not load third-party font hosts', function (): void {
     expect(file_get_contents(resource_path('views/app.blade.php')))->not->toContain('fonts.bunny.net');
 });

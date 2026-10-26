@@ -9,6 +9,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 import { cn } from '@/lib/utils';
 import { index, markAllRead } from '@/routes/notifications';
 
@@ -55,6 +56,7 @@ type Props = {
 };
 
 export function NotificationDropdown({ onClose }: Props) {
+    const { __ } = useTranslation();
     const { notifications } = usePage().props;
     const recent = notifications?.recent;
     const unreadCount = notifications?.unreadCount ?? 0;
@@ -101,10 +103,12 @@ export function NotificationDropdown({ onClose }: Props) {
         >
             <div className="flex items-center justify-between border-b px-4 py-3">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">Notifications</span>
+                    <span className="text-sm font-semibold">
+                        {__('Notifications')}
+                    </span>
                     {unreadCount > 0 && (
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary tabular-nums">
-                            {unreadCount} unread
+                            {unreadCount} {__('unread')}
                         </span>
                     )}
                 </div>
@@ -116,8 +120,8 @@ export function NotificationDropdown({ onClose }: Props) {
                         className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                         onClick={handleMarkAllAsRead}
                     >
-                        <CheckCheck className="mr-1 h-3.5 w-3.5" />
-                        Mark all as read
+                        <CheckCheck className="me-1 h-3.5 w-3.5" />
+                        {__('Mark all as read')}
                     </Button>
                 )}
             </div>
@@ -130,8 +134,10 @@ export function NotificationDropdown({ onClose }: Props) {
                     />
                 ) : recent.length === 0 ? (
                     <NotificationEmptyState
-                        title="No notifications"
-                        description="You are caught up with all notifications."
+                        title={__('No notifications')}
+                        description={__(
+                            'You are caught up with all notifications.',
+                        )}
                         className="py-8"
                     />
                 ) : (
@@ -156,7 +162,9 @@ export function NotificationDropdown({ onClose }: Props) {
                     asChild
                     onClick={onClose}
                 >
-                    <Link href={index().url}>View all notifications</Link>
+                    <Link href={index().url}>
+                        {__('View all notifications')}
+                    </Link>
                 </Button>
             </div>
         </DropdownMenuContent>

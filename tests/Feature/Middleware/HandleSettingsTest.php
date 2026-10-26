@@ -6,7 +6,7 @@ use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Http\Middleware\HandleSettings;
 use App\Models\User;
-use App\Queries\GetSetting;
+use App\Queries\SettingQuery;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +19,7 @@ it('applies configured application name and display timezone to config without m
 
     $originalAppTimezone = config('app.timezone');
 
-    $middleware = new HandleSettings(resolve(GetSetting::class));
+    $middleware = new HandleSettings(resolve(SettingQuery::class));
     $request = Request::create('/', 'GET');
 
     $response = $middleware->handle($request, fn (Request $req): Response => new Response('OK'));

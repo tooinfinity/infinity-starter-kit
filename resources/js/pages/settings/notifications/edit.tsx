@@ -5,24 +5,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit, update } from '@/routes/notification-preferences';
 import type { BreadcrumbItem } from '@/types';
 import type { NotificationPreference } from '@/types/notifications';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Notification preferences',
-        href: edit(),
-    },
-];
-
 type Props = {
     preferences: NotificationPreference[];
 };
 
 export default function NotificationPreferencesEdit({ preferences }: Props) {
+    const { __ } = useTranslation();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Notification preferences'),
+            href: edit(),
+        },
+    ];
+
     const initialPreferences = preferences.reduce(
         (acc, pref) => {
             acc[pref.type] = {
@@ -56,16 +59,18 @@ export default function NotificationPreferencesEdit({ preferences }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Notification preferences" />
+            <Head title={__('Notification preferences')} />
 
-            <h1 className="sr-only">Notification preferences</h1>
+            <h1 className="sr-only">{__('Notification preferences')}</h1>
 
             <SettingsLayout>
                 <div className="space-y-6">
                     <Heading
                         variant="small"
-                        title="Notification preferences"
-                        description="Control which notifications you receive inside the application."
+                        title={__('Notification preferences')}
+                        description={__(
+                            'Control which notifications you receive inside the application.',
+                        )}
                     />
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -79,7 +84,7 @@ export default function NotificationPreferencesEdit({ preferences }: Props) {
                                 return (
                                     <div
                                         key={pref.type}
-                                        className="flex items-center justify-between space-x-4 border-b py-2 last:border-0"
+                                        className="flex items-center justify-between gap-4 border-b py-2 last:border-0"
                                     >
                                         <div className="space-y-0.5">
                                             <div className="flex items-center gap-2">
@@ -94,13 +99,15 @@ export default function NotificationPreferencesEdit({ preferences }: Props) {
                                                         variant="secondary"
                                                         className="px-1.5 py-0 text-[10px]"
                                                     >
-                                                        Mandatory
+                                                        {__('Mandatory')}
                                                     </Badge>
                                                 )}
                                             </div>
                                             <p className="text-xs text-muted-foreground">
                                                 {pref.mandatory
-                                                    ? 'Mandatory notifications cannot be disabled for security reasons.'
+                                                    ? __(
+                                                          'Mandatory notifications cannot be disabled for security reasons.',
+                                                      )
                                                     : `Receive in-app notifications for ${pref.label.toLowerCase()} activity.`}
                                             </p>
                                         </div>
@@ -123,12 +130,12 @@ export default function NotificationPreferencesEdit({ preferences }: Props) {
 
                         <div className="flex items-center gap-4">
                             <Button type="submit" disabled={processing}>
-                                Save preferences
+                                {__('Save preferences')}
                             </Button>
 
                             {recentlySuccessful && (
                                 <p className="text-sm text-muted-foreground">
-                                    Saved.
+                                    {__('Saved.')}
                                 </p>
                             )}
                         </div>

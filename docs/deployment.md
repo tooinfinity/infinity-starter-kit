@@ -28,12 +28,14 @@ php artisan key:generate
     ```ini
     TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     ```
+- **`NOTIFICATION_RETENTION_DAYS=30`**: The number of days read notifications are retained before automatic pruning (set `<= 0` to disable pruning).
+- **`NOTIFICATION_UNREAD_RETENTION_DAYS`**: (Optional) Number of days unread notifications are retained before pruning. Unset or null by default (unread notifications never expire).
 
 ---
 
 ## 2. Security Headers & CSP
 
-The application includes `App\Http\Middleware\SecurityHeaders`, which automatically adds defensive HTTP headers to responses:
+The application includes `App\Http\Middleware\SecurityHeaders`, configured via `config/security.php`, which automatically adds defensive HTTP headers to responses:
 
 - **`X-Content-Type-Options: nosniff`**: Prevents MIME-type sniffing.
 - **`Referrer-Policy: strict-origin-when-cross-origin`**: Limits referrer information to the origin when navigating cross-origin over HTTPS.
@@ -41,6 +43,11 @@ The application includes `App\Http\Middleware\SecurityHeaders`, which automatica
 - **`Permissions-Policy: camera=(), microphone=(), geolocation=()`**: Restricts access to sensitive browser capabilities.
 - **`Strict-Transport-Security` (HSTS)**: Automatically emitted in production environments on HTTPS requests (`max-age=31536000; includeSubDomains`).
 - **`Content-Security-Policy`**: Enforces strict origin restrictions and binds inline/external scripts using a cryptographically random per-request nonce (`Vite::useCspNonce()`).
+  - Configure CSP via `config/security.php` or environment variables:
+    - `SECURITY_CSP_ENABLED=true` (or `false` to disable CSP)
+    - `SECURITY_CSP_REPORT_ONLY=true` (for CSP report-only mode)
+    - `SECURITY_CSP_REPORT_URI=https://example.report-uri.com/r/d/csp/enforce`
+    - `SECURITY_CSP_SCRIPT_SRC`, `SECURITY_CSP_CONNECT_SRC`, `SECURITY_CSP_IMG_SRC`, `SECURITY_CSP_STYLE_SRC`, `SECURITY_CSP_FONT_SRC`: Comma-separated extra origins for CDNs or analytics.
 
 Self-hosted fonts are bundled at build time via `laravel-vite-plugin/fonts` (e.g. Instrument Sans) so no third-party font CDNs are queried at runtime.
 

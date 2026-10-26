@@ -12,17 +12,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/settings';
 import type { ApplicationSettings, BreadcrumbItem } from '@/types';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Application settings',
-        href: edit(),
-    },
-];
 
 const commonTimezones = [
     'UTC',
@@ -48,18 +42,29 @@ const commonTimezones = [
 ];
 
 export default function Edit({ settings }: { settings: ApplicationSettings }) {
+    const { __ } = useTranslation();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Application settings'),
+            href: edit(),
+        },
+    ];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Application settings" />
+            <Head title={__('Application settings')} />
 
-            <h1 className="sr-only">Application settings</h1>
+            <h1 className="sr-only">{__('Application settings')}</h1>
 
             <SettingsLayout>
                 <div className="space-y-6">
                     <Heading
                         variant="small"
-                        title="Application settings"
-                        description="Configure your application's general settings"
+                        title={__('Application settings')}
+                        description={__(
+                            "Configure your application's general settings",
+                        )}
                     />
 
                     <Form
@@ -73,7 +78,7 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                             <>
                                 <div className="grid gap-2">
                                     <Label htmlFor="settings-application-name">
-                                        Application Name
+                                        {__('Application Name')}
                                     </Label>
 
                                     <Input
@@ -85,7 +90,7 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                                         name="settings[application.name]"
                                         required
                                         autoComplete="off"
-                                        placeholder="My Application"
+                                        placeholder={__('My Application')}
                                     />
 
                                     <InputError
@@ -98,7 +103,7 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="settings-application-timezone">
-                                        Timezone
+                                        {__('Timezone')}
                                     </Label>
 
                                     <Select
@@ -111,7 +116,11 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                                             id="settings-application-timezone"
                                             className="mt-1 w-full"
                                         >
-                                            <SelectValue placeholder="Select timezone" />
+                                            <SelectValue
+                                                placeholder={__(
+                                                    'Select timezone',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {commonTimezones.map((timezone) => (
@@ -140,7 +149,7 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                                         disabled={processing}
                                         data-test="update-settings-button"
                                     >
-                                        Save
+                                        {__('Save')}
                                     </Button>
                                 </div>
                             </>
