@@ -111,6 +111,80 @@ test('translation directory is under lang/ not resources/lang/', function (): vo
     expect(lang_path())->toBe(base_path('lang'));
 });
 
+test('all literal translation keys used in frontend exist in en.json', function (): void {
+    /** @var array<string, string> $enJson */
+    $enJson = json_decode((string) file_get_contents(lang_path('en.json')), true);
+
+    $jsDir = resource_path('js');
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jsDir));
+    $pattern = '/\b(?:__|transChoice|trans)\s*\(\s*(?:\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)")/';
+
+    $missing = [];
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! in_array($file->getExtension(), ['ts', 'tsx', 'js', 'jsx'], true)) {
+            continue;
+        }
+
+        $content = file_get_contents($file->getPathname());
+        if ($content === false) {
+            continue;
+        }
+
+        if (preg_match_all($pattern, $content, $matches)) {
+            $extracted = array_filter(array_merge($matches[1], $matches[2]), static fn (string $k): bool => $k !== '');
+
+            foreach ($extracted as $rawKey) {
+                $key = stripslashes($rawKey);
+                if (! array_key_exists($key, $enJson)) {
+                    $missing[$key][] = str_replace(base_path().'/', '', $file->getPathname());
+                }
+            }
+        }
+    }
+
+    expect($missing)->toBeEmpty('Missing frontend translation keys in en.json: '.json_encode($missing, JSON_PRETTY_PRINT));
+});
+
+test('no raw capitalized text nodes exist in JSX outside components/ui', function (): void {
+    $jsDir = resource_path('js');
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jsDir));
+    $pattern = '/>\s*([A-Z][A-Za-z0-9\s,\.\?!:\-\/]{2,})\s*</';
+
+    $untranslated = [];
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! in_array($file->getExtension(), ['tsx', 'jsx'], true)) {
+            continue;
+        }
+
+        $relPath = str_replace(base_path().'/', '', $file->getPathname());
+        if (str_starts_with($relPath, 'resources/js/components/ui/')) {
+            continue;
+        }
+
+        $content = file_get_contents($file->getPathname());
+        if ($content === false) {
+            continue;
+        }
+
+        // Strip comments
+        $content = (string) preg_replace('!/\*.*?\*/!s', '', $content);
+        $content = (string) preg_replace('!//.*!', '', $content);
+        // Strip TS generic types like Promise<void>
+        $content = (string) preg_replace('/Promise<[^>]+>/', '', $content);
+
+        if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $text = mb_trim((string) $match[1]);
+                $untranslated[$relPath][] = $text;
+            }
+        }
+    }
+
+    expect($untranslated)->toBeEmpty('Found raw untranslated text in JSX: '.json_encode($untranslated, JSON_PRETTY_PRINT));
+});
+
 /**
  * @param  array<string, mixed>  $array
  * @return list<string>

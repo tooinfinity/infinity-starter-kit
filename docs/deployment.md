@@ -46,8 +46,10 @@ The application includes `App\Http\Middleware\SecurityHeaders`, configured via `
   - Configure CSP via `config/security.php` or environment variables:
     - `SECURITY_CSP_ENABLED=true` (or `false` to disable CSP)
     - `SECURITY_CSP_REPORT_ONLY=true` (for CSP report-only mode)
-    - `SECURITY_CSP_REPORT_URI=https://example.report-uri.com/r/d/csp/enforce`
-    - `SECURITY_CSP_SCRIPT_SRC`, `SECURITY_CSP_CONNECT_SRC`, `SECURITY_CSP_IMG_SRC`, `SECURITY_CSP_STYLE_SRC`, `SECURITY_CSP_FONT_SRC`: Comma-separated extra origins for CDNs or analytics.
+    - `SECURITY_CSP_REPORT_TO=csp-endpoint` (CSP Level 3 reporting group name)
+    - `SECURITY_CSP_REPORTING_ENDPOINTS=csp-endpoint="https://example.com/csp-reports"` (sets `Reporting-Endpoints` header)
+    - `SECURITY_CSP_REPORT_URI=https://example.report-uri.com/r/d/csp/enforce` (legacy CSP report URI fallback)
+    - `SECURITY_CSP_SCRIPT_SRC`, `SECURITY_CSP_CONNECT_SRC`, `SECURITY_CSP_IMG_SRC`, `SECURITY_CSP_STYLE_SRC`, `SECURITY_CSP_FONT_SRC`, `SECURITY_CSP_MEDIA_SRC`, `SECURITY_CSP_FRAME_SRC`: Comma-separated extra origins for CDNs, analytics, or embeds. Semicolons and newlines are sanitized automatically.
 
 Self-hosted fonts are bundled at build time via `laravel-vite-plugin/fonts` (e.g. Instrument Sans) so no third-party font CDNs are queried at runtime.
 

@@ -33,13 +33,20 @@ final readonly class SecurityHeaders
             /** @var array<string, array<int, string>> $extraSources */
             $extraSources = config('security.csp.extra_sources', []);
 
+            $isSafeToken = static fn (string $value): bool => ! str_contains($value, ';')
+                && ! str_contains($value, "\r")
+                && ! str_contains($value, "\n");
+
             /**
              * @param  array<int, string>  $defaultSources
              */
-            $formatDirective = function (string $name, array $defaultSources, string $extraKey) use ($extraSources): string {
+            $formatDirective = function (string $name, array $defaultSources, string $extraKey) use ($extraSources, $isSafeToken): string {
                 /** @var array<int, string> $extra */
                 $extra = $extraSources[$extraKey] ?? [];
-                $sources = array_filter(array_merge($defaultSources, $extra));
+                $sources = array_values(array_filter(
+                    array_map(trim(...), array_merge($defaultSources, $extra)),
+                    static fn (string $source): bool => $source !== '' && $isSafeToken($source),
+                ));
 
                 return $name.' '.implode(' ', $sources);
             };
@@ -72,9 +79,22 @@ final readonly class SecurityHeaders
                 $csp[] = $formatDirective('frame-src', ["'self'"], 'frame_src');
             }
 
+            $reportingEndpoints = config('security.csp.reporting_endpoints');
+            if (is_string($reportingEndpoints) && $reportingEndpoints !== '') {
+                $sanitizedEndpoints = mb_trim(str_replace(["\r", "\n"], '', $reportingEndpoints));
+                if ($sanitizedEndpoints !== '') {
+                    $response->headers->set('Reporting-Endpoints', $sanitizedEndpoints);
+                }
+            }
+
+            $reportTo = config('security.csp.report_to');
+            if (is_string($reportTo) && $reportTo !== '' && $isSafeToken($reportTo)) {
+                $csp[] = 'report-to '.mb_trim($reportTo);
+            }
+
             $reportUri = config('security.csp.report_uri');
-            if (is_string($reportUri) && $reportUri !== '') {
-                $csp[] = "report-uri {$reportUri}";
+            if (is_string($reportUri) && $reportUri !== '' && $isSafeToken($reportUri)) {
+                $csp[] = 'report-uri '.mb_trim($reportUri);
             }
 
             $headerName = config()->boolean('security.csp.report_only', false)

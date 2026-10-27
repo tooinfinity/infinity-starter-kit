@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Data\Reporting;
 
-use App\Queries\Reporting\TimeBucketSql;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
@@ -63,15 +62,6 @@ final readonly class ReportDateRange
         }
 
         return config()->string('app.timezone', 'UTC');
-    }
-
-    /**
-     * @param  literal-string  $column
-     * @return literal-string
-     */
-    public static function timeBucketSql(?string $driver = null, string $column = 'created_at'): string
-    {
-        return TimeBucketSql::forDriver($driver, $column);
     }
 
     /**

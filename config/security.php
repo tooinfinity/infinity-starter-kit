@@ -20,16 +20,20 @@ return [
 
         'report_only' => (bool) env('SECURITY_CSP_REPORT_ONLY', false),
 
+        'report_to' => env('SECURITY_CSP_REPORT_TO'),
+
+        'reporting_endpoints' => env('SECURITY_CSP_REPORTING_ENDPOINTS'),
+
         'report_uri' => env('SECURITY_CSP_REPORT_URI'),
 
         'extra_sources' => [
-            'script_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_SCRIPT_SRC', '')))),
-            'style_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_STYLE_SRC', '')))),
-            'img_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_IMG_SRC', '')))),
-            'font_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_FONT_SRC', '')))),
-            'connect_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_CONNECT_SRC', '')))),
-            'media_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_MEDIA_SRC', '')))),
-            'frame_src' => array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_FRAME_SRC', '')))),
+            'script_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_SCRIPT_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
+            'style_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_STYLE_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
+            'img_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_IMG_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
+            'font_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_FONT_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
+            'connect_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_CONNECT_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
+            'media_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_MEDIA_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
+            'frame_src' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('SECURITY_CSP_FRAME_SRC', ''))), static fn (string $src): bool => $src !== '' && ! str_contains($src, ';') && ! str_contains($src, "\n") && ! str_contains($src, "\r"))),
         ],
     ],
 

@@ -104,7 +104,7 @@ export default function Register() {
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
-                                {__('Create account')}
+                                {__('Create an account')}
                             </Button>
                         </div>
 

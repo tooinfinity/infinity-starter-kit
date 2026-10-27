@@ -1,6 +1,6 @@
 {
-    ":count unread": "{one} :count unread|{other} :count unread",
     "2FA recovery codes": "2FA recovery codes",
+    ":count unread": "{one} :count unread|{other} :count unread",
     "A new verification link has been sent to the email address you provided during registration.": "A new verification link has been sent to the email address you provided during registration.",
     "A new verification link has been sent to your email address.": "A new verification link has been sent to your email address.",
     "A reset link will be sent if the account exists.": "A reset link will be sent if the account exists.",
@@ -67,6 +67,7 @@
     "Create": "Create",
     "Create User": "Create User",
     "Create a new administrative or standard user account.": "Create a new administrative or standard user account.",
+    "Create account": "Create account",
     "Create an account": "Create an account",
     "Created": "Created",
     "Current Password": "Current Password",
@@ -292,6 +293,7 @@
     "System events, administrative actions, and security audit log.": "System events, administrative actions, and security audit log.",
     "Table": "Table",
     "Table view": "Table view",
+    "Tags": "Tags",
     "Target": "Target",
     "Target ID": "Target ID",
     "Target Resource": "Target Resource",

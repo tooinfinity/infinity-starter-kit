@@ -1,6 +1,6 @@
 {
-    ":count unread": "{one} :count غير مقروءة|{two} :count غير مقروءتين|{other} :count غير مقروءة",
     "2FA recovery codes": "رموز استرداد المصادقة الثنائية",
+    ":count unread": "{one} :count غير مقروءة|{two} :count غير مقروءتين|{other} :count غير مقروءة",
     "A new verification link has been sent to the email address you provided during registration.": "تم إرسال رابط تحقق جديد إلى عنوان البريد الإلكتروني الذي قدمته أثناء التسجيل.",
     "A new verification link has been sent to your email address.": "تم إرسال رابط تأكيد جديد إلى عنوان بريدك الإلكتروني.",
     "A reset link will be sent if the account exists.": "سيتم إرسال رابط إعادة التعيين إذا كان الحساب موجوداً.",
@@ -67,6 +67,7 @@
     "Create": "إنشاء",
     "Create User": "إنشاء مستخدم",
     "Create a new administrative or standard user account.": "إنشاء حساب مستخدم إداري أو قياسي جديد.",
+    "Create account": "إنشاء حساب",
     "Create an account": "إنشاء حساب",
     "Created": "تاريخ الإنشاء",
     "Current Password": "كلمة المرور الحالية",
@@ -292,6 +293,7 @@
     "System events, administrative actions, and security audit log.": "أحداث النظام والإجراءات الإدارية وسجل تدقيق الأمان.",
     "Table": "جدول",
     "Table view": "عرض الجدول",
+    "Tags": "الوسوم",
     "Target": "الهدف",
     "Target ID": "معرف الهدف",
     "Target Resource": "المورد المستهدف",

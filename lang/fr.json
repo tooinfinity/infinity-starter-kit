@@ -1,6 +1,6 @@
 {
-    ":count unread": "{one} :count non lue|{other} :count non lues",
     "2FA recovery codes": "Codes de récupération 2FA",
+    ":count unread": "{one} :count non lue|{other} :count non lues",
     "A new verification link has been sent to the email address you provided during registration.": "Un nouveau lien de vérification a été envoyé à l'adresse email fournie lors de l'inscription.",
     "A new verification link has been sent to your email address.": "Un nouveau lien de vérification a été envoyé à votre adresse e-mail.",
     "A reset link will be sent if the account exists.": "Un lien de réinitialisation sera envoyé si le compte existe.",
@@ -67,6 +67,7 @@
     "Create": "Créer",
     "Create User": "Créer un utilisateur",
     "Create a new administrative or standard user account.": "Créez un nouveau compte d'utilisateur administratif ou standard.",
+    "Create account": "Créer un compte",
     "Create an account": "Créer un compte",
     "Created": "Créé le",
     "Current Password": "Mot de passe actuel",
@@ -292,6 +293,7 @@
     "System events, administrative actions, and security audit log.": "Événements système, actions administratives et journal d'audit de sécurité.",
     "Table": "Tableau",
     "Table view": "Vue tableau",
+    "Tags": "Balises",
     "Target": "Cible",
     "Target ID": "ID cible",
     "Target Resource": "Ressource cible",

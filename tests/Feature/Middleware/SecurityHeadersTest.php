@@ -131,6 +131,43 @@ it('merges extra sources from security config into content security policy', fun
         ->and($csp)->toContain("frame-src 'self' https://embed.example.com");
 });
 
+it('supports modern report-to directive and Reporting-Endpoints header', function (): void {
+    config([
+        'security.csp.report_to' => 'csp-endpoint',
+        'security.csp.reporting_endpoints' => 'csp-endpoint="https://example.com/csp-reports"',
+    ]);
+
+    $response = $this->get(route('home'));
+
+    $response->assertHeader('Reporting-Endpoints', 'csp-endpoint="https://example.com/csp-reports"');
+
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+    expect($csp)->toContain('report-to csp-endpoint');
+});
+
+it('rejects extra sources and directives containing semicolons or newlines to prevent directive injection', function (): void {
+    config([
+        'security.csp.extra_sources' => [
+            'script_src' => [
+                'https://evil.com; malicious-directive evil',
+                "https://evil.com\ninjection",
+                'https://trusted.example.com',
+            ],
+        ],
+        'security.csp.report_to' => "group-name;\r\nmalicious",
+        'security.csp.report_uri' => "https://report.example.com;\r\nmalicious",
+    ]);
+
+    $response = $this->get(route('home'));
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->not->toContain('malicious-directive')
+        ->and($csp)->not->toContain('evil.com')
+        ->and($csp)->not->toContain('report-to')
+        ->and($csp)->not->toContain('report-uri')
+        ->and($csp)->toContain('https://trusted.example.com');
+});
+
 it('does not load third-party font hosts', function (): void {
     expect(file_get_contents(resource_path('views/app.blade.php')))->not->toContain('fonts.bunny.net');
 });
