@@ -41,7 +41,11 @@ const commonTimezones = [
     'Africa/Casablanca',
 ];
 
-export default function Edit({ settings }: { settings: ApplicationSettings }) {
+export default function Edit({
+    settings,
+}: {
+    settings: ApplicationSettings | null;
+}) {
     const { __ } = useTranslation();
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -67,8 +71,18 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                         )}
                     />
 
+                    {settings === null && (
+                        <InputError
+                            role="alert"
+                            message={__(
+                                'Unable to load settings. Please reload the page to try again.',
+                            )}
+                        />
+                    )}
+
                     <Form
                         {...SettingController.update.form()}
+                        onBefore={() => settings !== null}
                         options={{
                             preserveScroll: true,
                         }}
@@ -85,8 +99,9 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                                         id="settings-application-name"
                                         className="mt-1 block w-full"
                                         defaultValue={
-                                            settings['application.name']
+                                            settings?.['application.name'] ?? ''
                                         }
+                                        disabled={settings === null}
                                         name="settings[application.name]"
                                         required
                                         autoComplete="off"
@@ -109,8 +124,9 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
                                     <Select
                                         name="settings[application.timezone]"
                                         defaultValue={
-                                            settings['application.timezone']
+                                            settings?.['application.timezone']
                                         }
+                                        disabled={settings === null}
                                     >
                                         <SelectTrigger
                                             id="settings-application-timezone"
@@ -146,7 +162,9 @@ export default function Edit({ settings }: { settings: ApplicationSettings }) {
 
                                 <div className="flex items-center gap-4">
                                     <Button
-                                        disabled={processing}
+                                        disabled={
+                                            processing || settings === null
+                                        }
                                         data-test="update-settings-button"
                                     >
                                         {__('Save')}

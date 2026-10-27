@@ -46,7 +46,7 @@ it('shows stored values without the handle settings middleware', function (): vo
             ->where('settings', fn ($settings): bool => $settings['application.name'] === 'Custom App'));
 });
 
-it('renders settings page with defaults and reports error when cache failure occurs', function (): void {
+it('renders settings page with a load failure and reports the error when cache failure occurs', function (): void {
     Exceptions::fake();
     Cache::shouldReceive('remember')->andThrow(new RuntimeException('Cache store unavailable'));
 
@@ -61,10 +61,7 @@ it('renders settings page with defaults and reports error when cache failure occ
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('settings/application/edit')
-            ->where('settings', [
-                'application.name' => config('app.name', 'Laravel'),
-                'application.timezone' => config('app.timezone', 'UTC'),
-            ]));
+            ->where('settings', null));
 
     Exceptions::assertReported(RuntimeException::class);
 });

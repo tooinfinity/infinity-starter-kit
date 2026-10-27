@@ -108,7 +108,12 @@ export default function NotificationPreferencesEdit({ preferences }: Props) {
                                                     ? __(
                                                           'Mandatory notifications cannot be disabled for security reasons.',
                                                       )
-                                                    : `Receive in-app notifications for ${pref.label.toLowerCase()} activity.`}
+                                                    : __(
+                                                          'Receive in-app notifications for :label activity.',
+                                                          {
+                                                              label: pref.label.toLowerCase(),
+                                                          },
+                                                      )}
                                             </p>
                                         </div>
 

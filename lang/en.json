@@ -1,4 +1,5 @@
 {
+    ":count unread": "{one} :count unread|{other} :count unread",
     "2FA recovery codes": "2FA recovery codes",
     "A new verification link has been sent to the email address you provided during registration.": "A new verification link has been sent to the email address you provided during registration.",
     "A new verification link has been sent to your email address.": "A new verification link has been sent to your email address.",
@@ -322,6 +323,7 @@
     "Two-factor authentication enabled": "Two-factor authentication enabled",
     "Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.": "Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.",
     "URL": "URL",
+    "Unable to load settings. Please reload the page to try again.": "Unable to load settings. Please reload the page to try again.",
     "Unique Actors": "Unique Actors",
     "Unknown": "Unknown",
     "Unread": "Unread",

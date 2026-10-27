@@ -10,7 +10,7 @@ import {
 import { useTranslation } from '@/hooks/use-translation';
 
 export function NotificationBell() {
-    const { __ } = useTranslation();
+    const { __, transChoice } = useTranslation();
     const [open, setOpen] = useState(false);
     const { notifications } = usePage().props;
     const unreadCount = notifications?.unreadCount ?? 0;
@@ -31,7 +31,7 @@ export function NotificationBell() {
                     className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
                     aria-label={
                         unreadCount > 0
-                            ? `${__('Notifications')} (${unreadCount} ${__('unread')})`
+                            ? `${__('Notifications')} (${transChoice(':count unread', unreadCount)})`
                             : __('Notifications')
                     }
                 >

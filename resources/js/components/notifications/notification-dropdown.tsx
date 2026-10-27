@@ -56,7 +56,7 @@ type Props = {
 };
 
 export function NotificationDropdown({ onClose }: Props) {
-    const { __ } = useTranslation();
+    const { __, transChoice } = useTranslation();
     const { notifications } = usePage().props;
     const recent = notifications?.recent;
     const unreadCount = notifications?.unreadCount ?? 0;
@@ -108,7 +108,7 @@ export function NotificationDropdown({ onClose }: Props) {
                     </span>
                     {unreadCount > 0 && (
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary tabular-nums">
-                            {unreadCount} {__('unread')}
+                            {transChoice(':count unread', unreadCount)}
                         </span>
                     )}
                 </div>

@@ -21,11 +21,11 @@ final readonly class SettingController
             $settings = $query->all();
         } catch (Exception $exception) {
             report($exception);
-            $settings = [];
+            $settings = null;
         }
 
         return Inertia::render('settings/application/edit', [
-            'settings' => [
+            'settings' => $settings === null ? null : [
                 SettingKey::ApplicationName->value => $settings[SettingKey::ApplicationName->value] ?? SettingKey::ApplicationName->defaultValue(),
                 SettingKey::ApplicationTimezone->value => $settings[SettingKey::ApplicationTimezone->value] ?? SettingKey::ApplicationTimezone->defaultValue(),
             ],

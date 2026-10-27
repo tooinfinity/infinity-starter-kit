@@ -16,6 +16,8 @@ final readonly class SecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $nonce = Vite::useCspNonce();
+
         $response = $next($request);
 
         $response->headers->set('X-Content-Type-Options', config()->string('security.headers.x_content_type_options', 'nosniff'));
@@ -28,8 +30,6 @@ final readonly class SecurityHeaders
         }
 
         if (config()->boolean('security.csp.enabled', true)) {
-            $nonce = Vite::useCspNonce();
-
             /** @var array<string, array<int, string>> $extraSources */
             $extraSources = config('security.csp.extra_sources', []);
 

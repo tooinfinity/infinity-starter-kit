@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 it('sends baseline security headers', function (): void {
@@ -69,6 +70,21 @@ it('formats content security policy strictly in production', function (): void {
 
     expect($csp)->not->toContain("'unsafe-eval'")
         ->and($csp)->toContain("connect-src 'self';");
+});
+
+it('provides a fresh nonce during rendering that matches the content security policy', function (): void {
+    $previousNonce = Vite::useCspNonce();
+
+    foreach (range(1, 2) as $attempt) {
+        $response = $this->get(route('home'));
+        $nonce = Vite::cspNonce();
+
+        expect($nonce)->toBeString()->not->toBeEmpty()->not->toBe($previousNonce)
+            ->and($response->headers->get('Content-Security-Policy'))->toContain("'nonce-{$nonce}'")
+            ->and($response->getContent())->toContain('nonce="'.$nonce.'"');
+
+        $previousNonce = $nonce;
+    }
 });
 
 it('can disable content security policy via config', function (): void {

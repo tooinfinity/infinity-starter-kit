@@ -1,4 +1,5 @@
 {
+    ":count unread": "{one} :count غير مقروءة|{two} :count غير مقروءتين|{other} :count غير مقروءة",
     "2FA recovery codes": "رموز استرداد المصادقة الثنائية",
     "A new verification link has been sent to the email address you provided during registration.": "تم إرسال رابط تحقق جديد إلى عنوان البريد الإلكتروني الذي قدمته أثناء التسجيل.",
     "A new verification link has been sent to your email address.": "تم إرسال رابط تأكيد جديد إلى عنوان بريدك الإلكتروني.",
@@ -322,6 +323,7 @@
     "Two-factor authentication enabled": "تم تفعيل المصادقة الثنائية",
     "Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.": "تم تفعيل المصادقة الثنائية الآن. امسح رمز الاستجابة السريعة ضوئياً أو أدخل مفتاح الإعداد في تطبيق المصادقة الخاص بك.",
     "URL": "الرابط",
+    "Unable to load settings. Please reload the page to try again.": "تعذر تحميل الإعدادات. يرجى إعادة تحميل الصفحة للمحاولة مرة أخرى.",
     "Unique Actors": "الفاعلون الفريدون",
     "Unknown": "غير معروف",
     "Unread": "غير مقروء",
