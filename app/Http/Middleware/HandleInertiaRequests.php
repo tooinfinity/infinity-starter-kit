@@ -11,9 +11,14 @@ use App\Models\User;
 use Illuminate\Http\Request;
 /* @chisel-notifications */
 use Illuminate\Notifications\DatabaseNotification;
-use Inertia\Inertia;
 /* @end-chisel-notifications */
+use Illuminate\Support\Facades\File;
+use Inertia\Inertia;
 use Inertia\Middleware;
+/* @chisel-localization */
+use LaravelLangSyncInertia\Facades\Lang;
+
+/* @end-chisel-localization */
 
 final class HandleInertiaRequests extends Middleware
 {
@@ -23,6 +28,22 @@ final class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /* @chisel-localization */
+    /**
+     * @var array<string, array<string, mixed>>
+     */
+    private static array $translationsCache = [];
+
+    /**
+     * Flush the in-memory translations cache.
+     */
+    public static function flushTranslationsCache(): void
+    {
+        self::$translationsCache = [];
+    }
+
+    /* @end-chisel-localization */
 
     /**
      * @see https://inertiajs.com/asset-versioning
@@ -58,10 +79,10 @@ final class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             /* @chisel-localization */
-            'locale' => app()->getLocale(),
-            'direction' => Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr',
+            'locale' => $locale = app()->getLocale(),
+            'direction' => Locale::tryFrom($locale)?->direction() ?? 'ltr',
             'supportedLocales' => Locale::toOptions(),
-            'lang' => $this->resolveTranslations(...),
+            'lang' => Inertia::once(fn (): array => $this->resolveTranslations($locale))->as("lang.{$locale}"),
             /* @end-chisel-localization */
             /* @chisel-notifications */
             'notifications' => [
@@ -94,32 +115,34 @@ final class HandleInertiaRequests extends Middleware
     /**
      * @return array<string, mixed>
      */
-    private function resolveTranslations(): array
+    private function resolveTranslations(string $locale): array
     {
-        $locale = app()->getLocale();
+        if (isset(self::$translationsCache[$locale])) {
+            return self::$translationsCache[$locale];
+        }
+
         /** @var array<string, mixed> $translations */
         $translations = [];
 
         $jsonPath = lang_path("{$locale}.json");
-        if (file_exists($jsonPath)) {
-            $decoded = json_decode((string) file_get_contents($jsonPath), true);
+        if (File::exists($jsonPath)) {
+            $decoded = json_decode(File::get($jsonPath), true);
             if (is_array($decoded)) {
                 /** @var array<string, mixed> $decoded */
                 $translations = $decoded;
             }
         }
 
+        Lang::clearResolvedInstances();
+
         $groups = ['common', 'localization', 'notifications', 'reports', 'audit'];
-        $groupTranslations = [];
-        if (function_exists('syncLangFiles')) {
-            $groupTranslations = syncLangFiles($groups);
-        }
+        $groupTranslations = syncLangFiles($groups);
 
         foreach ($groupTranslations as $key => $value) {
             $translations[$key] = $value;
         }
 
-        return $translations;
+        return self::$translationsCache[$locale] = $translations;
     }
 
     /* @end-chisel-localization */
