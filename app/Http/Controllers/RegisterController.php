@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\CreateUser;
+use App\Enums\Locale;
 use App\Http\Requests\CreateUserRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -23,9 +24,9 @@ final readonly class RegisterController
         /** @var array<string, mixed> $attributes */
         $attributes = $request->safe()->except('password');
 
-        $cookieLocale = $request->cookie('locale');
-        if (is_string($cookieLocale)) {
-            $attributes['locale'] = $cookieLocale;
+        $locale = $request->locale();
+        if ($locale instanceof Locale) {
+            $attributes['locale'] = $locale;
         }
 
         $user = $action->handle(
