@@ -4,6 +4,30 @@ declare(strict_types=1);
 
 use App\Enums\Locale;
 
+$translationCallPattern = '/\b(?:__|transChoice|trans_choice|trans)\s*\(\s*(?:\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)")/';
+$untranslatedJsxPattern = '/>\s*([A-Z][A-Za-z0-9\s,\.\?!:\-\/&;\'’]{2,})\s*</u';
+
+test('translation call matcher detects literal keys for every supported helper', function (string $call) use ($translationCallPattern): void {
+    expect(preg_match($translationCallPattern, $call, $matches))->toBe(1)
+        ->and($matches[1] ?: $matches[2])->toBe('Missing key');
+})->with([
+    "__('Missing key')",
+    "trans('Missing key')",
+    "transChoice('Missing key', 2)",
+    "trans_choice('Missing key', 2)",
+    'trans_choice("Missing key", 2)',
+]);
+
+test('JSX text matcher flags untranslated punctuation', function (string $text) use ($untranslatedJsxPattern): void {
+    expect(preg_match($untranslatedJsxPattern, '<span>'.$text.'</span>', $matches))->toBe(1)
+        ->and($matches[1])->toBe($text);
+})->with([
+    'Terms & Conditions',
+    'Terms &amp; Conditions',
+    "What's new?",
+    'What’s new?',
+]);
+
 test('all required translation files exist for English', function (): void {
     expect(file_exists(lang_path('en/common.php')))->toBeTrue()
         ->and(file_exists(lang_path('en/localization.php')))->toBeTrue()
@@ -111,13 +135,13 @@ test('translation directory is under lang/ not resources/lang/', function (): vo
     expect(lang_path())->toBe(base_path('lang'));
 });
 
-test('all literal translation keys used in frontend exist in en.json', function (): void {
+test('all literal translation keys used in frontend exist in en.json', function () use ($translationCallPattern): void {
     /** @var array<string, string> $enJson */
     $enJson = json_decode((string) file_get_contents(lang_path('en.json')), true);
 
     $jsDir = resource_path('js');
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jsDir));
-    $pattern = '/\b(?:__|transChoice|trans)\s*\(\s*(?:\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)")/';
+    $pattern = $translationCallPattern;
 
     $missing = [];
 
@@ -146,10 +170,10 @@ test('all literal translation keys used in frontend exist in en.json', function 
     expect($missing)->toBeEmpty('Missing frontend translation keys in en.json: '.json_encode($missing, JSON_PRETTY_PRINT));
 });
 
-test('no raw capitalized text nodes exist in JSX outside components/ui', function (): void {
+test('no raw capitalized text nodes exist in JSX outside components/ui', function () use ($untranslatedJsxPattern): void {
     $jsDir = resource_path('js');
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jsDir));
-    $pattern = '/>\s*([A-Z][A-Za-z0-9\s,\.\?!:\-\/]{2,})\s*</';
+    $pattern = $untranslatedJsxPattern;
 
     $untranslated = [];
 

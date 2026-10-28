@@ -168,6 +168,32 @@ it('rejects extra sources and directives containing semicolons or newlines to pr
         ->and($csp)->toContain('https://trusted.example.com');
 });
 
+it('rejects extra sources containing whitespace', function (string $whitespace): void {
+    app()->detectEnvironment(fn (): string => 'production');
+
+    config([
+        'security.csp.extra_sources.script_src' => [
+            '',
+            '   ',
+            'https://evil.example.com'.$whitespace."'unsafe-inline'",
+            'https://trusted.example.com',
+        ],
+    ]);
+
+    $response = new SecurityHeaders()->handle(Request::create('/'), fn (): Response => response('OK'));
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->not->toContain('evil.example.com')
+        ->and($csp)->toContain("' https://trusted.example.com; style-src");
+})->with([
+    'space' => ' ',
+    'tab' => "\t",
+    'line feed' => "\n",
+    'carriage return' => "\r",
+    'vertical tab' => "\v",
+    'form feed' => "\f",
+]);
+
 it('does not load third-party font hosts', function (): void {
     expect(file_get_contents(resource_path('views/app.blade.php')))->not->toContain('fonts.bunny.net');
 });

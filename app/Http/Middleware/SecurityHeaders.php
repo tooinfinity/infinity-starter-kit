@@ -45,7 +45,7 @@ final readonly class SecurityHeaders
                 $extra = $extraSources[$extraKey] ?? [];
                 $sources = array_values(array_filter(
                     array_map(trim(...), array_merge($defaultSources, $extra)),
-                    static fn (string $source): bool => $source !== '' && $isSafeToken($source),
+                    static fn (string $source): bool => $source !== '' && $isSafeToken($source) && preg_match('/\s/', $source) === 0,
                 ));
 
                 return $name.' '.implode(' ', $sources);
