@@ -4,6 +4,30 @@ declare(strict_types=1);
 
 use App\Enums\Locale;
 
+$translationCallPattern = '/\b(?:__|transChoice|trans_choice|trans)\s*\(\s*(?:\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)")/';
+$untranslatedJsxPattern = '/>\s*([A-Z][A-Za-z0-9\s,\.\?!:\-\/&;\'’]{2,})\s*</u';
+
+test('translation call matcher detects literal keys for every supported helper', function (string $call) use ($translationCallPattern): void {
+    expect(preg_match($translationCallPattern, $call, $matches))->toBe(1)
+        ->and($matches[1] ?: $matches[2])->toBe('Missing key');
+})->with([
+    "__('Missing key')",
+    "trans('Missing key')",
+    "transChoice('Missing key', 2)",
+    "trans_choice('Missing key', 2)",
+    'trans_choice("Missing key", 2)',
+]);
+
+test('JSX text matcher flags untranslated punctuation', function (string $text) use ($untranslatedJsxPattern): void {
+    expect(preg_match($untranslatedJsxPattern, '<span>'.$text.'</span>', $matches))->toBe(1)
+        ->and($matches[1])->toBe($text);
+})->with([
+    'Terms & Conditions',
+    'Terms &amp; Conditions',
+    "What's new?",
+    'What’s new?',
+]);
+
 test('all required translation files exist for English', function (): void {
     expect(file_exists(lang_path('en/common.php')))->toBeTrue()
         ->and(file_exists(lang_path('en/localization.php')))->toBeTrue()
@@ -109,6 +133,80 @@ test('translation placeholders resolve', function (): void {
 
 test('translation directory is under lang/ not resources/lang/', function (): void {
     expect(lang_path())->toBe(base_path('lang'));
+});
+
+test('all literal translation keys used in frontend exist in en.json', function () use ($translationCallPattern): void {
+    /** @var array<string, string> $enJson */
+    $enJson = json_decode((string) file_get_contents(lang_path('en.json')), true);
+
+    $jsDir = resource_path('js');
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jsDir));
+    $pattern = $translationCallPattern;
+
+    $missing = [];
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! in_array($file->getExtension(), ['ts', 'tsx', 'js', 'jsx'], true)) {
+            continue;
+        }
+
+        $content = file_get_contents($file->getPathname());
+        if ($content === false) {
+            continue;
+        }
+
+        if (preg_match_all($pattern, $content, $matches)) {
+            $extracted = array_filter(array_merge($matches[1], $matches[2]), static fn (string $k): bool => $k !== '');
+
+            foreach ($extracted as $rawKey) {
+                $key = stripslashes($rawKey);
+                if (! array_key_exists($key, $enJson)) {
+                    $missing[$key][] = str_replace(base_path().'/', '', $file->getPathname());
+                }
+            }
+        }
+    }
+
+    expect($missing)->toBeEmpty('Missing frontend translation keys in en.json: '.json_encode($missing, JSON_PRETTY_PRINT));
+});
+
+test('no raw capitalized text nodes exist in JSX outside components/ui', function () use ($untranslatedJsxPattern): void {
+    $jsDir = resource_path('js');
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jsDir));
+    $pattern = $untranslatedJsxPattern;
+
+    $untranslated = [];
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || ! in_array($file->getExtension(), ['tsx', 'jsx'], true)) {
+            continue;
+        }
+
+        $relPath = str_replace(base_path().'/', '', $file->getPathname());
+        if (str_starts_with($relPath, 'resources/js/components/ui/')) {
+            continue;
+        }
+
+        $content = file_get_contents($file->getPathname());
+        if ($content === false) {
+            continue;
+        }
+
+        // Strip comments
+        $content = (string) preg_replace('!/\*.*?\*/!s', '', $content);
+        $content = (string) preg_replace('!//.*!', '', $content);
+        // Strip TS generic types like Promise<void>
+        $content = (string) preg_replace('/Promise<[^>]+>/', '', $content);
+
+        if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $text = mb_trim((string) $match[1]);
+                $untranslated[$relPath][] = $text;
+            }
+        }
+    }
+
+    expect($untranslated)->toBeEmpty('Found raw untranslated text in JSX: '.json_encode($untranslated, JSON_PRETTY_PRINT));
 });
 
 /**

@@ -4,25 +4,27 @@ import Heading from '@/components/heading';
 import { NotificationEmptyState } from '@/components/notifications/notification-empty-state';
 import { NotificationItem } from '@/components/notifications/notification-item';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import { index, markAllRead } from '@/routes/notifications';
 import type { BreadcrumbItem } from '@/types';
 import type { PaginatedNotifications } from '@/types/notifications';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Notifications',
-        href: index(),
-    },
-];
 
 type Props = {
     notifications: PaginatedNotifications;
 };
 
 export default function NotificationsIndex({ notifications }: Props) {
+    const { __ } = useTranslation();
     const { notifications: sharedNotifications } = usePage().props;
     const unreadCount = sharedNotifications?.unreadCount ?? 0;
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Notifications'),
+            href: index(),
+        },
+    ];
 
     const handleMarkAllAsRead = () => {
         router.patch(
@@ -36,13 +38,15 @@ export default function NotificationsIndex({ notifications }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Notifications" />
+            <Head title={__('Notifications')} />
 
             <div className="mx-auto flex h-full w-full max-w-4xl flex-1 flex-col gap-4 p-4 md:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <Heading
-                        title="Notifications"
-                        description="View and manage your recent activity and system alerts."
+                        title={__('Notifications')}
+                        description={__(
+                            'View and manage your recent activity and system alerts.',
+                        )}
                     />
 
                     {unreadCount > 0 && (
@@ -52,8 +56,8 @@ export default function NotificationsIndex({ notifications }: Props) {
                             onClick={handleMarkAllAsRead}
                             className="self-start sm:self-auto"
                         >
-                            <CheckCheck className="mr-2 h-4 w-4" />
-                            Mark all as read
+                            <CheckCheck className="me-2 h-4 w-4" />
+                            {__('Mark all as read')}
                         </Button>
                     )}
                 </div>
@@ -81,12 +85,12 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 label.includes('Previous') ||
                                 label.includes('&laquo;')
                             ) {
-                                label = 'Previous';
+                                label = __('Previous');
                             } else if (
                                 label.includes('Next') ||
                                 label.includes('&raquo;')
                             ) {
-                                label = 'Next';
+                                label = __('Next');
                             } else if (
                                 label === '...' ||
                                 label === '&hellip;'
