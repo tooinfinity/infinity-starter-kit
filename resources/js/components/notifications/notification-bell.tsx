@@ -15,7 +15,7 @@ export function NotificationBell() {
 
     const handleOpenChange = (isOpen: boolean) => {
         setOpen(isOpen);
-        if (isOpen && notifications?.recent === undefined) {
+        if (isOpen) {
             router.reload({ only: ['notifications.recent'] });
         }
     };
