@@ -6,7 +6,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-
     | Trusted Proxies
     |--------------------------------------------------------------------------
     |
@@ -67,6 +66,4 @@ return [
         'permissions_policy' => 'camera=(), microphone=(), geolocation=()',
         'strict_transport_security' => 'max-age=31536000; includeSubDomains',
     ],
-
-
 ];
