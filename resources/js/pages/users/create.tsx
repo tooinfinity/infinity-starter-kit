@@ -65,7 +65,7 @@ export default function UsersCreate({
                             onChange={(e) =>
                                 form.setData('name', e.target.value)
                             }
-                            placeholder="John Doe"
+                            placeholder={__('Full name')}
                             required
                         />
                         <InputError message={form.errors.name} />

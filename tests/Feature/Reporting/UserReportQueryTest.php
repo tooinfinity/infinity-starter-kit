@@ -209,17 +209,6 @@ it('does not load every row to build the time series', function (): void {
     expect($series)->not->toBeNull();
 });
 
-test('hourlyBucketSql returns expected expressions across database drivers', function (): void {
-    $query = new UserReportQuery;
-
-    expect($query->hourlyBucketSql('sqlite'))->toBe("strftime('%Y-%m-%d %H:', created_at) || printf('%02d:00', strftime('%M', created_at) - (strftime('%M', created_at) % 15))")
-        ->and($query->hourlyBucketSql('pgsql'))->toBe("to_char(created_at, 'YYYY-MM-DD HH24:') || lpad((extract(minute from created_at)::integer - (extract(minute from created_at)::integer % 15))::text, 2, '0') || ':00'")
-        ->and($query->hourlyBucketSql('sqlsrv'))->toBe("FORMAT(DATEADD(minute, -(DATEPART(minute, created_at) % 15), created_at), 'yyyy-MM-dd HH:mm:00')")
-        ->and($query->hourlyBucketSql('mysql'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
-        ->and($query->hourlyBucketSql('mariadb'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
-        ->and($query->hourlyBucketSql('unknown'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')");
-});
-
 it('correctly attributes events around midnight for half-hour timezones like Asia/Kolkata', function (): void {
     config(['app.display_timezone' => 'Asia/Kolkata']);
 

@@ -5,6 +5,7 @@ import Heading from '@/components/heading';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/hooks/use-translation';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -17,18 +18,12 @@ type Props = {
     twoFactorEnabled?: boolean;
 };
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Two-Factor Authentication',
-        href: show(),
-    },
-];
-
 export default function TwoFactor({
     canManageTwoFactor = false,
     requiresConfirmation = false,
     twoFactorEnabled = false,
 }: Props) {
+    const { __ } = useTranslation();
     const {
         qrCodeSvg,
         hasSetupData,
@@ -41,24 +36,32 @@ export default function TwoFactor({
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Two-Factor Authentication'),
+            href: show(),
+        },
+    ];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Two-Factor Authentication" />
+            <Head title={__('Two-Factor Authentication')} />
             <SettingsLayout>
                 {canManageTwoFactor && (
                     <div className="space-y-6">
                         <Heading
                             variant="small"
-                            title="Two-factor authentication"
-                            description="Manage your two-factor authentication settings"
+                            title={__('Two-factor authentication')}
+                            description={__(
+                                'Manage your two-factor authentication settings',
+                            )}
                         />
                         {twoFactorEnabled ? (
                             <div className="flex flex-col items-start justify-start space-y-4">
                                 <p className="text-sm text-muted-foreground">
-                                    You will be prompted for a secure, random
-                                    pin during login, which you can retrieve
-                                    from the TOTP-supported application on your
-                                    phone.
+                                    {__(
+                                        'You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.',
+                                    )}
                                 </p>
 
                                 <div className="relative inline">
@@ -69,7 +72,7 @@ export default function TwoFactor({
                                                 type="submit"
                                                 disabled={processing}
                                             >
-                                                Disable 2FA
+                                                {__('Disable 2FA')}
                                             </Button>
                                         )}
                                     </Form>
@@ -84,10 +87,9 @@ export default function TwoFactor({
                         ) : (
                             <div className="flex flex-col items-start justify-start space-y-4">
                                 <p className="text-sm text-muted-foreground">
-                                    When you enable two-factor authentication,
-                                    you will be prompted for a secure pin during
-                                    login. This pin can be retrieved from a
-                                    TOTP-supported application on your phone.
+                                    {__(
+                                        'When you enable two-factor authentication, you will be prompted for a secure pin during login. This pin can be retrieved from a TOTP-supported application on your phone.',
+                                    )}
                                 </p>
 
                                 <div>
@@ -98,7 +100,7 @@ export default function TwoFactor({
                                             }
                                         >
                                             <ShieldCheck />
-                                            Continue setup
+                                            {__('Continue setup')}
                                         </Button>
                                     ) : (
                                         <Form
@@ -112,7 +114,7 @@ export default function TwoFactor({
                                                     type="submit"
                                                     disabled={processing}
                                                 >
-                                                    Enable 2FA
+                                                    {__('Enable 2FA')}
                                                 </Button>
                                             )}
                                         </Form>

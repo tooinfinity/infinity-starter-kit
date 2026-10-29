@@ -596,7 +596,9 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
 
         expect(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Http/Requests/CreateUserRequest.php'))->toBeTrue()
             ->and(file_exists($dir.'/tests/Feature/Controllers/RegisterControllerTest.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Enums/Locale.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
@@ -605,6 +607,17 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
         $userModel = (string) file_get_contents($dir.'/app/Models/User.php');
         expect($userModel)->not->toContain('implements MustVerifyEmail')
             ->and($userModel)->not->toContain('use TwoFactorAuthenticatable');
+
+        $registrationRequest = (string) file_get_contents($dir.'/app/Http/Requests/CreateUserRequest.php');
+        $registrationController = (string) file_get_contents($dir.'/app/Http/Controllers/RegisterController.php');
+        $registrationTests = (string) file_get_contents($dir.'/tests/Feature/Controllers/RegisterControllerTest.php');
+
+        expect($registrationRequest)->not->toContain('Locale')
+            ->and($registrationRequest)->not->toContain('function locale(')
+            ->and($registrationController)->not->toContain('Locale')
+            ->and($registrationController)->not->toContain('$request->locale()')
+            ->and($registrationTests)->toContain('may register a new user')
+            ->and($registrationTests)->not->toContain('guest locale cookie');
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

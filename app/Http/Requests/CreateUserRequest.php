@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+/* @chisel-localization */
+use App\Enums\Locale;
+/* @end-chisel-localization */
 use App\Models\User;
 use App\Rules\ValidEmail;
 use Illuminate\Foundation\Http\FormRequest;
@@ -35,4 +38,14 @@ final class CreateUserRequest extends FormRequest
             ],
         ];
     }
+
+    /* @chisel-localization */
+    public function locale(): ?Locale
+    {
+        $locale = $this->cookie('locale');
+
+        return is_string($locale) ? Locale::tryFrom($locale) : null;
+    }
+
+    /* @end-chisel-localization */
 }

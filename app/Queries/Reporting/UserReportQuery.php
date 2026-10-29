@@ -82,7 +82,7 @@ final readonly class UserReportQuery
         // 2. Time-series (registrations per day in display timezone)
         /** @var array<string, int> $countsByDate */
         $countsByDate = [];
-        $bucketSql = $this->timeBucketSql();
+        $bucketSql = TimeBucketSql::forDriver(column: 'created_at');
 
         /** @var list<object{bucket: string, count: int|string}> $rawSeries */
         $rawSeries = DB::table('users')
@@ -158,21 +158,5 @@ final readonly class UserReportQuery
         }
 
         return $query;
-    }
-
-    /**
-     * @return literal-string
-     */
-    public function timeBucketSql(?string $driver = null): string
-    {
-        return ReportDateRange::timeBucketSql($driver);
-    }
-
-    /**
-     * @return literal-string
-     */
-    public function hourlyBucketSql(?string $driver = null): string
-    {
-        return $this->timeBucketSql($driver);
     }
 }

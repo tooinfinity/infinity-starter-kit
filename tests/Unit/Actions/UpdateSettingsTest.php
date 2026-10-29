@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
 use App\Models\Setting;
-use App\Queries\GetSetting;
+use App\Queries\SettingQuery;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -54,7 +54,7 @@ test('UpdateSettings updates existing settings', function (): void {
 });
 
 test('UpdateSettings invalidates cache', function (): void {
-    $getSetting = resolve(GetSetting::class);
+    $settingQuery = resolve(SettingQuery::class);
     $updateSettings = resolve(UpdateSettings::class);
 
     Setting::query()->create([
@@ -62,7 +62,7 @@ test('UpdateSettings invalidates cache', function (): void {
         'value' => 'Before Update',
     ]);
 
-    $getSetting->handle(SettingKey::ApplicationName);
+    $settingQuery->get(SettingKey::ApplicationName);
 
     expect(Cache::has('settings.all'))->toBeTrue();
 

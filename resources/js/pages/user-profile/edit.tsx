@@ -6,6 +6,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/user-profile';
@@ -13,13 +14,6 @@ import { edit } from '@/routes/user-profile';
 import { send } from '@/routes/verification';
 /* @end-chisel-email-verification */
 import type { BreadcrumbItem } from '@/types';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Profile settings',
-        href: edit(),
-    },
-];
 
 export default function Edit(
     /* @chisel-email-verification */
@@ -32,20 +26,28 @@ export default function Edit(
     },
     /* @end-chisel-email-verification */
 ) {
+    const { __ } = useTranslation();
     const { auth } = usePage().props;
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: __('Profile settings'),
+            href: edit(),
+        },
+    ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Profile settings" />
+            <Head title={__('Profile settings')} />
 
-            <h1 className="sr-only">Profile settings</h1>
+            <h1 className="sr-only">{__('Profile settings')}</h1>
 
             <SettingsLayout>
                 <div className="space-y-6">
                     <Heading
                         variant="small"
-                        title="Profile information"
-                        description="Update your name and email address"
+                        title={__('Profile information')}
+                        description={__('Update your name and email address')}
                     />
 
                     <Form
@@ -58,7 +60,7 @@ export default function Edit(
                         {({ processing, errors }) => (
                             <>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
+                                    <Label htmlFor="name">{__('Name')}</Label>
 
                                     <Input
                                         id="name"
@@ -67,7 +69,7 @@ export default function Edit(
                                         name="name"
                                         required
                                         autoComplete="name"
-                                        placeholder="Full name"
+                                        placeholder={__('Full name')}
                                     />
 
                                     <InputError
@@ -77,7 +79,9 @@ export default function Edit(
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email">Email address</Label>
+                                    <Label htmlFor="email">
+                                        {__('Email address')}
+                                    </Label>
 
                                     <Input
                                         id="email"
@@ -87,7 +91,7 @@ export default function Edit(
                                         name="email"
                                         required
                                         autoComplete="username"
-                                        placeholder="Email address"
+                                        placeholder={__('Email address')}
                                     />
 
                                     <InputError
@@ -101,24 +105,26 @@ export default function Edit(
                                     auth.user.email_verified_at === null && (
                                         <div>
                                             <p className="-mt-4 text-sm text-muted-foreground">
-                                                Your email address is
-                                                unverified.{' '}
+                                                {__(
+                                                    'Your email address is unverified.',
+                                                )}{' '}
                                                 <Link
                                                     href={send()}
                                                     as="button"
                                                     className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                                                 >
-                                                    Click here to resend the
-                                                    verification email.
+                                                    {__(
+                                                        'Click here to resend the verification email.',
+                                                    )}
                                                 </Link>
                                             </p>
 
                                             {status ===
                                                 'verification-link-sent' && (
                                                 <div className="mt-2 text-sm font-medium text-green-600">
-                                                    A new verification link has
-                                                    been sent to your email
-                                                    address.
+                                                    {__(
+                                                        'A new verification link has been sent to your email address.',
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -130,7 +136,7 @@ export default function Edit(
                                         disabled={processing}
                                         data-test="update-profile-button"
                                     >
-                                        Save
+                                        {__('Save')}
                                     </Button>
                                 </div>
                             </>
