@@ -288,6 +288,9 @@ Which optional modules should be installed?
  [x] Notifications
  [x] Audit Trails
  [x] Reporting
+
+Include AI assistant guidelines?
+ [x] AI assistant guidelines (.claude, .cursor, AGENTS.md, ...)
 ```
 
 #### Non-Interactive Installation
@@ -295,10 +298,12 @@ Which optional modules should be installed?
 Pass answers as a JSON string via the `--answers` option:
 
 ```bash
-php artisan install:features --answers='{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}' --no-interaction
+php artisan install:features --answers='{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"],"ai_guidelines":["guidelines"]}' --no-interaction
 ```
 
-Unselected modules have all exclusive code, routes, permissions, translations, and dependencies cleanly pruned.
+Pass `"ai_guidelines": []` (or `"ai_guidelines": false`) to decline and prune all maintainer AI configuration files (`.agents`, `.ai`, `.amp`, `.claude`, `.codex`, `.cursor`, `.gemini`, `.junie`, `.mcp.json`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `opencode.json`, `boost.json`).
+
+Unselected modules and declined guidelines have all exclusive code, routes, permissions, translations, and configs cleanly pruned.
 
 #### Post-Installation Self-Cleanup
 

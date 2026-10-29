@@ -186,3 +186,52 @@ test('shouldSkipNode returns true when LARAVEL_INSTALLER_NO_NODE is enabled', fu
         $cleanEnv('LARAVEL_INSTALLER_NO_NODE');
     }
 });
+
+test('resolve correctly normalizes ai_guidelines boolean values, aliases, and defaults', function (): void {
+    $script = Chisel::script(base_path())
+        ->questions([
+            Question::multiselect('auth_features', 'Auth', ['registration' => 'Registration'], ['registration']),
+            Question::multiselect('optional_modules', 'Modules', ['authorization' => 'Authorization'], []),
+            Question::multiselect('ai_guidelines', 'AI', ['guidelines' => 'AI guidelines'], ['guidelines']),
+        ]);
+
+    // 1. Default when omitted
+    $command1 = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
+    $command1->setInput(new ArrayInput(['--answers' => '{"auth_features":["registration"]}'], $command1->getDefinition()));
+    $command1->setOutput(new OutputStyle(new ArrayInput([], $command1->getDefinition()), new BufferedOutput));
+
+    $context1 = InstallerContextResolver::resolve($command1, $script, isMockedScript: true, isInteractive: false);
+    expect($context1->includeAiGuidelines)->toBeTrue()
+        ->and($context1->answers['ai_guidelines'])->toBe(['guidelines']);
+
+    // 2. Boolean false normalizes to empty array
+    $command2 = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
+    $command2->setInput(new ArrayInput(['--answers' => '{"ai_guidelines":false}'], $command2->getDefinition()));
+    $command2->setOutput(new OutputStyle(new ArrayInput([], $command2->getDefinition()), new BufferedOutput));
+
+    $context2 = InstallerContextResolver::resolve($command2, $script, isMockedScript: true, isInteractive: false);
+    expect($context2->includeAiGuidelines)->toBeFalse()
+        ->and($context2->answers['ai_guidelines'])->toBe([]);
+
+    // 3. Boolean true normalizes to ['guidelines']
+    $command3 = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
+    $command3->setInput(new ArrayInput(['--answers' => '{"ai_guidelines":true}'], $command3->getDefinition()));
+    $command3->setOutput(new OutputStyle(new ArrayInput([], $command3->getDefinition()), new BufferedOutput));
+
+    $context3 = InstallerContextResolver::resolve($command3, $script, isMockedScript: true, isInteractive: false);
+    expect($context3->includeAiGuidelines)->toBeTrue()
+        ->and($context3->answers['ai_guidelines'])->toBe(['guidelines']);
+
+    // 4. Alias ai_tooling normalized to ai_guidelines
+    $command4 = new #[Signature('test:resolve {--answers=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    class extends Command {};
+    $command4->setInput(new ArrayInput(['--answers' => '{"ai_tooling":[]}'], $command4->getDefinition()));
+    $command4->setOutput(new OutputStyle(new ArrayInput([], $command4->getDefinition()), new BufferedOutput));
+
+    $context4 = InstallerContextResolver::resolve($command4, $script, isMockedScript: true, isInteractive: false);
+    expect($context4->includeAiGuidelines)->toBeFalse()
+        ->and($context4->answers['ai_guidelines'])->toBe([]);
+});
