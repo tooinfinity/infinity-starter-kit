@@ -130,13 +130,16 @@ Add a single cron entry on your production server to trigger scheduled tasks eve
 
 ---
 
-## 6. Production Optimization Checklist
+## 6. Production Deployment Checklist
 
-Run the following Artisan commands during deployment to cache routes, configuration, events, and views:
+Run the following Artisan commands during deployment to run migrations, synchronize roles and permissions, and cache routes, configuration, events, and views:
 
 ```bash
 # Run database migrations
 php artisan migrate --force
+
+# Synchronize authorization permissions and roles (idempotent; required if Authorization is enabled)
+php artisan authorization:setup
 
 # Optimize and cache configuration & routes
 php artisan config:cache
@@ -146,4 +149,54 @@ php artisan event:cache
 
 # Restart queue workers to pick up new code
 php artisan queue:restart
+```
+
+---
+
+## 7. Initial Production Bootstrap: Roles & First Super Admin
+
+On a fresh production database, the application contains no user accounts, and roles and permissions must be initialized before administrative access can be granted.
+
+### 1. Synchronize Roles and Permissions
+
+Ensure migrations have run and synchronize all permissions and roles defined in your PHP enums (`App\Enums\Permission` and `App\Enums\Role`):
+
+```bash
+php artisan migrate --force
+php artisan authorization:setup
+```
+
+The `authorization:setup` command is idempotent. It creates any missing permissions and the `super-admin` role in the database, associates all permissions with the Super Admin role, and clears the permission cache. Running it multiple times has no side effects and is safe to execute on every deployment (including after introducing new enum cases).
+
+### 2. Create or Assign the First Super Admin
+
+Because installer-only commands (such as `admin:setup`) are stripped during project generation to maintain a minimal runtime attack surface, bootstrap your first production administrator using Laravel Tinker.
+
+#### Option A: Create a New Administrator Account
+
+If user registration is disabled in production, or if you want to provision the first administrator directly from the command line:
+
+```bash
+php artisan tinker --execute '$user = App\Models\User::create(["name" => "Administrator", "email" => "admin@your-domain.com", "password" => "your-secure-password", "email_verified_at" => now()]); $user->assignRole("super-admin");'
+```
+
+> **Note:** The `User` model automatically hashes the `password` attribute via its `'hashed'` cast. Setting `'email_verified_at' => now()` ensures the account is verified immediately when email verification is enabled.
+
+#### Option B: Promote an Existing User by Email
+
+If the administrator has already registered an account via the web application:
+
+```bash
+php artisan tinker --execute 'App\Models\User::where("email", "admin@your-domain.com")->firstOrFail()->assignRole("super-admin");'
+```
+
+Alternatively, open an interactive Tinker session:
+
+```bash
+php artisan tinker
+```
+
+```php
+$user = App\Models\User::where('email', 'admin@your-domain.com')->firstOrFail();
+$user->assignRole('super-admin');
 ```
