@@ -4,60 +4,60 @@ declare(strict_types=1);
 
 use App\Enums\SettingKey;
 use App\Models\Setting;
-use App\Queries\GetSetting;
+use App\Queries\SettingQuery;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-test('GetSetting returns stored value', function (): void {
+test('SettingQuery returns stored value', function (): void {
     Setting::query()->create([
         'key' => SettingKey::ApplicationName->value,
         'value' => 'Custom App',
     ]);
 
-    $query = resolve(GetSetting::class);
+    $query = resolve(SettingQuery::class);
 
-    expect($query->handle(SettingKey::ApplicationName))->toBe('Custom App');
+    expect($query->get(SettingKey::ApplicationName))->toBe('Custom App');
 });
 
-test('GetSetting returns default when setting is not stored', function (): void {
-    $query = resolve(GetSetting::class);
+test('SettingQuery returns default when setting is not stored', function (): void {
+    $query = resolve(SettingQuery::class);
 
-    expect($query->handle(SettingKey::ApplicationName))->toBe(config('app.name', 'Laravel'));
+    expect($query->get(SettingKey::ApplicationName))->toBe(config('app.name', 'Laravel'));
 });
 
-test('GetSetting returns default when setting is not stored for timezone', function (): void {
-    $query = resolve(GetSetting::class);
+test('SettingQuery returns default when setting is not stored for timezone', function (): void {
+    $query = resolve(SettingQuery::class);
 
-    expect($query->handle(SettingKey::ApplicationTimezone))->toBe(config('app.timezone', 'UTC'));
+    expect($query->get(SettingKey::ApplicationTimezone))->toBe(config('app.timezone', 'UTC'));
 });
 
-test('GetSetting caches the result', function (): void {
+test('SettingQuery caches the result', function (): void {
     Setting::query()->create([
         'key' => SettingKey::ApplicationName->value,
         'value' => 'Cached App',
     ]);
 
-    $query = resolve(GetSetting::class);
-    $query->handle(SettingKey::ApplicationName);
+    $query = resolve(SettingQuery::class);
+    $query->get(SettingKey::ApplicationName);
 
     expect(Cache::has('settings.all'))->toBeTrue();
 });
 
-test('GetSetting all returns stored settings', function (): void {
+test('SettingQuery all returns stored settings', function (): void {
     Setting::query()->create([
         'key' => SettingKey::ApplicationName->value,
         'value' => 'Custom App',
     ]);
 
-    $query = resolve(GetSetting::class);
+    $query = resolve(SettingQuery::class);
 
     expect($query->all())->toBe([
         SettingKey::ApplicationName->value => 'Custom App',
     ]);
 });
 
-test('GetSetting excludes unsupported stored keys before hydrating settings', function (): void {
+test('SettingQuery excludes unsupported stored keys before hydrating settings', function (): void {
     Setting::query()->create([
         'key' => SettingKey::ApplicationName->value,
         'value' => 'Custom App',
@@ -75,7 +75,7 @@ test('GetSetting excludes unsupported stored keys before hydrating settings', fu
         $hydratedKeys[] = $setting->getRawOriginal('key');
     });
 
-    expect(resolve(GetSetting::class)->all())->toBe([
+    expect(resolve(SettingQuery::class)->all())->toBe([
         SettingKey::ApplicationName->value => 'Custom App',
     ])->and($hydratedKeys)->toBe([SettingKey::ApplicationName->value]);
 });
