@@ -40,6 +40,7 @@ it('may register a new user', function (): void {
     Event::assertDispatched(Registered::class);
 });
 
+/* @chisel-localization */
 it('persists guest locale cookie on registration', function (): void {
     Event::fake([Registered::class]);
 
@@ -95,6 +96,8 @@ it('registers user with null locale when guest locale cookie is missing', functi
     expect($user)->not->toBeNull()
         ->and($user->locale)->toBeNull();
 });
+
+/* @end-chisel-localization */
 
 it('requires name', function (): void {
     $response = $this->fromRoute('register')

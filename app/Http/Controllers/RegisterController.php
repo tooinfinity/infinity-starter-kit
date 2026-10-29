@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\CreateUser;
+/* @chisel-localization */
 use App\Enums\Locale;
+/* @end-chisel-localization */
 use App\Http\Requests\CreateUserRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -24,10 +26,13 @@ final readonly class RegisterController
         /** @var array<string, mixed> $attributes */
         $attributes = $request->safe()->except('password');
 
+        /* @chisel-localization */
         $locale = $request->locale();
         if ($locale instanceof Locale) {
             $attributes['locale'] = $locale;
         }
+
+        /* @end-chisel-localization */
 
         $user = $action->handle(
             $attributes,
