@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Exceptions\RoleDoesNotExist;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 use Spatie\Permission\PermissionRegistrar;
@@ -87,6 +88,48 @@ test('authorization setup command synchronizes permissions on super admin role',
 
     expect($superAdmin->permissions->pluck('name')->sort()->values()->toArray())
         ->toBe(collect(Permission::values())->sort()->values()->all());
+});
+
+test('assigning super admin role fails on fresh database before authorization setup is run', function (): void {
+    $user = User::factory()->create();
+
+    expect(fn () => $user->assignRole(Role::SuperAdmin->value))
+        ->toThrow(RoleDoesNotExist::class);
+});
+
+test('fresh database bootstrap with authorization setup and first admin creation works end to end', function (): void {
+    $this->artisan('authorization:setup')->assertSuccessful();
+    $this->artisan('authorization:setup')->assertSuccessful();
+
+    $user = User::query()->create([
+        'name' => 'Administrator',
+        'email' => 'admin@example.com',
+        'password' => 'secure-password',
+        'email_verified_at' => now(),
+    ]);
+    $user->assignRole(Role::SuperAdmin->value);
+
+    expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue()
+        ->and(Gate::forUser($user)->allows('non-existent-permission'))->toBeTrue();
+});
+
+test('documented first admin promotion by email works end to end on fresh database', function (): void {
+    $this->artisan('authorization:setup')->assertSuccessful();
+
+    $user = User::query()->create([
+        'name' => 'Regular User',
+        'email' => 'registered@example.com',
+        'password' => 'secure-password',
+        'email_verified_at' => now(),
+    ]);
+
+    User::query()
+        ->where('email', 'registered@example.com')
+        ->firstOrFail()
+        ->assignRole(Role::SuperAdmin->value);
+
+    expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue()
+        ->and(Gate::forUser($user)->allows(Permission::UsersView->value))->toBeTrue();
 });
 
 test('shared inertia props include authorization data for authenticated user', function (): void {
