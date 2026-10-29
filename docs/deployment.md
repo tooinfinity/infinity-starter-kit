@@ -19,7 +19,7 @@ php artisan key:generate
 - **`APP_DEBUG=false`**: Never expose stack traces or detailed error messages to end users in production.
 - **`APP_URL=https://your-domain.com`**: Must use `https://` to ensure generated URLs match secure protocol expectations.
 - **`SESSION_SECURE_COOKIE=true`**: Enforces the `Secure` flag on session cookies so they are transmitted solely over HTTPS.
-- **`TRUSTED_PROXIES`**: Required when hosting behind load balancers or reverse proxies (AWS ALB/ELB, Cloudflare, Traefik, Nginx, Caddy).
+- **`TRUSTED_PROXIES`**: Required when hosting behind load balancers or reverse proxies (AWS ALB/ELB, Cloudflare, Traefik, Nginx, Caddy). Defined in `config/security.php` (`security.trusted_proxies`) and handled at request time by `App\Http\Middleware\TrustProxies` so it is safely preserved after `php artisan config:cache`.
   - Leave unset by default. Use `*` only when origin access is restricted to a trusted ingress that replaces client-supplied forwarding headers:
     ```ini
     TRUSTED_PROXIES=*
