@@ -184,3 +184,55 @@ test('does not evaluate recent notifications on subsequent visit when client alr
 
     expect($recentQueries)->toBeEmpty();
 });
+
+test('partial reload of recent notifications returns a notification created after the first load', function (): void {
+    $user = User::factory()->create();
+    $user->notify(new PasswordChanged);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('notifications.unreadCount', 1)
+            ->missing('notifications.recent')
+            ->reloadOnly('notifications.recent', fn (Assert $page): Assert => $page
+                ->has('notifications.recent', 1)
+            )
+        );
+
+    $user->notify(new PasswordChanged);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('notifications.unreadCount', 2)
+            ->missing('notifications.recent')
+            ->reloadOnly('notifications.recent', fn (Assert $page): Assert => $page
+                ->has('notifications.recent', 2)
+            )
+        );
+});
+
+test('partial reload evaluates recent notifications even when client specifies except once props', function (): void {
+    $user = User::factory()->create();
+    $user->notify(new PasswordChanged);
+
+    $initial = $this->actingAs($user)->get(route('dashboard'))->assertOk();
+    $page = $initial->viewData('page');
+    $version = $page['version'] ?? (string) Inertia::getVersion();
+
+    $user->notify(new PasswordChanged);
+
+    $response = $this->actingAs($user)
+        ->withHeaders([
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => $version,
+            'X-Inertia-Partial-Component' => $page['component'],
+            'X-Inertia-Partial-Data' => 'notifications.recent',
+            'X-Inertia-Except-Once-Props' => 'notifications.recent',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->get(route('dashboard'))
+        ->assertOk();
+
+    expect($response->json('props.notifications.recent'))->toHaveCount(2);
+});
