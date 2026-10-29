@@ -6,6 +6,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trusted Proxies
+    |--------------------------------------------------------------------------
+    |
+    | The IP addresses of proxies that should be trusted when detecting the
+    | client IP address, URL scheme, and other forwarded request headers.
+    | Set to '*' or comma-separated IP addresses/CIDR blocks.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Content Security Policy (CSP)
     |--------------------------------------------------------------------------
     |
@@ -53,5 +66,4 @@ return [
         'permissions_policy' => 'camera=(), microphone=(), geolocation=()',
         'strict_transport_security' => 'max-age=31536000; includeSubDomains',
     ],
-
 ];
