@@ -26,13 +26,12 @@ it('leaves no queued jobs when an activate user action is rolled back', function
     $user = User::factory()->inactive()->create();
     $action = resolve(UpdateUserStatus::class);
 
-    try {
+    expect(function () use ($user, $action): void {
         DB::transaction(function () use ($user, $action): void {
             $action->handle($user, true);
             throw new RuntimeException('Simulated rollback');
         });
-    } catch (RuntimeException) {
-    }
+    })->toThrow(RuntimeException::class, 'Simulated rollback');
 
     expect(DB::table('jobs')->count())->toBe(0);
 });
@@ -52,13 +51,12 @@ it('leaves no queued jobs when a deactivate user action is rolled back', functio
     $user = User::factory()->active()->create();
     $action = resolve(UpdateUserStatus::class);
 
-    try {
+    expect(function () use ($user, $action): void {
         DB::transaction(function () use ($user, $action): void {
             $action->handle($user, false);
             throw new RuntimeException('Simulated rollback');
         });
-    } catch (RuntimeException) {
-    }
+    })->toThrow(RuntimeException::class, 'Simulated rollback');
 
     expect(DB::table('jobs')->count())->toBe(0);
 });
@@ -78,13 +76,12 @@ it('leaves no queued jobs when a change password action is rolled back', functio
     $user = User::factory()->create();
     $action = resolve(UpdateUserPassword::class);
 
-    try {
+    expect(function () use ($user, $action): void {
         DB::transaction(function () use ($user, $action): void {
             $action->handle($user, 'new-password-123');
             throw new RuntimeException('Simulated rollback');
         });
-    } catch (RuntimeException) {
-    }
+    })->toThrow(RuntimeException::class, 'Simulated rollback');
 
     expect(DB::table('jobs')->count())->toBe(0);
 });
@@ -103,13 +100,12 @@ it('sends nothing when a notification is dispatched inside a transaction that ro
     config(['queue.default' => 'database']);
     $user = User::factory()->create();
 
-    try {
+    expect(function () use ($user, $notificationClass): void {
         DB::transaction(function () use ($user, $notificationClass): void {
             $user->notify(new $notificationClass);
             throw new RuntimeException('Simulated rollback');
         });
-    } catch (RuntimeException) {
-    }
+    })->toThrow(RuntimeException::class, 'Simulated rollback');
 
     expect(DB::table('jobs')->count())->toBe(0);
 })->with([

@@ -334,12 +334,48 @@ function assertNoOrphanedFrontendReferences(string $directory, FeatureDefinition
     expect($orphans)->toBeEmpty('Found orphaned frontend references: '.implode("\n", $orphans));
 }
 
+function sandboxAutoloaderScript(): string
+{
+    return <<<'PHP'
+        $originalLoader = require 'vendor/autoload.php';
+        $originalLoader->unregister();
+        $loader = new Composer\Autoload\ClassLoader();
+        foreach ($originalLoader->getPrefixes() as $prefix => $paths) {
+            $loader->set($prefix, $paths);
+        }
+        $loader->set('', $originalLoader->getFallbackDirs());
+        foreach ($originalLoader->getPrefixesPsr4() as $prefix => $paths) {
+            $loader->setPsr4($prefix, $paths);
+        }
+        $loader->setPsr4('', $originalLoader->getFallbackDirsPsr4());
+        $roots = [
+            'App\\' => getcwd().'/app',
+            'Database\\Factories\\' => getcwd().'/database/factories',
+            'Database\\Seeders\\' => getcwd().'/database/seeders',
+        ];
+        foreach ($roots as $prefix => $path) {
+            $loader->setPsr4($prefix, $path);
+        }
+        $classMap = array_filter($originalLoader->getClassMap(), static function ($class) use ($roots) {
+            foreach ($roots as $prefix => $path) {
+                if (str_starts_with($class, $prefix)) {
+                    return false;
+                }
+            }
+            return true;
+        }, ARRAY_FILTER_USE_KEY);
+        $loader->addClassMap($classMap);
+        $loader->setUseIncludePath($originalLoader->getUseIncludePath());
+        $loader->register(true);
+        PHP;
+}
+
 /**
  * Boots the Laravel application inside the generated sandbox and asserts zero boot errors.
  */
 function assertSandboxBootsCleanly(string $directory): void
 {
-    $script = 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); echo "BOOT_SUCCESSFUL";';
+    $script = sandboxAutoloaderScript().' $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); echo "BOOT_SUCCESSFUL";';
     $process = new Process([PHP_BINARY, '-r', $script], $directory, [
         'APP_ENV' => 'testing',
         'APP_KEY' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
@@ -555,6 +591,43 @@ test('contract validation fails when feature declares self-dependency', function
 // Criterion 1, 4 & 6: Installed / Enabled State Contract
 // =========================================================================
 
+test('sandbox autoloader uses sandbox classes and cannot load pruned classes from the original classmap', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'],
+        'optional_modules' => [],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+        $script = sandboxAutoloaderScript().<<<'PHP'
+
+            $classes = [
+                'App\\Models\\User' => '/app/Models/User.php',
+                'Database\\Factories\\UserFactory' => '/database/factories/UserFactory.php',
+                'Database\\Seeders\\DatabaseSeeder' => '/database/seeders/DatabaseSeeder.php',
+            ];
+            foreach ($classes as $class => $path) {
+                if (! isset($originalLoader->getClassMap()[$class]) || $loader->findFile($class) !== getcwd().$path) {
+                    throw new RuntimeException('Wrong sandbox path for '.$class);
+                }
+            }
+            if (! isset($originalLoader->getClassMap()['App\\Chisel\\FeatureRegistry']) || $loader->findFile('App\\Chisel\\FeatureRegistry') !== false) {
+                throw new RuntimeException('Pruned class resolved outside the sandbox');
+            }
+            PHP;
+        $process = new Process([PHP_BINARY, '-r', $script], $dir);
+        $process->run();
+
+        expect($process->isSuccessful())->toBeTrue($process->getErrorOutput());
+
+        file_put_contents($dir.'/app/Providers/AppServiceProvider.php', "<?php\nnamespace App\\Providers;\nthrow new \\RuntimeException('Sandbox provider loaded');\n");
+        expect(fn () => assertSandboxBootsCleanly($dir))
+            ->toThrow(ExpectationFailedException::class, 'Sandbox provider loaded');
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
+
 test('every optional feature in installed state retains all exclusive files, packages, and boots cleanly', function (FeatureDefinition $feature): void {
     $selectedModules = resolveDependenciesForFeature($feature->key);
 
@@ -691,6 +764,13 @@ test('every optional feature in removed state is completely pruned without orpha
         $declaredClasses = extractDeclaredPhpClasses($feature->exclusiveFiles, base_path());
         assertNoOrphanedBackendReferences($dir, $declaredClasses);
         assertNoOrphanedFrontendReferences($dir, $feature);
+
+        if ($feature->key === 'notifications') {
+            $deleteAccountTest = (string) file_get_contents($dir.'/tests/Feature/Controllers/DeleteAccountControllerTest.php');
+            expect($deleteAccountTest)
+                ->not->toContain('use Illuminate\\Support\\Facades\\DB;', 'use Illuminate\\Support\\Str;')
+                ->toContain('use Illuminate\\Support\\Facades\\Hash;');
+        }
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

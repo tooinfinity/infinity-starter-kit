@@ -7,9 +7,13 @@ use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
 /* @end-chisel-audit-trails */
 use App\Models\User;
+/* @chisel-notifications */
 use Illuminate\Support\Facades\DB;
+/* @end-chisel-notifications */
 use Illuminate\Support\Facades\Hash;
+/* @chisel-notifications */
 use Illuminate\Support\Str;
+/* @end-chisel-notifications */
 /* @chisel-user-management */
 use Spatie\Permission\Models\Role;
 
