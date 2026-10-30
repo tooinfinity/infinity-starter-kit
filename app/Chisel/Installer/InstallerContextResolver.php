@@ -221,6 +221,15 @@ final class InstallerContextResolver
             $providedAnswers = $resolvedPreset->answers();
         }
 
+        $savedState = null;
+        if (! $hasAnswersSource && InstallerState::exists(base_path())) {
+            $savedState = InstallerState::load(base_path());
+            if ($savedState instanceof InstallerState) {
+                $hasAnswersSource = true;
+                $providedAnswers = $savedState->answers;
+            }
+        }
+
         if (isset($providedAnswers['ai_tooling']) && ! isset($providedAnswers['ai_guidelines'])) {
             $providedAnswers['ai_guidelines'] = $providedAnswers['ai_tooling'];
         }
@@ -280,6 +289,11 @@ final class InstallerContextResolver
         $adminPassword = is_string($adminPassword) && $adminPassword !== ''
             ? $adminPassword
             : (is_string($adminData['password'] ?? null) ? $adminData['password'] : (is_string($providedAnswers['admin_password'] ?? null) ? $providedAnswers['admin_password'] : null));
+
+        if ($savedState instanceof InstallerState) {
+            $adminName ??= (isset($savedState->metadata['admin_name']) && is_string($savedState->metadata['admin_name']) ? $savedState->metadata['admin_name'] : null);
+            $adminEmail ??= (isset($savedState->metadata['admin_email']) && is_string($savedState->metadata['admin_email']) ? $savedState->metadata['admin_email'] : null);
+        }
 
         $skipNode = self::shouldSkipNode();
 
