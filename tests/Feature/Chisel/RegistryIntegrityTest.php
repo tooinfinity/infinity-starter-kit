@@ -209,3 +209,115 @@ test('entire starter kit feature registry passes dependency graph integrity vali
     expect(fn () => DependencyValidator::validateDefinitions(FeatureRegistry::all()))
         ->not->toThrow(Throwable::class);
 });
+
+test('every declared exclusive, marker, and package path within each feature definition has no internal duplicates', function (): void {
+    foreach (FeatureRegistry::all() as $featureKey => $feature) {
+        expect(count($feature->exclusiveFiles))
+            ->toBe(count(array_unique($feature->exclusiveFiles)), "Feature [{$featureKey}] contains duplicate exclusive files in its definition.");
+
+        expect(count($feature->markerFiles))
+            ->toBe(count(array_unique($feature->markerFiles)), "Feature [{$featureKey}] contains duplicate marker files in its definition.");
+
+        expect(count($feature->emptyDirectories))
+            ->toBe(count(array_unique($feature->emptyDirectories)), "Feature [{$featureKey}] contains duplicate empty directories in its definition.");
+
+        expect(count($feature->composerPackages))
+            ->toBe(count(array_unique($feature->composerPackages)), "Feature [{$featureKey}] contains duplicate composer packages in its definition.");
+
+        expect(count($feature->frontendPackages))
+            ->toBe(count(array_unique($feature->frontendPackages)), "Feature [{$featureKey}] contains duplicate frontend packages in its definition.");
+
+        $intersection = array_intersect($feature->exclusiveFiles, $feature->markerFiles);
+        expect($intersection)
+            ->toBeEmpty("Feature [{$featureKey}] declares files as both exclusive and marker: ".implode(', ', $intersection));
+    }
+});
+
+test('every declared composer and frontend package is unique to its owning feature definition', function (): void {
+    $seenComposer = [];
+    $seenFrontend = [];
+
+    foreach (FeatureRegistry::all() as $featureKey => $feature) {
+        foreach ($feature->composerPackages as $pkg) {
+            $prev = $seenComposer[$pkg] ?? null;
+            expect($prev)
+                ->toBeNull("Composer package [{$pkg}] declared in [{$featureKey}] was already declared in [{$prev}].");
+            $seenComposer[$pkg] = $featureKey;
+        }
+
+        foreach ($feature->frontendPackages as $pkg) {
+            $prev = $seenFrontend[$pkg] ?? null;
+            expect($prev)
+                ->toBeNull("Frontend package [{$pkg}] declared in [{$featureKey}] was already declared in [{$prev}].");
+            $seenFrontend[$pkg] = $featureKey;
+        }
+    }
+});
+
+test('no compatibility-only path or package can silently drift between FeatureDefinitions and toPathsArray', function (): void {
+    $paths = FeatureRegistry::toPathsArray();
+    $optionalModules = FeatureRegistry::optionalModules();
+
+    foreach ($optionalModules as $featureKey => $definition) {
+        $pathsKey = str_replace('-', '_', $featureKey);
+        expect(isset($paths[$pathsKey]))->toBeTrue("Optional module [{$featureKey}] is missing from toPathsArray().");
+        $modulePaths = $paths[$pathsKey];
+
+        expect($modulePaths['empty_dirs'] ?? [])
+            ->toBe($definition->emptyDirectories, "Empty directories for [{$featureKey}] diverge between FeatureDefinition and toPathsArray().");
+
+        if ($definition->composerPackages !== []) {
+            expect($modulePaths['composer_package'] ?? null)
+                ->toBe($definition->composerPackages[0], "Composer package for [{$featureKey}] diverges between FeatureDefinition and toPathsArray().");
+        } else {
+            expect(isset($modulePaths['composer_package']))
+                ->toBeFalse("Feature [{$featureKey}] has no composer packages in definition but toPathsArray declares one.");
+        }
+
+        if ($definition->frontendPackages !== []) {
+            expect($modulePaths['frontend_package'] ?? null)
+                ->toBe($definition->frontendPackages[0], "Frontend package for [{$featureKey}] diverges between FeatureDefinition and toPathsArray().");
+        } else {
+            expect(isset($modulePaths['frontend_package']))
+                ->toBeFalse("Feature [{$featureKey}] has no frontend packages in definition but toPathsArray declares one.");
+        }
+
+        $representedFiles = [];
+        foreach (['files', 'components', 'pages', 'extra_lang_files'] as $category) {
+            foreach ((array) ($modulePaths[$category] ?? []) as $file) {
+                if (is_string($file)) {
+                    $representedFiles[$file] = true;
+                }
+            }
+        }
+
+        if (isset($modulePaths['types'])) {
+            foreach ((array) $modulePaths['types'] as $typeFile) {
+                if (is_string($typeFile)) {
+                    $representedFiles[$typeFile] = true;
+                }
+            }
+        }
+
+        foreach ($definition->exclusiveFiles as $exclusiveFile) {
+            expect(isset($representedFiles[$exclusiveFile]))
+                ->toBeTrue("Exclusive file [{$exclusiveFile}] of [{$featureKey}] is not represented in toPathsArray().");
+        }
+    }
+
+    $knownTopLevelKeys = [
+        'auth',
+        'data',
+        'dependencies',
+        'cross_feature_tests',
+        'chisel',
+    ];
+    foreach (array_keys($optionalModules) as $featureKey) {
+        $knownTopLevelKeys[] = str_replace('-', '_', $featureKey);
+    }
+
+    foreach (array_keys($paths) as $topKey) {
+        expect(in_array($topKey, $knownTopLevelKeys, true))
+            ->toBeTrue("toPathsArray contains orphaned/unknown top-level key [{$topKey}].");
+    }
+});
