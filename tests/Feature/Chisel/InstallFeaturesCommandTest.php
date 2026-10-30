@@ -98,6 +98,102 @@ test('command fails when --answers option decodes to non-array scalar', function
         ->assertFailed();
 })->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
+test('command succeeds with --preset minimal', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--preset' => 'minimal'])
+        ->assertSuccessful();
+});
+
+test('command succeeds with --preset standard', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--preset' => 'standard'])
+        ->assertSuccessful();
+});
+
+test('command succeeds with --preset full', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--preset' => 'full'])
+        ->assertSuccessful();
+});
+
+test('command fails before mutation when invalid preset name is provided', function (): void {
+    $script = bindMockChiselScript();
+    $mutated = false;
+    $script->apply(function () use (&$mutated): void {
+        $mutated = true;
+    });
+
+    try {
+        $this->artisan('install:features', ['--preset' => 'non-existent-preset'])
+            ->assertFailed();
+    } catch (InvalidArgumentException $invalidArgumentException) {
+        expect($invalidArgumentException->getMessage())->toContain('Unknown preset [non-existent-preset]');
+    }
+
+    expect($mutated)->toBeFalse();
+});
+
+test('command succeeds with --answers-file', function (): void {
+    bindMockChiselScript();
+
+    $tempFile = sys_get_temp_dir().'/cli_answers_file_'.bin2hex(random_bytes(4)).'.json';
+    file_put_contents($tempFile, json_encode([
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization'],
+    ], JSON_THROW_ON_ERROR));
+
+    try {
+        $this->artisan('install:features', ['--answers-file' => $tempFile])
+            ->assertSuccessful();
+    } finally {
+        @unlink($tempFile);
+    }
+});
+
+test('command fails before mutation when --answers-file does not exist', function (): void {
+    $script = bindMockChiselScript();
+    $mutated = false;
+    $script->apply(function () use (&$mutated): void {
+        $mutated = true;
+    });
+
+    $missingFile = sys_get_temp_dir().'/missing_answers_'.bin2hex(random_bytes(6)).'.json';
+
+    try {
+        $this->artisan('install:features', ['--answers-file' => $missingFile])
+            ->assertFailed();
+    } catch (RuntimeException $runtimeException) {
+        expect($runtimeException->getMessage())->toContain("Answers file [{$missingFile}] does not exist.");
+    }
+
+    expect($mutated)->toBeFalse();
+});
+
+test('command fails before mutation when --answers-file contains invalid JSON', function (): void {
+    $script = bindMockChiselScript();
+    $mutated = false;
+    $script->apply(function () use (&$mutated): void {
+        $mutated = true;
+    });
+
+    $tempFile = sys_get_temp_dir().'/invalid_json_'.bin2hex(random_bytes(4)).'.json';
+    file_put_contents($tempFile, 'not-valid-json');
+
+    try {
+        $this->artisan('install:features', ['--answers-file' => $tempFile])
+            ->assertFailed();
+    } catch (JsonException) {
+        // expected
+    } finally {
+        @unlink($tempFile);
+    }
+
+    expect($mutated)->toBeFalse();
+});
+
 test('command defers execution when LARAVEL_INSTALLER_DEFER_HOOKS is true and no answers given', function () use ($preserveEnv): void {
     $restoreEnv = $preserveEnv('LARAVEL_INSTALLER_DEFER_HOOKS');
 

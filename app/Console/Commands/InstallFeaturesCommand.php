@@ -23,6 +23,8 @@ use Throwable;
 #[Description('Choose which starter kit features to keep')]
 #[Signature('install:features
         {--answers= : JSON string of answers to skip interactive prompts}
+        {--answers-file= : Path to a JSON file of answers to skip interactive prompts}
+        {--preset= : Name of the preset to install (minimal, standard, full)}
         {--admin-name= : Name of the administrator user}
         {--admin-email= : Email of the administrator user}
         {--admin-password= : Password for the administrator user}
