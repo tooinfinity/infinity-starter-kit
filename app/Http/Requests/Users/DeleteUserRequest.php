@@ -23,7 +23,8 @@ final class DeleteUserRequest extends FormRequest
             return false;
         }
 
-        $canDelete = ! enum_exists(Permission::class) || $actor->can(Permission::UsersDelete->value);
+        $canDelete = ! enum_exists(Permission::class) || ($actor->can(Permission::UsersView->value)
+            && $actor->can(Permission::UsersDelete->value));
 
         return $canDelete && $actor->canManage($target);
     }

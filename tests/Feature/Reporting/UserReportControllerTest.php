@@ -219,3 +219,15 @@ test('exports users without a per-row roles query', function (): void {
     expect($roleQueries)->toBeLessThanOrEqual(2)
         ->and(mb_substr_count($csv, "\n"))->toBeGreaterThanOrEqual(26);
 });
+
+test('report exports require view and export permissions', function (string $routeName, Permission $permission): void {
+    $user = User::factory()->create();
+    $user->givePermissionTo(PermissionModel::findOrCreate($permission->value));
+
+    $this->actingAs($user)->get(route($routeName))->assertForbidden();
+})->with([
+    'user export without view' => ['reports.users.export', Permission::ReportsExport],
+    'user export without export permission' => ['reports.users.export', Permission::ReportsView],
+    'audit export without view' => ['reports.audit.export', Permission::ReportsExport],
+    'audit export without export permission' => ['reports.audit.export', Permission::ReportsView],
+]);

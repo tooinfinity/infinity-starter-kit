@@ -17,7 +17,8 @@ final class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersCreate->value) ?? false);
+        return ! enum_exists(Permission::class) || (($this->user()?->can(Permission::UsersView->value) ?? false)
+            && $this->user()->can(Permission::UsersCreate->value));
     }
 
     /**
