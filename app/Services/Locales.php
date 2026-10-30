@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Actions;
+namespace App\Services;
 
 use App\Enums\Locale;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-final readonly class ResolveLocale
+final readonly class Locales
 {
-    public function handle(Request $request): Locale
+    public function resolve(Request $request): Locale
     {
         if ($request->user() instanceof User) {
             $userLocale = $request->user()->locale;

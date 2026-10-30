@@ -7,7 +7,7 @@ namespace App\Actions;
 use App\Enums\Locale;
 use App\Models\User;
 
-final readonly class ChangeLocale
+final readonly class UpdateUserLocale
 {
     public function handle(User $user, Locale $locale): void
     {

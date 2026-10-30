@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Actions\ResolveLocale;
 use App\Enums\Locale;
 use App\Models\User;
+use App\Services\Locales;
 use Illuminate\Http\Request;
 
 test('resolves authenticated user explicit locale', function (): void {
@@ -12,9 +12,9 @@ test('resolves authenticated user explicit locale', function (): void {
     $request = Request::create('/');
     $request->setUserResolver(fn () => $user);
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::French);
+    expect($service->resolve($request))->toBe(Locale::French);
 });
 
 test('resolves to default locale when authenticated user has null locale and no cookie', function (): void {
@@ -22,9 +22,9 @@ test('resolves to default locale when authenticated user has null locale and no 
     $request = Request::create('/');
     $request->setUserResolver(fn () => $user);
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::default());
+    expect($service->resolve($request))->toBe(Locale::default());
 });
 
 test('resolves to cookie locale when authenticated user has null locale', function (): void {
@@ -33,35 +33,35 @@ test('resolves to cookie locale when authenticated user has null locale', functi
     $request->setUserResolver(fn () => $user);
     $request->cookies->set('locale', 'fr');
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::French);
+    expect($service->resolve($request))->toBe(Locale::French);
 });
 
 test('resolves guest locale from valid cookie', function (): void {
     $request = Request::create('/');
     $request->cookies->set('locale', 'ar');
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::Arabic);
+    expect($service->resolve($request))->toBe(Locale::Arabic);
 });
 
 test('resolves to default locale for guest without cookie', function (): void {
     $request = Request::create('/');
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::default());
+    expect($service->resolve($request))->toBe(Locale::default());
 });
 
 test('resolves to default locale for guest with invalid cookie', function (): void {
     $request = Request::create('/');
     $request->cookies->set('locale', 'invalid');
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::default());
+    expect($service->resolve($request))->toBe(Locale::default());
 });
 
 test('authenticated user locale overrides guest cookie', function (): void {
@@ -70,7 +70,7 @@ test('authenticated user locale overrides guest cookie', function (): void {
     $request->setUserResolver(fn () => $user);
     $request->cookies->set('locale', 'ar');
 
-    $action = resolve(ResolveLocale::class);
+    $service = resolve(Locales::class);
 
-    expect($action->handle($request))->toBe(Locale::French);
+    expect($service->resolve($request))->toBe(Locale::French);
 });

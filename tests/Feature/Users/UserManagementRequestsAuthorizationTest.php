@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Http\Requests\Users\ActivateUserRequest;
 use App\Http\Requests\Users\DeactivateUserRequest;
 use App\Http\Requests\Users\DeleteUserRequest;
+use App\Http\Requests\Users\EditUserRequest;
 use App\Http\Requests\Users\UpdateUserPasswordRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
@@ -18,6 +19,7 @@ dataset('user-management-requests', [
     'activate' => [ActivateUserRequest::class, Permission::UsersUpdate, 'PATCH', 'users/{user}/activate'],
     'deactivate' => [DeactivateUserRequest::class, Permission::UsersUpdate, 'PATCH', 'users/{user}/deactivate'],
     'delete' => [DeleteUserRequest::class, Permission::UsersDelete, 'DELETE', 'users/{user}'],
+    'edit user' => [EditUserRequest::class, Permission::UsersUpdate, 'GET', 'users/{user}/edit'],
     'update password' => [UpdateUserPasswordRequest::class, Permission::UsersManagePassword, 'PUT', 'users/{user}/password'],
     'update user' => [UpdateUserRequest::class, Permission::UsersUpdate, 'PUT', 'users/{user}'],
 ]);

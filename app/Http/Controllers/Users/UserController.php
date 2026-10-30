@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Users;
 
-use App\Actions\Users\CreateUserAction;
-use App\Actions\Users\DeleteUserAction;
-use App\Actions\Users\UpdateUserAction;
+use App\Actions\Users\CreateUser;
+use App\Actions\Users\DeleteUser;
+use App\Actions\Users\UpdateUser;
 use App\Data\Users\UserData;
+use App\Http\Requests\Users\CreateUserRequest;
 use App\Http\Requests\Users\DeleteUserRequest;
+use App\Http\Requests\Users\EditUserRequest;
+use App\Http\Requests\Users\ListUsersRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
 use App\Queries\Users\UserListingQuery;
 use App\Queries\Users\UserRolesQuery;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final readonly class UserController
 {
-    public function index(Request $request, UserListingQuery $query, UserRolesQuery $rolesQuery): Response
+    public function index(ListUsersRequest $request, UserListingQuery $query, UserRolesQuery $rolesQuery): Response
     {
         $filters = [
             'search' => $request->string('search')->value(),
@@ -39,14 +41,14 @@ final readonly class UserController
         ]);
     }
 
-    public function create(UserRolesQuery $rolesQuery): Response
+    public function create(CreateUserRequest $request, UserRolesQuery $rolesQuery): Response
     {
         return Inertia::render('users/create', [
             'availableRoles' => $rolesQuery->handle(),
         ]);
     }
 
-    public function store(StoreUserRequest $request, CreateUserAction $action): RedirectResponse
+    public function store(StoreUserRequest $request, CreateUser $action): RedirectResponse
     {
         $action->handle($request->toData());
 
@@ -58,7 +60,7 @@ final readonly class UserController
         return to_route('users.index');
     }
 
-    public function edit(User $user, UserRolesQuery $rolesQuery): Response
+    public function edit(EditUserRequest $request, User $user, UserRolesQuery $rolesQuery): Response
     {
         return Inertia::render('users/edit', [
             'user' => UserData::fromModel($user)->toArray(),
@@ -66,7 +68,7 @@ final readonly class UserController
         ]);
     }
 
-    public function update(UpdateUserRequest $request, User $user, UpdateUserAction $action): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user, UpdateUser $action): RedirectResponse
     {
         $action->handle($user, $request->toData());
 
@@ -78,7 +80,7 @@ final readonly class UserController
         return to_route('users.index');
     }
 
-    public function destroy(DeleteUserRequest $request, User $user, DeleteUserAction $action): RedirectResponse
+    public function destroy(DeleteUserRequest $request, User $user, DeleteUser $action): RedirectResponse
     {
         $action->handle($user, $request->user());
 

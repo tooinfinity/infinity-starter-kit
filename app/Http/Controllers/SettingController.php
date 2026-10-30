@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
+use App\Http\Requests\EditSettingsRequest;
 use App\Http\Requests\UpdateSettingsRequest;
 use App\Queries\GetSetting;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +15,7 @@ use Inertia\Response;
 
 final readonly class SettingController
 {
-    public function edit(GetSetting $query): Response
+    public function edit(EditSettingsRequest $request, GetSetting $query): Response
     {
         $settings = $query->all();
 

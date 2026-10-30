@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Actions\DeleteUser;
-use App\Actions\Users\DeactivateUserAction;
-use App\Actions\Users\DeleteUserAction;
-use App\Actions\Users\UpdateUserAction;
-use App\Actions\Users\UpdateUserRolesAction;
+use App\Actions\Users\DeleteUser as AdminDeleteUser;
+use App\Actions\Users\UpdateUser as AdminUpdateUser;
+use App\Actions\Users\UpdateUserRoles;
+use App\Actions\Users\UpdateUserStatus;
 use App\Data\Users\UpdateUserData;
 use App\Enums\Role;
 use App\Models\User;
@@ -57,7 +57,7 @@ it('serializes simultaneous super admin restrictions with role removal', functio
             flush();
 
             try {
-                resolve(App\Actions\Users\UpdateUserRolesAction::class)->handle($user, []);
+                resolve(App\Actions\Users\UpdateUserRoles::class)->handle($user, []);
                 echo json_encode(['removed' => true], JSON_THROW_ON_ERROR)."\n";
             } catch (Illuminate\Validation\ValidationException $exception) {
                 echo json_encode($exception->errors(), JSON_THROW_ON_ERROR)."\n";
@@ -67,8 +67,9 @@ it('serializes simultaneous super admin restrictions with role removal', functio
         DB::beginTransaction();
         $backend = DB::selectOne('select pg_backend_pid() as pid');
         match ($actionClass) {
-            UpdateUserRolesAction::class => resolve(UpdateUserRolesAction::class)->handle($first, []),
-            UpdateUserAction::class => resolve(UpdateUserAction::class)->handle($first, new UpdateUserData($first->name, $first->email, [])),
+            UpdateUserRoles::class => resolve(UpdateUserRoles::class)->handle($first, []),
+            AdminUpdateUser::class => resolve(AdminUpdateUser::class)->handle($first, new UpdateUserData($first->name, $first->email, [])),
+            UpdateUserStatus::class => resolve(UpdateUserStatus::class)->handle($first, false),
             default => resolve($actionClass)->handle($first),
         };
 
@@ -113,9 +114,9 @@ it('serializes simultaneous super admin restrictions with role removal', functio
         $originalPdo->exec('DROP SCHEMA "'.$schema.'" CASCADE');
     }
 })->with([
-    'remove role' => UpdateUserRolesAction::class,
-    'update user roles' => UpdateUserAction::class,
-    'deactivate' => DeactivateUserAction::class,
-    'delete user' => DeleteUserAction::class,
+    'remove role' => UpdateUserRoles::class,
+    'update user roles' => AdminUpdateUser::class,
+    'deactivate' => UpdateUserStatus::class,
+    'delete user' => AdminDeleteUser::class,
     'delete account' => DeleteUser::class,
 ])->skip(fn (): bool => DB::connection()->getDriverName() !== 'pgsql', 'Requires PostgreSQL row locking.');

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\CreateUserAction;
+use App\Actions\Users\CreateUser;
 use App\Data\Users\CreateUserData;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role as RoleModel;
 
-test('CreateUserAction creates a user with roles', function (): void {
+test('CreateUser creates a user with roles', function (): void {
     RoleModel::findOrCreate('editor');
 
-    $action = resolve(CreateUserAction::class);
+    $action = resolve(CreateUser::class);
     $user = $action->handle(new CreateUserData(
         name: 'John Action',
         email: 'john.action@example.com',

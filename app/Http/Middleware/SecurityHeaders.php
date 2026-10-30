@@ -25,7 +25,7 @@ final readonly class SecurityHeaders
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
-        if (app()->isProduction() && ($request->isSecure() || $request->header('X-Forwarded-Proto') === 'https')) {
+        if (app()->isProduction() && $request->isSecure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 

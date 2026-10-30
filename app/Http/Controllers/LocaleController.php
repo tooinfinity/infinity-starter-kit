@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\ChangeLocale;
-use App\Http\Requests\ChangeLocaleRequest;
+use App\Actions\UpdateUserLocale;
+use App\Http\Requests\UpdateLocaleRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 
 final readonly class LocaleController
 {
-    public function update(ChangeLocaleRequest $request, ChangeLocale $action): RedirectResponse
+    public function update(UpdateLocaleRequest $request, UpdateUserLocale $action): RedirectResponse
     {
         $locale = $request->validatedLocale();
         $user = $request->user();

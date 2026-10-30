@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\UpdateUserRolesAction;
+use App\Actions\Users\UpdateUserRoles;
 use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +15,7 @@ it('protects last super admin when mutating roles directly', function (): void {
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole($superAdminRole);
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     expect(fn () => $action->handle($superAdmin, ['editor']))
         ->toThrow(ValidationException::class);
@@ -33,7 +33,7 @@ it('allows removing super admin role if multiple super admins exist', function (
     $superAdmin2 = User::factory()->create();
     $superAdmin2->assignRole($superAdminRole);
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($superAdmin1, ['editor']);
 
@@ -49,7 +49,7 @@ it('updates roles and records audit trail by default', function (): void {
     $user = User::factory()->create();
     $user->assignRole('editor');
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($user, ['manager']);
 
@@ -65,7 +65,7 @@ it('updates roles without recording audit trail when disabled', function (): voi
     $user = User::factory()->create();
     $user->assignRole('editor');
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($user, ['manager'], recordAuditTrail: false);
 
@@ -79,7 +79,7 @@ it('allows assigning super admin role', function (): void {
 
     $user = User::factory()->create();
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($user, [Role::SuperAdmin->value]);
 
@@ -90,7 +90,7 @@ it('allows assigning super admin role', function (): void {
 it('returns unpersisted user directly', function (): void {
     $unsavedUser = new User;
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($unsavedUser, ['editor']);
 

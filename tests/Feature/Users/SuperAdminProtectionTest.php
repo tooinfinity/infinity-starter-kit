@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\UpdateUserRolesAction;
+use App\Actions\Users\UpdateUserRoles;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
@@ -107,7 +107,7 @@ it('NotLastSuperAdmin passes when multiple super admins exist', function (SuperA
     SuperAdminRestrictionOperation::RemoveRole,
 ]);
 
-it('UpdateUserRolesAction allows removing super admin role if multiple super admins exist', function (): void {
+it('UpdateUserRoles allows removing super admin role if multiple super admins exist', function (): void {
     $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
     RoleModel::findOrCreate('editor');
 
@@ -117,7 +117,7 @@ it('UpdateUserRolesAction allows removing super admin role if multiple super adm
     $superAdmin2 = User::factory()->create();
     $superAdmin2->assignRole($superAdminRole);
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($superAdmin1, ['editor']);
 
@@ -126,14 +126,14 @@ it('UpdateUserRolesAction allows removing super admin role if multiple super adm
         ->and($superAdmin1->fresh()->hasRole('editor'))->toBeTrue();
 });
 
-it('UpdateUserRolesAction updates roles and records audit trail by default', function (): void {
+it('UpdateUserRoles updates roles and records audit trail by default', function (): void {
     RoleModel::findOrCreate('editor');
     RoleModel::findOrCreate('manager');
 
     $user = User::factory()->create();
     $user->assignRole('editor');
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($user, ['manager']);
 
@@ -142,14 +142,14 @@ it('UpdateUserRolesAction updates roles and records audit trail by default', fun
         ->and($user->fresh()->hasRole('editor'))->toBeFalse();
 });
 
-it('UpdateUserRolesAction updates roles without recording audit trail when disabled', function (): void {
+it('UpdateUserRoles updates roles without recording audit trail when disabled', function (): void {
     RoleModel::findOrCreate('editor');
     RoleModel::findOrCreate('manager');
 
     $user = User::factory()->create();
     $user->assignRole('editor');
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($user, ['manager'], recordAuditTrail: false);
 
@@ -158,12 +158,12 @@ it('UpdateUserRolesAction updates roles without recording audit trail when disab
         ->and($user->fresh()->hasRole('editor'))->toBeFalse();
 });
 
-it('UpdateUserRolesAction allows assigning super admin role', function (): void {
+it('UpdateUserRoles allows assigning super admin role', function (): void {
     RoleModel::findOrCreate(Role::SuperAdmin->value);
 
     $user = User::factory()->create();
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($user, [Role::SuperAdmin->value]);
 
@@ -171,10 +171,10 @@ it('UpdateUserRolesAction allows assigning super admin role', function (): void 
         ->and($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });
 
-it('UpdateUserRolesAction returns unpersisted user directly', function (): void {
+it('UpdateUserRoles returns unpersisted user directly', function (): void {
     $unsavedUser = new User;
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
 
     $result = $action->handle($unsavedUser, ['editor']);
 

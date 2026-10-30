@@ -95,7 +95,7 @@ final class AuthFeatures
                     'resources/js/pages/user-profile/edit.tsx',
                     'resources/js/types/auth.ts',
                     'app/Models/User.php',
-                    'app/Actions/Users/UpdateUserAction.php',
+                    'app/Actions/Users/UpdateUser.php',
                     'app/Http/Controllers/Users/UserController.php',
                     'app/Data/Users/UserData.php',
                     'resources/js/types/users.ts',
