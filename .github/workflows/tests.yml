@@ -13,7 +13,94 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+          coverage: pcov
+          extensions: pdo, pdo_sqlite
+          ini-values: zend.assertions=1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          run-install: false
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Cache Bun Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Install Bun Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Assets
+        run: bun run build
+
+      - name: Cache Rector
+        uses: actions/cache@v4
+        with:
+          path: /tmp/rector
+          key: ${{ runner.os }}-rector-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-rector-
+
+      - name: Cache PHPStan
+        uses: actions/cache@v4
+        with:
+          path: /tmp/phpstan
+          key: ${{ runner.os }}-phpstan-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-phpstan-
+
+      - name: Create Cache Directories
+        run: mkdir -p /tmp/rector /tmp/phpstan
+
+      - name: Lint Checks (Pint, Rector, Vite+)
+        run: composer test:lint
+
+      - name: Type Checks (PHPStan, TypeScript)
+        run: composer test:types
+
+      - name: Type Coverage
+        run: composer test:type-coverage
+
+      - name: Unit & Architecture Tests
+        run: composer test:unit
+
+      - name: Code Coverage
+        run: composer test:coverage
+
+  database:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -74,8 +161,49 @@ jobs:
         with:
           php-version: "8.5"
           tools: composer:v2
-          coverage: pcov
           extensions: pdo, pdo_sqlite, pdo_mysql, pdo_pgsql
+          ini-values: zend.assertions=1
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Database Integration Tests
+        run: composer test:database
+        env:
+          DB_CONNECTION: ${{ matrix.db_connection }}
+          DB_HOST: ${{ matrix.db_host }}
+          DB_PORT: ${{ matrix.db_port }}
+          DB_DATABASE: ${{ matrix.db_database }}
+          DB_USERNAME: ${{ matrix.db_username }}
+          DB_PASSWORD: ${{ matrix.db_password }}
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+          extensions: pdo, pdo_sqlite
           ini-values: zend.assertions=1
 
       - name: Setup Bun
@@ -85,8 +213,6 @@ jobs:
         uses: voidzero-dev/setup-vp@v1
         with:
           node-version: 24
-          # Bun handles installs below. Without this, setup-vp runs `vp install`
-          # with npm, which fails on strict peer deps (@inertiajs/vite vs vite-plus-core).
           run-install: false
 
       - name: Cache Composer Dependencies
@@ -137,38 +263,14 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: bunx playwright install-deps
 
-      - name: Cache Rector
-        uses: actions/cache@v4
-        with:
-          path: /tmp/rector
-          key: ${{ runner.os }}-rector-${{ hashFiles('composer.lock') }}
-          restore-keys: ${{ runner.os }}-rector-
-
-      - name: Cache PHPStan
-        uses: actions/cache@v4
-        with:
-          path: /tmp/phpstan
-          key: ${{ runner.os }}-phpstan-${{ hashFiles('composer.lock') }}
-          restore-keys: ${{ runner.os }}-phpstan-
-
-      - name: Create Cache Directories
-        run: mkdir -p /tmp/rector /tmp/phpstan
-
-      - name: Tests
-        run: composer test
-        env:
-          DB_CONNECTION: ${{ matrix.db_connection }}
-          DB_HOST: ${{ matrix.db_host }}
-          DB_PORT: ${{ matrix.db_port }}
-          DB_DATABASE: ${{ matrix.db_database }}
-          DB_USERNAME: ${{ matrix.db_username }}
-          DB_PASSWORD: ${{ matrix.db_password }}
+      - name: Browser Tests
+        run: composer test:browser
 
       - name: Store Artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-screenshots-${{ matrix.db }}
+          name: browser-screenshots
           path: tests/Browser/Screenshots
           if-no-files-found: ignore
 
@@ -237,4 +339,4 @@ jobs:
         run: bun run build
 
       - name: Installer E2E Tests
-        run: vendor/bin/pest --group=installer-e2e --compact
+        run: composer test:installer
