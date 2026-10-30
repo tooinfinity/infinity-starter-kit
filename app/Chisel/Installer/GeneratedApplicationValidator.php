@@ -24,7 +24,7 @@ final class GeneratedApplicationValidator
      *
      * When CHISEL_TEST_FAIL_STAGE is set, throws a RuntimeException at a deterministic point.
      */
-    public static function injectTestFailureIfRequested(): void
+    public static function injectTestFailureIfRequested(?string $currentStage = null): void
     {
         $raw = Env::get(
             'CHISEL_TEST_FAIL_STAGE',
@@ -34,6 +34,10 @@ final class GeneratedApplicationValidator
         $stage = is_string($raw) ? $raw : '';
 
         if ($stage === '') {
+            return;
+        }
+
+        if ($currentStage !== null && $stage !== $currentStage) {
             return;
         }
 

@@ -180,6 +180,7 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir, bool $
     $removedPaths = [
         'chisel.php',
         'chisel-paths.php',
+        '.installer-state.json',
         'app/Console/Commands/InstallFeaturesCommand.php',
         'app/Console/Commands/SetupAdminUserCommand.php',
         'app/Chisel',
@@ -646,10 +647,79 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             // The installer must not claim successful completion in output
             expect($combinedOutput)->not->toContain('Admin setup complete.');
 
+            expect(file_exists($targetDir.'/.installer-state.json'))->toBeTrue(
+                '.installer-state.json must remain after installer failure for diagnosis and retry.'
+            );
+
             // Composer post-create-project-cmd and package references must NOT have been removed on failure
             $failedComposerJson = (string) file_get_contents($targetDir.'/composer.json');
             expect($failedComposerJson)->toContain('install:features')
                 ->and($failedComposerJson)->toContain('laravel/chisel');
+        } finally {
+            removeComposerTestDirectory($baseTempDir);
+        }
+    });
+
+    it('executes Scenario E: failure after mutation followed by recovery re-run succeeds and cleans up installer overhead', function (): void {
+        $baseTempDir = sys_get_temp_dir().'/composer_scenario_e_'.uniqid();
+        mkdir($baseTempDir, 0755, true);
+
+        $sourceDir = createComposerGitRepositorySource($baseTempDir);
+        $targetDir = $baseTempDir.'/target';
+
+        $secret = 'SecretRecoveryPass123';
+        $answers = [
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+            'admin' => [
+                'name' => 'Admin User',
+                'email' => 'admin@example.com',
+                'password' => $secret,
+            ],
+        ];
+
+        try {
+            // First run fails after pruning at post_chisel
+            $failProcess = runComposerCreateProject(
+                $sourceDir,
+                $targetDir,
+                $answers,
+                ['CHISEL_TEST_FAIL_STAGE' => 'post_chisel'],
+            );
+
+            expect($failProcess->getExitCode())->not->toBe(0);
+
+            $statePath = $targetDir.'/.installer-state.json';
+            expect(file_exists($statePath))->toBeTrue('.installer-state.json must exist after failure.');
+
+            $stateContent = (string) file_get_contents($statePath);
+            expect($stateContent)->not->toContain($secret);
+
+            $stateData = json_decode($stateContent, true);
+            expect($stateData['status'])->toBe('failed')
+                ->and($stateData['failed_phase'])->toBe('post_chisel')
+                ->and($stateData['completed_phases'])->toContain('preflight', 'prune');
+
+            // Re-run install:features to recover
+            $retryProcess = runInCreatedProject(
+                $targetDir,
+                [PHP_BINARY, 'artisan', 'install:features', '--no-interaction'],
+                ['CHISEL_ANSWERS' => json_encode($answers, JSON_THROW_ON_ERROR)],
+            );
+
+            expect($retryProcess->getExitCode())
+                ->toBe(0, "Retry failed:\nSTDOUT:\n".$retryProcess->getOutput()."\nSTDERR:\n".$retryProcess->getErrorOutput());
+
+            $retryOutput = $retryProcess->getOutput().$retryProcess->getErrorOutput();
+            expect($retryOutput)->toContain('Resuming previous installation from phase [post_chisel]')
+                ->and($retryOutput)->toContain('Feature pruning already completed (skipped on retry)');
+
+            // Verify clean installation: all installer artifacts removed including state file
+            assertCreatedProjectCleanOfInstallerArtifacts($targetDir);
+
+            // Verify the application boots
+            $artisanVersion = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', '--version']);
+            expect($artisanVersion->getExitCode())->toBe(0, $artisanVersion->getOutput()."\n".$artisanVersion->getErrorOutput());
         } finally {
             removeComposerTestDirectory($baseTempDir);
         }

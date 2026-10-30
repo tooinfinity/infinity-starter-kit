@@ -11,7 +11,9 @@ use App\Chisel\Installer\GeneratedApplicationValidator;
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\InstallerContextResolver;
 use App\Chisel\Installer\InstallerPlanner;
+use App\Chisel\Installer\InstallerState;
 use App\Chisel\Installer\PostScaffoldRunner;
+use App\Chisel\Installer\PreflightValidator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -47,6 +49,16 @@ final class InstallFeaturesCommand extends Command
             return self::SUCCESS;
         }
 
+        $basePath = base_path();
+        $state = InstallerState::load($basePath);
+
+        if ($state instanceof InstallerState) {
+            $this->components->info(sprintf(
+                'Resuming previous installation from phase [%s].',
+                $state->failedPhase ?? $state->currentPhase,
+            ));
+        }
+
         $isMockedScript = app()->bound(Script::class);
 
         /** @var Script $script */
@@ -56,6 +68,13 @@ final class InstallFeaturesCommand extends Command
 
         DependencyValidator::validate($context->answers);
 
+        if ($state instanceof InstallerState && $state->answersConflict($context)) {
+            $this->components->error('Conflicting answers on installer retry.');
+            $this->outputConflictDetails($state, $context);
+
+            return self::FAILURE;
+        }
+
         if ($context->isDryRun) {
             $plan = InstallerPlanner::plan($context, base_path(), (bool) $this->option('fresh'));
             $plan->render($this, $this->components);
@@ -63,30 +82,145 @@ final class InstallFeaturesCommand extends Command
             return self::SUCCESS;
         }
 
-        if (! $this->runChisel($script, $context)) {
-            return self::FAILURE;
+        if (! $state instanceof InstallerState || ! $state->hasCompleted('preflight')) {
+            PreflightValidator::validate($context, $basePath);
+            $state ??= InstallerState::initialize($basePath, $context);
+            $state->markPhaseComplete($basePath, 'preflight');
         }
 
-        if (! $this->migrateDatabase($context)) {
-            return self::FAILURE;
+        if (! $state->hasCompleted('prune')) {
+            $state->setCurrentPhase($basePath, 'prune');
+
+            if (! $this->runChisel($script, $context)) {
+                $state->recordFailure($basePath, 'prune', 'Feature pruning failed.');
+                $this->outputActionableRecovery($state);
+
+                return self::FAILURE;
+            }
+
+            $state->markPhaseComplete($basePath, 'prune');
+        } else {
+            $this->components->info('Feature pruning already completed (skipped on retry).');
         }
 
-        $configStatus = GeneratedApplicationConfigurator::configure($this, $context, $this->components);
-        if ($configStatus !== self::SUCCESS) {
-            return $configStatus;
+        try {
+            GeneratedApplicationValidator::injectTestFailureIfRequested('post_chisel');
+        } catch (Throwable $throwable) {
+            $state->recordFailure($basePath, 'post_chisel', $context->redact($throwable->getMessage()));
+            $this->outputActionableRecovery($state);
+
+            throw $throwable;
         }
 
-        if (! $this->runPostScaffoldingTools($context)) {
-            return self::FAILURE;
+        if (! $state->hasCompleted('migrate')) {
+            $state->setCurrentPhase($basePath, 'migrate');
+
+            if (! $this->migrateDatabase($context)) {
+                $state->recordFailure($basePath, 'migrate', 'Database migration failed.');
+                $this->outputActionableRecovery($state);
+
+                return self::FAILURE;
+            }
+
+            $state->markPhaseComplete($basePath, 'migrate');
+        } else {
+            $this->components->info('Database migration already completed.');
         }
 
-        GeneratedApplicationValidator::injectTestFailureIfRequested();
+        try {
+            GeneratedApplicationValidator::injectTestFailureIfRequested('post_migration');
+        } catch (Throwable $throwable) {
+            $state->recordFailure($basePath, 'post_migration', $context->redact($throwable->getMessage()));
+            $this->outputActionableRecovery($state);
 
-        GeneratedApplicationValidator::validatePreCleanup(base_path());
+            throw $throwable;
+        }
+
+        if (! $state->hasCompleted('configure')) {
+            $state->setCurrentPhase($basePath, 'configure');
+
+            $configStatus = GeneratedApplicationConfigurator::configure($this, $context, $this->components);
+            if ($configStatus !== self::SUCCESS) {
+                $state->recordFailure($basePath, 'configure', 'Application configuration failed.');
+                $this->outputActionableRecovery($state);
+
+                return $configStatus;
+            }
+
+            $state->markPhaseComplete($basePath, 'configure');
+        } else {
+            $this->components->info('Application configuration already completed.');
+        }
+
+        if (! $state->hasCompleted('post_scaffold')) {
+            $state->setCurrentPhase($basePath, 'post_scaffold');
+
+            if (! $this->runPostScaffoldingTools($context)) {
+                $state->recordFailure($basePath, 'post_scaffold', 'Post-scaffolding tools failed.');
+                $this->outputActionableRecovery($state);
+
+                return self::FAILURE;
+            }
+
+            $state->markPhaseComplete($basePath, 'post_scaffold');
+        } else {
+            $this->components->twoColumnDetail('Post-scaffolding tools', 'already completed');
+        }
+
+        try {
+            GeneratedApplicationValidator::injectTestFailureIfRequested('post_scaffold');
+            GeneratedApplicationValidator::injectTestFailureIfRequested();
+        } catch (Throwable $throwable) {
+            $state->recordFailure($basePath, 'post_scaffold', $context->redact($throwable->getMessage()));
+            $this->outputActionableRecovery($state);
+
+            throw $throwable;
+        }
+
+        GeneratedApplicationValidator::validatePreCleanup($basePath);
         $didCleanup = $this->cleanupInstaller($context);
-        GeneratedApplicationValidator::validatePostCleanup($context, $didCleanup, base_path());
+        GeneratedApplicationValidator::validatePostCleanup($context, $didCleanup, $basePath);
+
+        $state->delete($basePath);
 
         return self::SUCCESS;
+    }
+
+    private function outputActionableRecovery(InstallerState $state): void
+    {
+        $phase = $state->failedPhase ?? $state->currentPhase;
+
+        $this->components->warn(sprintf('Installation halted at phase [%s].', $phase));
+        $this->components->info(sprintf('Checkpoint saved to [%s].', InstallerState::STATE_FILE));
+        $this->newLine();
+        $this->line('To retry and resume the installation:');
+        $this->line('  <comment>php artisan install:features</comment>');
+        $this->line('To start fresh with a clean directory:');
+        $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
+    }
+
+    private function outputConflictDetails(InstallerState $state, InstallerContext $context): void
+    {
+        $savedAuth = $state->answers['auth_features'];
+        $currentAuth = $context->selectedAuthFeatures;
+        $savedModules = $state->answers['optional_modules'];
+        $currentModules = $context->selectedModules;
+
+        $this->newLine();
+        $this->line('The project was already partially pruned with:');
+        $this->line('  Authentication: '.($savedAuth !== [] ? implode(', ', $savedAuth) : '(none)'));
+        $this->line('  Optional modules: '.($savedModules !== [] ? implode(', ', $savedModules) : '(none)'));
+        $this->newLine();
+        $this->line('Attempted retry with:');
+        $this->line('  Authentication: '.($currentAuth !== [] ? implode(', ', $currentAuth) : '(none)'));
+        $this->line('  Optional modules: '.($currentModules !== [] ? implode(', ', $currentModules) : '(none)'));
+        $this->newLine();
+        $this->line('The file structure has already been pruned according to the original selection and cannot be safely changed.');
+        $this->line('To retry with the previous answers, run:');
+        $this->line('  <comment>php artisan install:features</comment>');
+        $this->newLine();
+        $this->line('To start over with different features:');
+        $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
     }
 
     private function runChisel(Script $script, InstallerContext $context): bool
