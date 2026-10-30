@@ -430,22 +430,50 @@ Adding a new optional module or feature is simple and declarative:
 
 ## 🧪 Testing & Quality Control
 
+### Pre-Merge Verification (Complete Gate)
+
+The authoritative pre-merge verification command runs linting, static analysis, type coverage, and the complete test suite with a 100% code coverage requirement:
+
 ```bash
-# Run full test suite with 100% code coverage requirement
+# Complete authoritative pre-merge gate
 composer test
-
-# Run all unit and feature tests
-vendor/bin/pest tests/Unit tests/Feature --compact
-
-# Check type coverage (100% required)
-vendor/bin/pest --type-coverage --min=100
-
-# Static analysis (PHPStan at max level)
-vendor/bin/phpstan analyse
-
-# Code formatting & styling
-composer run lint
 ```
+
+### Fast Local Commands
+
+During active development, run targeted, fast local commands without redundant coverage or setup overhead:
+
+```bash
+# Fast parallel test run across all unit and feature tests (no coverage overhead)
+composer test:quick
+
+# Invariant, database-independent unit and architecture tests
+composer test:unit
+
+# Database-sensitive feature and query tests
+composer test:database
+
+# Invariant quality checks (linting, types, type coverage, unit tests)
+composer test:quality
+
+# End-to-end browser tests (Playwright)
+composer test:browser
+
+# Full suite code coverage verification (100% required)
+composer test:coverage
+
+# Installer end-to-end scaffolding tests
+composer test:installer
+```
+
+### CI Pipeline Architecture
+
+Continuous Integration separates database-independent invariant checks from the database integration matrix:
+
+1. **`quality`** (runs once): Installs dependencies, builds frontend assets, runs Pint/Rector/Vite+ linting, PHPStan & TypeScript checks, Pest type coverage (100%), database-independent unit & architecture tests, and full code coverage verification (100%).
+2. **`database`** (matrix: SQLite, MySQL, PostgreSQL): Exercises database-sensitive feature and query behavior across supported database engines without repeating frontend, lint, or static-analysis overhead.
+3. **`browser`** (runs once): Executes browser end-to-end tests on the canonical test database with Playwright.
+4. **`installer-e2e`** (runs once): Validates Chisel scaffolding and project lifecycle generation.
 
 ---
 
