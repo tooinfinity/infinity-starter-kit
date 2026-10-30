@@ -2,13 +2,22 @@
 
 declare(strict_types=1);
 
+/* @chisel-audit-trails */
 use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
+/* @end-chisel-audit-trails */
 use App\Models\User;
+/* @chisel-notifications */
 use Illuminate\Support\Facades\DB;
+/* @end-chisel-notifications */
 use Illuminate\Support\Facades\Hash;
+/* @chisel-notifications */
 use Illuminate\Support\Str;
+/* @end-chisel-notifications */
+/* @chisel-user-management */
 use Spatie\Permission\Models\Role;
+
+/* @end-chisel-user-management */
 
 it('may delete user account', function (): void {
     $user = User::factory()->create([
@@ -58,6 +67,7 @@ it('requires correct password to delete account', function (): void {
     expect($user->fresh())->not->toBeNull();
 });
 
+/* @chisel-user-management */
 it('prevents sole super admin from deleting their own account (SEC-002)', function (): void {
     $role = Role::findOrCreate(App\Enums\Role::SuperAdmin->value);
     $superAdmin = User::factory()->create([
@@ -94,7 +104,9 @@ it('blocks self-deletion of the last active super admin even if an inactive one 
 
     expect(User::query()->whereKey($actor->id)->exists())->toBeTrue();
 });
+/* @end-chisel-user-management */
 
+/* @chisel-notifications */
 it('prunes notifications when user account is deleted (DATA-001)', function (): void {
     $user = User::factory()->create([
         'password' => Hash::make('password'),
@@ -116,7 +128,9 @@ it('prunes notifications when user account is deleted (DATA-001)', function (): 
 
     expect(DB::table('notifications')->where('notifiable_id', $user->id)->count())->toBe(0);
 });
+/* @end-chisel-notifications */
 
+/* @chisel-audit-trails */
 it('records audit trail when user deletes own account (OBS-001)', function (): void {
     $user = User::factory()->create([
         'password' => Hash::make('password'),
@@ -135,3 +149,4 @@ it('records audit trail when user deletes own account (OBS-001)', function (): v
 
     expect($audit)->not->toBeNull();
 });
+/* @end-chisel-audit-trails */

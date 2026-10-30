@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Actions\Users\UpdateUserPassword;
 use App\Models\User;
+/* @chisel-notifications */
 use App\Notifications\PasswordChanged;
+/* @end-chisel-notifications */
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -23,7 +25,9 @@ test('UpdateUserPassword changes user password, rotates remember token, and send
     expect(Hash::check('new-secret-password123', $freshUser->password))->toBeTrue()
         ->and($freshUser->remember_token)->not->toBe($beforeToken);
 
+    /* @chisel-notifications */
     Notification::assertSentTo($user, PasswordChanged::class);
+    /* @end-chisel-notifications */
 });
 
 test('UpdateUserPassword deletes user sessions when database session driver is used', function (): void {

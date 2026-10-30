@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
+/* @chisel-notifications */
 use App\Notifications\UserActivated;
 use Illuminate\Notifications\DatabaseNotification;
+/* @end-chisel-notifications */
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
@@ -66,6 +68,7 @@ it('forbids unauthorized users from deleting another user', function (): void {
     expect(User::query()->where('id', $target->id)->exists())->toBeTrue();
 });
 
+/* @chisel-notifications */
 it('prunes notifications when user is deleted', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersDelete->value));
@@ -73,10 +76,9 @@ it('prunes notifications when user is deleted', function (): void {
 
     $target = User::factory()->create();
 
-    if (class_exists(UserActivated::class)) {
-        $target->notify(new UserActivated);
-        expect($target->notifications()->count())->toBe(1);
-    }
+    $target->notify(new UserActivated);
+
+    expect($target->notifications()->count())->toBe(1);
 
     $this->actingAs($admin)
         ->delete(route('users.destroy', $target))
@@ -84,7 +86,6 @@ it('prunes notifications when user is deleted', function (): void {
 
     expect(User::query()->where('id', $target->id)->exists())->toBeFalse();
 
-    if (class_exists(UserActivated::class)) {
-        expect(DatabaseNotification::query()->where('notifiable_id', $target->id)->count())->toBe(0);
-    }
+    expect(DatabaseNotification::query()->where('notifiable_id', $target->id)->count())->toBe(0);
 });
+/* @end-chisel-notifications */
