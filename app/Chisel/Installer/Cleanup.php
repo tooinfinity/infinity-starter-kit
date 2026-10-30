@@ -39,7 +39,9 @@ final class Cleanup
             'app/Chisel/Installer/ConfigCleaner.php',
             'app/Chisel/Installer/Cleanup.php',
             'app/Chisel/Installer/FeaturePruner.php',
+            'app/Chisel/Installer/AiToolingPruner.php',
             'tests/Support/CrossFeatureTests.php',
+            'tests/Unit/Chisel/AiToolingPrunerTest.php',
             'tests/Unit/Chisel/DirectoryPruningTest.php',
             'tests/Unit/Chisel/JsonPruningTest.php',
             'tests/Unit/Chisel/FeatureRegistryTest.php',
@@ -52,6 +54,7 @@ final class Cleanup
             'tests/Unit/Chisel/GeneratedApplicationConfiguratorTest.php',
             'tests/Unit/Chisel/GeneratedApplicationValidatorTest.php',
             'tests/Unit/Chisel/InstallerContextResolverTest.php',
+            'tests/Feature/Chisel/AiGuidelinesInstallationTest.php',
             'tests/Feature/Chisel/DependencyValidationTest.php',
             'tests/Feature/Chisel/FeatureCombinationTest.php',
             'tests/Feature/Chisel/GeneratedProjectLifecycleTest.php',
@@ -93,6 +96,7 @@ final class Cleanup
         class_exists(ComposerManifestPruner::class);
         class_exists(ComposerLockSynchronizer::class);
         class_exists(DirectoryPruner::class);
+        class_exists(AiToolingPruner::class);
 
         ConfigCleaner::cleanPhpunit($directory);
         ConfigCleaner::cleanPhpstan($directory);

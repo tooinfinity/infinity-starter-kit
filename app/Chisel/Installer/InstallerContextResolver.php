@@ -97,6 +97,17 @@ final class InstallerContextResolver
 
         throw_unless(is_array($providedAnswers), RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
+        if (isset($providedAnswers['ai_tooling']) && ! isset($providedAnswers['ai_guidelines'])) {
+            $providedAnswers['ai_guidelines'] = $providedAnswers['ai_tooling'];
+        }
+
+        if (isset($providedAnswers['ai_guidelines']) && is_bool($providedAnswers['ai_guidelines'])) {
+            $providedAnswers['ai_guidelines'] = $providedAnswers['ai_guidelines'] ? ['guidelines'] : [];
+        }
+
+        $isNonInteractive = $command->option('answers') !== null || ! $isInteractive || self::hasEnvironmentAnswers();
+        $isInteractivePrompting = $isInteractive && ! $isNonInteractive;
+
         /** @var array<string, mixed> $providedAnswers */
         $pendingAnswers = $script
             ->collectAnswers()
@@ -107,7 +118,7 @@ final class InstallerContextResolver
                 required: $question->required,
                 hint: $question->hint,
             ))
-            ->interactive($isInteractive)
+            ->interactive($isInteractivePrompting)
             ->withAnswers($providedAnswers);
 
         $answers = $pendingAnswers->toArray();
@@ -119,6 +130,13 @@ final class InstallerContextResolver
         $selectedAuthFeatures = array_values(array_filter($rawAuth, is_string(...)));
 
         $hasAuthorization = in_array('authorization', $selectedModules, true);
+
+        $rawAi = $providedAnswers['ai_guidelines'] ?? ($answers['ai_guidelines'] ?? null);
+        $includeAiGuidelines = match (true) {
+            is_bool($rawAi) => $rawAi,
+            is_array($rawAi) => in_array('guidelines', $rawAi, true) || in_array('ai-guidelines', $rawAi, true),
+            default => true,
+        };
 
         $adminName = $command->option('admin-name')
             ?? Env::get('CHISEL_ADMIN_NAME', Request::server('CHISEL_ADMIN_NAME') ?? getenv('CHISEL_ADMIN_NAME'));
@@ -139,7 +157,6 @@ final class InstallerContextResolver
             ? $adminPassword
             : (is_string($adminData['password'] ?? null) ? $adminData['password'] : (is_string($providedAnswers['admin_password'] ?? null) ? $providedAnswers['admin_password'] : null));
 
-        $isNonInteractive = $command->option('answers') !== null || ! $isInteractive || self::hasEnvironmentAnswers();
         $skipNode = self::shouldSkipNode();
 
         return new InstallerContext(
@@ -155,6 +172,7 @@ final class InstallerContextResolver
             isNonInteractive: $isNonInteractive,
             skipNode: $skipNode,
             isMockedScript: $isMockedScript,
+            includeAiGuidelines: $includeAiGuidelines,
         );
     }
 }

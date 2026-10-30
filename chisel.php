@@ -7,6 +7,7 @@ if (! class_exists('Laravel\Chisel\Chisel')) {
 }
 
 use App\Chisel\FeatureRegistry;
+use App\Chisel\Installer\AiToolingPruner;
 use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\ComposerLockSynchronizer;
 use App\Chisel\Installer\ComposerManifestPruner;
@@ -178,6 +179,13 @@ if (! function_exists('chiselCleanup')) {
     }
 }
 
+if (! function_exists('chiselPruneAiTooling')) {
+    function chiselPruneAiTooling(string $directory): void
+    {
+        AiToolingPruner::prune($directory);
+    }
+}
+
 /** @var array<string, mixed> $paths */
 $paths = require __DIR__.'/chisel-paths.php';
 
@@ -230,6 +238,17 @@ $script = Chisel::script(__DIR__)
                 'notifications',
                 'audit-trails',
                 'reporting',
+            ],
+            hint: 'Use space to select, enter to confirm.',
+        ),
+        Question::multiselect(
+            name: 'ai_guidelines',
+            label: 'Include AI assistant guidelines?',
+            options: [
+                'guidelines' => 'AI assistant guidelines (.claude, .cursor, AGENTS.md, ...)',
+            ],
+            default: [
+                'guidelines',
             ],
             hint: 'Use space to select, enter to confirm.',
         ),
@@ -449,6 +468,13 @@ foreach ($paths['cross_feature_tests'] ?? [] as $entry) {
 }
 
 return $script
+    ->selected(
+        'ai_guidelines',
+        'guidelines',
+        else: function (Chisel $chisel) use ($directory): void {
+            chiselPruneAiTooling($directory);
+        },
+    )
     ->selectedAny(
         'auth_features',
         ['password-reset', 'password-update'],
