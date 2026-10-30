@@ -6,15 +6,17 @@ namespace App\Actions;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+/* @end-chisel-audit-trails */
+/* @chisel-audit-trails */
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
-/* @chisel-roles-permissions */
+/* @chisel-user-management */
 use App\Enums\SuperAdminRestrictionOperation;
-/* @end-chisel-roles-permissions */
+/* @end-chisel-user-management */
 use App\Models\User;
-/* @chisel-roles-permissions */
+/* @chisel-user-management */
 use App\Rules\NotLastSuperAdmin;
-/* @end-chisel-roles-permissions */
+/* @end-chisel-user-management */
 use Illuminate\Support\Facades\DB;
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
@@ -33,9 +35,9 @@ final readonly class DeleteUser
     public function handle(User $user): void
     {
         DB::transaction(function () use ($user): void {
-            /* @chisel-roles-permissions */
+            /* @chisel-user-management */
             NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Delete);
-            /* @end-chisel-roles-permissions */
+            /* @end-chisel-user-management */
 
             /* @chisel-audit-trails */
             $this->auditTrail->handle(

@@ -2,11 +2,17 @@
 
 declare(strict_types=1);
 
+/* @chisel-audit-trails */
 use App\Enums\AuditEvent;
+/* @end-chisel-audit-trails */
 use App\Enums\Permission;
+/* @chisel-audit-trails */
 use App\Models\AuditTrail;
+/* @end-chisel-audit-trails */
 use App\Models\User;
+/* @chisel-notifications */
 use App\Notifications\PasswordChanged;
+/* @end-chisel-notifications */
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -76,7 +82,9 @@ it('rotates the remember token and notifies the user on admin password reset', f
         ->assertRedirect();
 
     expect($target->fresh()->remember_token)->not->toBe($before);
+    /* @chisel-notifications */
     Notification::assertSentTo($target, PasswordChanged::class);
+    /* @end-chisel-notifications */
 });
 
 it('invalidates database sessions of the target user on admin password reset', function (): void {
@@ -117,13 +125,8 @@ it('invalidates database sessions of the target user on admin password reset', f
         ->and(DB::table('sessions')->where('user_id', $admin->id)->exists())->toBeTrue();
 });
 
+/* @chisel-audit-trails */
 it('ensures password values never appear in audit data', function (): void {
-    if (! class_exists(AuditTrail::class)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManagePassword->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
@@ -142,3 +145,4 @@ it('ensures password values never appear in audit data', function (): void {
         ->and($audit->new_values['password'])->toBe('[REDACTED]')
         ->and(json_encode($audit->new_values))->not->toContain('super-secret-password-xyz');
 });
+/* @end-chisel-audit-trails */
