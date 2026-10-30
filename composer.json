@@ -16,7 +16,7 @@
     "require": {
         "php": "^8.5.0",
         "erag/laravel-lang-sync-inertia": "^2.4",
-        "inertiajs/inertia-laravel": "v3.0.6",
+        "inertiajs/inertia-laravel": "^3.0.6",
         "laravel/chisel": "^0.1.1",
         "laravel/fortify": "^1.39.0",
         "laravel/framework": "^13.32.0",
@@ -124,6 +124,9 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "_comment": [
+        "brianium/paratest is pinned to 7.26.0 for Pest compatibility."
+    ]
 }
