@@ -94,9 +94,6 @@ Route::middleware('auth')->group(function (): void {
     /* @chisel-settings */
     // Application Settings...
     Route::get('settings/application', [SettingController::class, 'edit'])
-        /* @chisel-roles-permissions */
-        ->middleware('can:settings.manage')
-        /* @end-chisel-roles-permissions */
         ->name('settings.edit');
     Route::put('settings/application', [SettingController::class, 'update'])
         ->name('settings.update');
@@ -104,31 +101,17 @@ Route::middleware('auth')->group(function (): void {
 
     /* @chisel-user-management */
     // User Management...
-    Route::middleware([
-        /* @chisel-roles-permissions */
-        'can:users.view',
-        /* @end-chisel-roles-permissions */
-    ])->group(function (): void {
-        Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
-        Route::get('users/create', [UserManagementController::class, 'create'])
-            /* @chisel-roles-permissions */
-            ->middleware('can:users.create')
-            /* @end-chisel-roles-permissions */
-            ->name('users.create');
-        Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
-        Route::get('users/{user}/edit', [UserManagementController::class, 'edit'])
-            /* @chisel-roles-permissions */
-            ->middleware('can:users.update')
-            /* @end-chisel-roles-permissions */
-            ->name('users.edit');
-        Route::put('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
-        Route::patch('users/{user}/activate', ActivateUserController::class)->name('users.activate');
-        Route::patch('users/{user}/deactivate', DeactivateUserController::class)->name('users.deactivate');
-        Route::put('users/{user}/password', AdminUserPasswordController::class)
-            ->middleware('password.confirm')
-            ->name('users.password.update');
-        Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
-    });
+    Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::get('users/create', [UserManagementController::class, 'create'])->name('users.create');
+    Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
+    Route::get('users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
+    Route::put('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+    Route::patch('users/{user}/activate', ActivateUserController::class)->name('users.activate');
+    Route::patch('users/{user}/deactivate', DeactivateUserController::class)->name('users.deactivate');
+    Route::put('users/{user}/password', AdminUserPasswordController::class)
+        ->middleware('password.confirm')
+        ->name('users.password.update');
+    Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
     /* @end-chisel-user-management */
 
     /* @chisel-notifications */
@@ -146,38 +129,21 @@ Route::middleware('auth')->group(function (): void {
     /* @chisel-audit-trails */
     // Audit Trails...
     Route::get('audit-trails', [AuditTrailController::class, 'index'])
-        /* @chisel-roles-permissions */
-        ->middleware('can:audit.view')
-        /* @end-chisel-roles-permissions */
         ->name('audit-trails.index');
     /* @end-chisel-audit-trails */
 
     /* @chisel-reporting */
     // Reporting...
-    Route::middleware([
-        /* @chisel-roles-permissions */
-        'can:reports.view',
-        /* @end-chisel-roles-permissions */
-    ])->prefix('reports')->name('reports.')->group(function (): void {
+    Route::prefix('reports')->name('reports.')->group(function (): void {
         Route::get('/', ReportIndexController::class)->name('index');
         Route::get('users', UserReportController::class)->name('users');
         Route::get('users/export', ExportUserReportController::class)
-            ->middleware([
-                /* @chisel-roles-permissions */
-                'can:reports.export',
-                /* @end-chisel-roles-permissions */
-                'throttle:10,1',
-            ])
+            ->middleware('throttle:10,1')
             ->name('users.export');
         /* @chisel-audit-trails */
         Route::get('audit', AuditReportController::class)->name('audit');
         Route::get('audit/export', ExportAuditReportController::class)
-            ->middleware([
-                /* @chisel-roles-permissions */
-                'can:reports.export',
-                /* @end-chisel-roles-permissions */
-                'throttle:10,1',
-            ])
+            ->middleware('throttle:10,1')
             ->name('audit.export');
         /* @end-chisel-audit-trails */
     });

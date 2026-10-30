@@ -23,7 +23,8 @@ final class DeactivateUserRequest extends FormRequest
             return false;
         }
 
-        $canUpdate = ! enum_exists(Permission::class) || $actor->can(Permission::UsersUpdate->value);
+        $canUpdate = ! enum_exists(Permission::class) || ($actor->can(Permission::UsersView->value)
+            && $actor->can(Permission::UsersUpdate->value));
 
         return $canUpdate && $actor->canManage($target);
     }

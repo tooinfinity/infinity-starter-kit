@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\UpdateUserAction;
+use App\Actions\Users\UpdateUser;
 use App\Data\Users\UpdateUserData;
 use App\Models\User;
 use Spatie\Permission\Models\Role as RoleModel;
 
-test('UpdateUserAction updates user attributes and roles', function (): void {
+test('UpdateUser updates user attributes and roles', function (): void {
     RoleModel::findOrCreate('manager');
 
     $user = User::factory()->create([
@@ -15,7 +15,7 @@ test('UpdateUserAction updates user attributes and roles', function (): void {
         'email' => 'original@example.com',
     ]);
 
-    $action = resolve(UpdateUserAction::class);
+    $action = resolve(UpdateUser::class);
     $action->handle($user, new UpdateUserData(
         name: 'Updated Name',
         email: 'original@example.com',

@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\ActivateUserAction;
-use App\Actions\Users\ChangeUserPasswordAction;
-use App\Actions\Users\DeactivateUserAction;
+use App\Actions\Users\UpdateUserPassword;
+use App\Actions\Users\UpdateUserStatus;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 use App\Notifications\UserActivated;
@@ -31,11 +30,11 @@ it('implements ShouldQueueAfterCommit on user notifications', function (): void 
 it('leaves no queued jobs when an activate user action is rolled back', function (): void {
     config(['queue.default' => 'database']);
     $user = User::factory()->inactive()->create();
-    $action = resolve(ActivateUserAction::class);
+    $action = resolve(UpdateUserStatus::class);
 
     try {
         DB::transaction(function () use ($user, $action): void {
-            $action->handle($user);
+            $action->handle($user, true);
             throw new RuntimeException('Simulated rollback');
         });
     } catch (RuntimeException) {
@@ -47,9 +46,9 @@ it('leaves no queued jobs when an activate user action is rolled back', function
 it('dispatches queued notification after user activation transaction commits', function (): void {
     config(['queue.default' => 'database']);
     $user = User::factory()->inactive()->create();
-    $action = resolve(ActivateUserAction::class);
+    $action = resolve(UpdateUserStatus::class);
 
-    $action->handle($user);
+    $action->handle($user, true);
 
     expect(DB::table('jobs')->count())->toBe(1);
 });
@@ -57,11 +56,11 @@ it('dispatches queued notification after user activation transaction commits', f
 it('leaves no queued jobs when a deactivate user action is rolled back', function (): void {
     config(['queue.default' => 'database']);
     $user = User::factory()->active()->create();
-    $action = resolve(DeactivateUserAction::class);
+    $action = resolve(UpdateUserStatus::class);
 
     try {
         DB::transaction(function () use ($user, $action): void {
-            $action->handle($user);
+            $action->handle($user, false);
             throw new RuntimeException('Simulated rollback');
         });
     } catch (RuntimeException) {
@@ -73,9 +72,9 @@ it('leaves no queued jobs when a deactivate user action is rolled back', functio
 it('dispatches queued notification after user deactivation transaction commits', function (): void {
     config(['queue.default' => 'database']);
     $user = User::factory()->active()->create();
-    $action = resolve(DeactivateUserAction::class);
+    $action = resolve(UpdateUserStatus::class);
 
-    $action->handle($user);
+    $action->handle($user, false);
 
     expect(DB::table('jobs')->count())->toBe(1);
 });
@@ -83,7 +82,7 @@ it('dispatches queued notification after user deactivation transaction commits',
 it('leaves no queued jobs when a change password action is rolled back', function (): void {
     config(['queue.default' => 'database']);
     $user = User::factory()->create();
-    $action = resolve(ChangeUserPasswordAction::class);
+    $action = resolve(UpdateUserPassword::class);
 
     try {
         DB::transaction(function () use ($user, $action): void {
@@ -99,7 +98,7 @@ it('leaves no queued jobs when a change password action is rolled back', functio
 it('dispatches queued notification after password change transaction commits', function (): void {
     config(['queue.default' => 'database']);
     $user = User::factory()->create();
-    $action = resolve(ChangeUserPasswordAction::class);
+    $action = resolve(UpdateUserPassword::class);
 
     $action->handle($user, 'new-password-123');
 

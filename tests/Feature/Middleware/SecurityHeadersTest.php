@@ -3,9 +3,14 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\SecurityHeaders;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
+
+afterEach(function (): void {
+    TrustProxies::flushState();
+});
 
 it('sends baseline security headers', function (): void {
     $this->get(route('home'))
@@ -15,12 +20,23 @@ it('sends baseline security headers', function (): void {
         ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 });
 
-it('only sends HSTS in production', function (): void {
+it('only sends HSTS in production for secure requests', function (): void {
     $this->get(route('home'))->assertHeaderMissing('Strict-Transport-Security');
 
+    TrustProxies::at('*');
     app()->detectEnvironment(fn (): string => 'production');
     $this->get(route('home'), ['X-Forwarded-Proto' => 'https'])
         ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+});
+
+it('omits HSTS in production when X-Forwarded-Proto comes from untrusted proxy', function (): void {
+    TrustProxies::at('192.168.1.1');
+    app()->detectEnvironment(fn (): string => 'production');
+
+    $this->get(route('home'), [
+        'REMOTE_ADDR' => '10.0.0.1',
+        'X-Forwarded-Proto' => 'https',
+    ])->assertHeaderMissing('Strict-Transport-Security');
 });
 
 it('omits HSTS in production for non-secure requests', function (): void {

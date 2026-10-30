@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\UpdateSettings;
 use App\Enums\SettingKey;
+use App\Http\Requests\EditSettingsRequest;
 use App\Http\Requests\UpdateSettingsRequest;
 use App\Queries\SettingQuery;
 use Exception;
@@ -15,7 +16,7 @@ use Inertia\Response;
 
 final readonly class SettingController
 {
-    public function edit(SettingQuery $query): Response
+    public function edit(EditSettingsRequest $request, SettingQuery $query): Response
     {
         try {
             $settings = $query->all();

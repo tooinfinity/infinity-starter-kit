@@ -21,7 +21,8 @@ final class UpdateUserPasswordRequest extends FormRequest
             return false;
         }
 
-        $canManagePassword = ! enum_exists(Permission::class) || $actor->can(Permission::UsersManagePassword->value);
+        $canManagePassword = ! enum_exists(Permission::class) || ($actor->can(Permission::UsersView->value)
+            && $actor->can(Permission::UsersManagePassword->value));
 
         return $canManagePassword && $actor->canManage($target);
     }

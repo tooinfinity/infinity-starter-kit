@@ -12,16 +12,19 @@ use App\Data\Users\CreateUserData;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Models\User;
+/* @chisel-audit-trails */
+use App\Services\UserAuditData;
+/* @end-chisel-audit-trails */
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 
-final readonly class CreateUserAction
+final readonly class CreateUser
 {
     public function __construct(
-        private UpdateUserRolesAction $updateUserRoles = new UpdateUserRolesAction,
+        private UpdateUserRoles $updateUserRoles = new UpdateUserRoles,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
-        private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
+        private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
 
@@ -45,7 +48,7 @@ final readonly class CreateUserAction
             $this->auditTrail->handle(
                 event: AuditEvent::UserCreated,
                 auditable: $user,
-                newValues: $this->snapshotUserAuditData->handle($user, $data->roles),
+                newValues: $this->userAuditData->snapshot($user, $data->roles),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */

@@ -10,18 +10,19 @@ use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
-/* @chisel-notifications */
-use App\Notifications\UserDeactivated;
-/* @end-chisel-notifications */
 use App\Rules\NotLastSuperAdmin;
+/* @chisel-audit-trails */
+use App\Services\UserAuditData;
+/* @end-chisel-audit-trails */
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-final readonly class DeactivateUserAction
+final readonly class DeleteUser
 {
     public function __construct(
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
 
@@ -29,28 +30,27 @@ final readonly class DeactivateUserAction
     {
         if ($currentUser instanceof User && $user->id === $currentUser->id) {
             throw ValidationException::withMessages([
-                'user' => __('You cannot deactivate your own account.'),
+                'user' => __('You cannot delete your own account.'),
             ]);
         }
 
         DB::transaction(function () use ($user): void {
-            NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Deactivate);
-
-            $user->forceFill(['is_active' => false])->save();
+            NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Delete);
 
             /* @chisel-audit-trails */
             $this->auditTrail->handle(
-                event: AuditEvent::UserDeactivated,
+                event: AuditEvent::UserDeleted,
                 auditable: $user,
-                oldValues: ['is_active' => true],
-                newValues: ['is_active' => false],
+                oldValues: $this->userAuditData->snapshot($user),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */
 
             /* @chisel-notifications */
-            $user->notify(new UserDeactivated);
+            $user->notifications()->delete();
             /* @end-chisel-notifications */
+
+            $user->delete();
         });
     }
 }

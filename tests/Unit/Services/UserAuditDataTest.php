@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\SnapshotUserAuditDataAction;
 use App\Models\User;
+use App\Services\UserAuditData;
 use Spatie\Permission\Models\Role as RoleModel;
 
 it('snapshots user audit data using assigned roles', function (): void {
@@ -16,8 +16,8 @@ it('snapshots user audit data using assigned roles', function (): void {
     ]);
     $user->assignRole('editor');
 
-    $action = resolve(SnapshotUserAuditDataAction::class);
-    $snapshot = $action->handle($user);
+    $service = resolve(UserAuditData::class);
+    $snapshot = $service->snapshot($user);
 
     expect($snapshot)->toBe([
         'name' => 'John Doe',
@@ -34,8 +34,8 @@ it('snapshots user audit data with explicit roles', function (): void {
         'is_active' => false,
     ]);
 
-    $action = resolve(SnapshotUserAuditDataAction::class);
-    $snapshot = $action->handle($user, ['admin', 'manager']);
+    $service = resolve(UserAuditData::class);
+    $snapshot = $service->snapshot($user, ['admin', 'manager']);
 
     expect($snapshot)->toBe([
         'name' => 'Jane Doe',

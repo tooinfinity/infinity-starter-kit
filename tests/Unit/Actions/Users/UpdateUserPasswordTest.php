@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use App\Actions\Users\ChangeUserPasswordAction;
+use App\Actions\Users\UpdateUserPassword;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 
-test('ChangeUserPasswordAction changes user password, rotates remember token, and sends notification', function (): void {
+test('UpdateUserPassword changes user password, rotates remember token, and sends notification', function (): void {
     Notification::fake();
 
     $user = User::factory()->create();
     $beforeToken = $user->remember_token;
 
-    $action = resolve(ChangeUserPasswordAction::class);
+    $action = resolve(UpdateUserPassword::class);
     $action->handle($user, 'new-secret-password123');
 
     $freshUser = $user->fresh();
@@ -26,7 +26,7 @@ test('ChangeUserPasswordAction changes user password, rotates remember token, an
     Notification::assertSentTo($user, PasswordChanged::class);
 });
 
-test('ChangeUserPasswordAction deletes user sessions when database session driver is used', function (): void {
+test('UpdateUserPassword deletes user sessions when database session driver is used', function (): void {
     config(['session.driver' => 'database']);
 
     $user = User::factory()->create();
@@ -50,7 +50,7 @@ test('ChangeUserPasswordAction deletes user sessions when database session drive
         'last_activity' => time(),
     ]);
 
-    $action = resolve(ChangeUserPasswordAction::class);
+    $action = resolve(UpdateUserPassword::class);
     $action->handle($user, 'new-secret-password123');
 
     expect(DB::table('sessions')->where('user_id', $user->id)->exists())->toBeFalse()

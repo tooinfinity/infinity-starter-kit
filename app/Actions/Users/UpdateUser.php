@@ -15,15 +15,18 @@ use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use App\Rules\NotLastSuperAdmin;
+/* @chisel-audit-trails */
+use App\Services\UserAuditData;
+/* @end-chisel-audit-trails */
 use Illuminate\Support\Facades\DB;
 
-final readonly class UpdateUserAction
+final readonly class UpdateUser
 {
     public function __construct(
-        private UpdateUserRolesAction $updateUserRoles = new UpdateUserRolesAction,
+        private UpdateUserRoles $updateUserRoles = new UpdateUserRoles,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
-        private SnapshotUserAuditDataAction $snapshotUserAuditData = new SnapshotUserAuditDataAction,
+        private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
 
@@ -35,7 +38,7 @@ final readonly class UpdateUserAction
             }
 
             /* @chisel-audit-trails */
-            $oldValues = $this->snapshotUserAuditData->handle($user);
+            $oldValues = $this->userAuditData->snapshot($user);
             /* @end-chisel-audit-trails */
 
             /* @chisel-email-verification */
@@ -68,7 +71,7 @@ final readonly class UpdateUserAction
                 event: AuditEvent::UserUpdated,
                 auditable: $user,
                 oldValues: $oldValues,
-                newValues: $this->snapshotUserAuditData->handle($user, $data->roles),
+                newValues: $this->userAuditData->snapshot($user, $data->roles),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */

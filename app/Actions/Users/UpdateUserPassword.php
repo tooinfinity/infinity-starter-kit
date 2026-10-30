@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use SensitiveParameter;
 
-final readonly class ChangeUserPasswordAction
+final readonly class UpdateUserPassword
 {
     public function __construct(
         /* @chisel-audit-trails */

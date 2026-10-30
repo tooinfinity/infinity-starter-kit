@@ -5,13 +5,12 @@ declare(strict_types=1);
 use App\Actions\DeleteUser;
 use App\Actions\UpdateUser;
 use App\Actions\UpdateUserPassword;
-use App\Actions\Users\ActivateUserAction;
-use App\Actions\Users\ChangeUserPasswordAction;
-use App\Actions\Users\CreateUserAction;
-use App\Actions\Users\DeactivateUserAction;
-use App\Actions\Users\DeleteUserAction;
-use App\Actions\Users\UpdateUserAction;
-use App\Actions\Users\UpdateUserRolesAction;
+use App\Actions\Users\CreateUser as AdminCreateUser;
+use App\Actions\Users\DeleteUser as AdminDeleteUser;
+use App\Actions\Users\UpdateUser as AdminUpdateUser;
+use App\Actions\Users\UpdateUserPassword as AdminUpdateUserPassword;
+use App\Actions\Users\UpdateUserRoles;
+use App\Actions\Users\UpdateUserStatus;
 use App\Data\Users\CreateUserData;
 use App\Data\Users\UpdateUserData;
 use App\Enums\AuditEvent;
@@ -19,11 +18,11 @@ use App\Models\AuditTrail;
 use App\Models\User;
 use Spatie\Permission\Models\Role as RoleModel;
 
-test('CreateUserAction records user.created audit trail', function (): void {
+test('CreateUser records user.created audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
-    $action = resolve(CreateUserAction::class);
+    $action = resolve(AdminCreateUser::class);
     $data = new CreateUserData(
         name: 'Jane Doe',
         email: 'jane@example.com',
@@ -44,7 +43,7 @@ test('CreateUserAction records user.created audit trail', function (): void {
         ->and($audit->new_values['is_active'])->toBeTrue();
 });
 
-test('UpdateUserAction records user.updated audit trail with diff', function (): void {
+test('UpdateUser records user.updated audit trail with diff', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
@@ -54,7 +53,7 @@ test('UpdateUserAction records user.updated audit trail with diff', function ():
         'is_active' => true,
     ]);
 
-    $action = resolve(UpdateUserAction::class);
+    $action = resolve(AdminUpdateUser::class);
     $data = new UpdateUserData(
         name: 'Updated Name',
         email: 'updated@example.com',
@@ -74,14 +73,14 @@ test('UpdateUserAction records user.updated audit trail with diff', function ():
         ->and($audit->new_values['email'])->toBe('updated@example.com');
 });
 
-test('ActivateUserAction records user.activated audit trail', function (): void {
+test('UpdateUserStatus (activate) records user.activated audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
     $targetUser = User::factory()->inactive()->create();
 
-    $action = resolve(ActivateUserAction::class);
-    $action->handle($targetUser);
+    $action = resolve(UpdateUserStatus::class);
+    $action->handle($targetUser, true);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserActivated)->first();
 
@@ -92,14 +91,14 @@ test('ActivateUserAction records user.activated audit trail', function (): void 
         ->and($audit->new_values['is_active'])->toBeTrue();
 });
 
-test('DeactivateUserAction records user.deactivated audit trail', function (): void {
+test('UpdateUserStatus (deactivate) records user.deactivated audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
     $targetUser = User::factory()->create(['is_active' => true]);
 
-    $action = resolve(DeactivateUserAction::class);
-    $action->handle($targetUser, $actor);
+    $action = resolve(UpdateUserStatus::class);
+    $action->handle($targetUser, false, $actor);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserDeactivated)->first();
 
@@ -110,7 +109,7 @@ test('DeactivateUserAction records user.deactivated audit trail', function (): v
         ->and($audit->new_values['is_active'])->toBeFalse();
 });
 
-test('DeleteUserAction records user.deleted audit trail', function (): void {
+test('DeleteUser records user.deleted audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
@@ -120,7 +119,7 @@ test('DeleteUserAction records user.deleted audit trail', function (): void {
     ]);
     $targetId = $targetUser->id;
 
-    $action = resolve(DeleteUserAction::class);
+    $action = resolve(AdminDeleteUser::class);
     $action->handle($targetUser, $actor);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->first();
@@ -132,13 +131,13 @@ test('DeleteUserAction records user.deleted audit trail', function (): void {
         ->and($audit->old_values['email'])->toBe('delete_me@example.com');
 });
 
-test('ChangeUserPasswordAction records user.password_changed audit trail with redacted password', function (): void {
+test('UpdateUserPassword records user.password_changed audit trail with redacted password', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
     $targetUser = User::factory()->create();
 
-    $action = resolve(ChangeUserPasswordAction::class);
+    $action = resolve(AdminUpdateUserPassword::class);
     $action->handle($targetUser, 'brand_new_secret_password');
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserPasswordChanged)->first();
@@ -217,7 +216,7 @@ test('DeleteUser self-service action records user.deleted audit trail (OBS-001)'
         ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
 });
 
-test('UpdateUserRolesAction records user.updated audit trail with roles and tags', function (): void {
+test('UpdateUserRoles records user.updated audit trail with roles and tags', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
@@ -227,7 +226,7 @@ test('UpdateUserRolesAction records user.updated audit trail with roles and tags
     $targetUser = User::factory()->create();
     $targetUser->assignRole('editor');
 
-    $action = resolve(UpdateUserRolesAction::class);
+    $action = resolve(UpdateUserRoles::class);
     $action->handle($targetUser, ['manager']);
 
     $audit = AuditTrail::query()

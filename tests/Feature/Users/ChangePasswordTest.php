@@ -35,6 +35,7 @@ it('forbids password change without permission', function (): void {
     $target = User::factory()->create();
 
     $response = $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
         ->put(route('users.password.update', $target), [
             'password' => 'new-secure-password123',
         ]);
