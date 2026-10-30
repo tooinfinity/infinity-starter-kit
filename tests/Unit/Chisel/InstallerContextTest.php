@@ -31,7 +31,26 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         ->and($context->adminPassword)->toBe('secret-password')
         ->and($context->isNonInteractive)->toBeTrue()
         ->and($context->skipNode)->toBeFalse()
-        ->and($context->isMockedScript)->toBeTrue();
+        ->and($context->isMockedScript)->toBeTrue()
+        ->and($context->isDryRun)->toBeFalse();
+
+    $dryRunContext = new InstallerContext(
+        providedAnswers: [],
+        answers: [],
+        paths: [],
+        selectedModules: [],
+        selectedAuthFeatures: [],
+        hasAuthorization: false,
+        adminName: null,
+        adminEmail: null,
+        adminPassword: null,
+        isNonInteractive: true,
+        skipNode: false,
+        isMockedScript: false,
+        isDryRun: true,
+    );
+
+    expect($dryRunContext->isDryRun)->toBeTrue();
 });
 
 test('installer context redacts admin secrets from messages', function (): void {

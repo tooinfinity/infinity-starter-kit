@@ -1051,6 +1051,79 @@ test('database migration exception returns non-zero exit status and outputs reda
     }
 });
 
+test('command dry-run previews all mutations without applying any changes', function (): void {
+    bindMockChiselScript();
+    Process::fake();
+
+    $userCountBefore = User::query()->count();
+    $permissionCountBefore = Permission::query()->count();
+
+    $answers = json_encode([
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization', 'user-management'],
+        'admin' => [
+            'name' => 'Dry Run Admin',
+            'email' => 'dryrun@example.com',
+            'password' => 'secret1234',
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', [
+        '--answers' => $answers,
+        '--dry-run' => true,
+    ])
+        ->expectsOutputToContain('Planned Feature Installation Preview')
+        ->expectsOutputToContain('Explicit Auth Features')
+        ->expectsOutputToContain('Explicit Optional Modules')
+        ->expectsOutputToContain('Dependency-Derived Selections')
+        ->expectsOutputToContain('PACKAGES (COMPOSER & FRONTEND)')
+        ->expectsOutputToContain('DATABASE & CONFIGURATION PHASES')
+        ->expectsOutputToContain('POST-SCAFFOLDING TOOLING')
+        ->expectsOutputToContain('VALIDATION & CLEANUP PHASES')
+        ->expectsOutputToContain('PLANNED FILESYSTEM MUTATIONS')
+        ->expectsOutputToContain('0 mutations executed')
+        ->assertSuccessful();
+
+    expect(User::query()->count())->toBe($userCountBefore)
+        ->and(Permission::query()->count())->toBe($permissionCountBefore);
+
+    Process::assertNothingRan();
+});
+
+test('command dry-run displays fresh migration command when --fresh option is supplied', function (): void {
+    bindMockChiselScript();
+    Process::fake();
+
+    $answers = json_encode([
+        'auth_features' => ['login'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', [
+        '--answers' => $answers,
+        '--dry-run' => true,
+        '--fresh' => true,
+    ])
+        ->expectsOutputToContain('php artisan migrate:fresh --force')
+        ->assertSuccessful();
+
+    Process::assertNothingRan();
+});
+
+test('command dry-run fails with invalid feature dependencies identical to normal execution', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['login'],
+        'optional_modules' => ['user-management'],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', [
+        '--answers' => $answers,
+        '--dry-run' => true,
+    ]);
+})->throws(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
+
 /**
  * @param  array<string, mixed>  $processFakes
  */

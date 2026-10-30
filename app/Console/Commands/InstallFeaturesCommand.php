@@ -10,6 +10,7 @@ use App\Chisel\Installer\GeneratedApplicationConfigurator;
 use App\Chisel\Installer\GeneratedApplicationValidator;
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\InstallerContextResolver;
+use App\Chisel\Installer\InstallerPlanner;
 use App\Chisel\Installer\PostScaffoldRunner;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -28,7 +29,8 @@ use Throwable;
         {--admin-name= : Name of the administrator user}
         {--admin-email= : Email of the administrator user}
         {--admin-password= : Password for the administrator user}
-        {--fresh : Drop all tables and re-run all migrations}')]
+        {--fresh : Drop all tables and re-run all migrations}
+        {--dry-run : Preview all planned mutations without making any changes}')]
 final class InstallFeaturesCommand extends Command
 {
     /**
@@ -53,6 +55,13 @@ final class InstallFeaturesCommand extends Command
         $context = InstallerContextResolver::resolve($this, $script, $isMockedScript, $this->input->isInteractive());
 
         DependencyValidator::validate($context->answers);
+
+        if ($context->isDryRun) {
+            $plan = InstallerPlanner::plan($context, base_path(), (bool) $this->option('fresh'));
+            $plan->render($this, $this->components);
+
+            return self::SUCCESS;
+        }
 
         if (! $this->runChisel($script, $context)) {
             return self::FAILURE;

@@ -56,6 +56,24 @@ Which optional modules should be installed?
 
 Select the features you want using `Space`, then press `Enter`.
 
+#### Dry-Run Mode (Preview Planned Mutations)
+
+To inspect all planned operations without applying any changes to your files, packages, or database, pass the `--dry-run` flag:
+
+```bash
+# Preview interactive feature selection
+php artisan install:features --dry-run
+
+# Preview automated/CI selections via JSON answers
+php artisan install:features --dry-run --answers='{"auth_features":["registration"],"optional_modules":["authorization","user-management"]}'
+```
+
+Dry-run mode:
+- Resolves explicitly selected features and identifies dependency-derived requirements (e.g. `login` required by `registration`).
+- Enforces identical validation semantics as real installations (failing on invalid or missing dependencies).
+- Displays a structured preview of pruned files and directories, package removals, database operations, tooling steps, and installer cleanup.
+- Guarantees **zero mutations** to the filesystem, dependencies, database, or git status.
+
 ### 3. Authorization & Super Admin (if enabled)
 
 During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively, need to bootstrap a fresh production database, or updated the `Permission` or `Role` enums:

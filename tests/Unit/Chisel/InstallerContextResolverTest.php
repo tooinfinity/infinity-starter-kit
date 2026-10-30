@@ -22,7 +22,7 @@ $cleanEnv = function (string ...$keys): void {
 };
 
 $makeCommand = function (array $options = []): Command {
-    $command = new #[Signature('test:resolve {--answers=} {--answers-file=} {--preset=} {--admin-name=} {--admin-email=} {--admin-password=}')]
+    $command = new #[Signature('test:resolve {--answers=} {--answers-file=} {--preset=} {--admin-name=} {--admin-email=} {--admin-password=} {--dry-run}')]
     class extends Command {};
     $command->setInput(new ArrayInput($options, $command->getDefinition()));
     $command->setOutput(new OutputStyle(new ArrayInput($options, $command->getDefinition()), new BufferedOutput));
@@ -214,6 +214,9 @@ test('shouldDeferInstallerHooks returns true only when LARAVEL_INSTALLER_DEFER_H
 
         $commandWithPreset = $makeCommand(['--preset' => 'minimal']);
         expect(InstallerContextResolver::shouldDeferInstallerHooks($commandWithPreset))->toBeFalse();
+
+        $commandWithDryRun = $makeCommand(['--dry-run' => true]);
+        expect(InstallerContextResolver::shouldDeferInstallerHooks($commandWithDryRun))->toBeFalse();
 
         putenv('CHISEL_ANSWERS={}');
         $_ENV['CHISEL_ANSWERS'] = '{}';
@@ -587,5 +590,45 @@ test('precedence: environment preset applies when no higher precedence option is
             ->and($context->selectedModules)->toBe(Preset::answersFor(Preset::MINIMAL)['optional_modules']);
     } finally {
         $cleanEnv('CHISEL_PRESET');
+    }
+});
+
+test('resolve correctly sets isDryRun from option or environment variables', function () use ($cleanEnv, $makeCommand, $makeScript): void {
+    $cleanEnv('CHISEL_DRY_RUN', 'LARAVEL_INSTALLER_DRY_RUN');
+
+    $script = $makeScript();
+
+    // Default is false
+    $commandDefault = $makeCommand();
+    $contextDefault = InstallerContextResolver::resolve($commandDefault, $script, isMockedScript: true, isInteractive: false);
+    expect($contextDefault->isDryRun)->toBeFalse();
+
+    // Option --dry-run
+    $commandOption = $makeCommand(['--dry-run' => true]);
+    $contextOption = InstallerContextResolver::resolve($commandOption, $script, isMockedScript: true, isInteractive: false);
+    expect($contextOption->isDryRun)->toBeTrue();
+
+    // CHISEL_DRY_RUN env
+    putenv('CHISEL_DRY_RUN=true');
+    $_ENV['CHISEL_DRY_RUN'] = 'true';
+    $_SERVER['CHISEL_DRY_RUN'] = 'true';
+
+    try {
+        $contextChiselEnv = InstallerContextResolver::resolve($commandDefault, $script, isMockedScript: true, isInteractive: false);
+        expect($contextChiselEnv->isDryRun)->toBeTrue();
+    } finally {
+        $cleanEnv('CHISEL_DRY_RUN');
+    }
+
+    // LARAVEL_INSTALLER_DRY_RUN env
+    putenv('LARAVEL_INSTALLER_DRY_RUN=true');
+    $_ENV['LARAVEL_INSTALLER_DRY_RUN'] = 'true';
+    $_SERVER['LARAVEL_INSTALLER_DRY_RUN'] = 'true';
+
+    try {
+        $contextInstallerEnv = InstallerContextResolver::resolve($commandDefault, $script, isMockedScript: true, isInteractive: false);
+        expect($contextInstallerEnv->isDryRun)->toBeTrue();
+    } finally {
+        $cleanEnv('LARAVEL_INSTALLER_DRY_RUN');
     }
 });
