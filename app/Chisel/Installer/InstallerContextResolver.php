@@ -24,7 +24,11 @@ final class InstallerContextResolver
      */
     public static function shouldDeferInstallerHooks(Command $command): bool
     {
-        if ($command->option('answers') !== null || self::hasEnvironmentAnswers()) {
+        $hasCliAnswers = ($command->hasOption('answers') && $command->option('answers') !== null)
+            || ($command->hasOption('answers-file') && $command->option('answers-file') !== null)
+            || ($command->hasOption('preset') && $command->option('preset') !== null);
+
+        if ($hasCliAnswers || self::hasEnvironmentAnswers() || self::hasEnvironmentAnswersFile() || self::hasEnvironmentPreset()) {
             return false;
         }
 
@@ -58,6 +62,58 @@ final class InstallerContextResolver
     }
 
     /**
+     * Checks if an answers file was supplied through environment variables.
+     */
+    public static function hasEnvironmentAnswersFile(): bool
+    {
+        return self::environmentAnswersFile() !== null;
+    }
+
+    /**
+     * Retrieves the answers file path supplied through environment variables if available.
+     */
+    public static function environmentAnswersFile(): ?string
+    {
+        $chisel = Env::get('CHISEL_ANSWERS_FILE', Request::server('CHISEL_ANSWERS_FILE') ?? (getenv('CHISEL_ANSWERS_FILE') ?: null));
+        if (is_string($chisel) && mb_trim($chisel) !== '') {
+            return $chisel;
+        }
+
+        $installer = Env::get('LARAVEL_INSTALLER_ANSWERS_FILE', Request::server('LARAVEL_INSTALLER_ANSWERS_FILE') ?? (getenv('LARAVEL_INSTALLER_ANSWERS_FILE') ?: null));
+        if (is_string($installer) && mb_trim($installer) !== '') {
+            return $installer;
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks if a preset was supplied through environment variables.
+     */
+    public static function hasEnvironmentPreset(): bool
+    {
+        return self::environmentPreset() !== null;
+    }
+
+    /**
+     * Retrieves the preset supplied through environment variables if available.
+     */
+    public static function environmentPreset(): ?string
+    {
+        $chisel = Env::get('CHISEL_PRESET', Request::server('CHISEL_PRESET') ?? (getenv('CHISEL_PRESET') ?: null));
+        if (is_string($chisel) && mb_trim($chisel) !== '') {
+            return $chisel;
+        }
+
+        $installer = Env::get('LARAVEL_INSTALLER_PRESET', Request::server('LARAVEL_INSTALLER_PRESET') ?? (getenv('LARAVEL_INSTALLER_PRESET') ?: null));
+        if (is_string($installer) && mb_trim($installer) !== '') {
+            return $installer;
+        }
+
+        return null;
+    }
+
+    /**
      * Checks if Node/frontend installations should be skipped.
      */
     public static function shouldSkipNode(): bool
@@ -77,6 +133,48 @@ final class InstallerContextResolver
     }
 
     /**
+     * Loads and validates answers from a JSON file.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws JsonException
+     * @throws RuntimeException
+     */
+    public static function loadAnswersFromFile(string $filePath, bool $isOption = true): array
+    {
+        $trimmedPath = mb_trim($filePath);
+        if ($trimmedPath === '') {
+            $message = $isOption
+                ? 'The --answers-file option must specify a non-empty file path.'
+                : 'Answers file path cannot be empty.';
+
+            throw new RuntimeException($message);
+        }
+
+        $resolvedPath = file_exists($trimmedPath) ? $trimmedPath : base_path($trimmedPath);
+
+        if (! file_exists($resolvedPath)) {
+            throw new RuntimeException(sprintf('Answers file [%s] does not exist.', $filePath));
+        }
+
+        if (! is_readable($resolvedPath) || ($contents = @file_get_contents($resolvedPath)) === false) {
+            throw new RuntimeException(sprintf('Answers file [%s] cannot be read.', $filePath));
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+
+        $errorMessage = $isOption
+            ? 'The --answers-file option must decode to a JSON object.'
+            : 'The answers file must decode to a JSON object.';
+
+        throw_unless(is_array($decoded), RuntimeException::class, $errorMessage);
+
+        /** @var array<string, mixed> $decoded */
+        return $decoded;
+    }
+
+    /**
      * Resolves the complete InstallerContext for the command run.
      *
      * @throws JsonException
@@ -86,16 +184,42 @@ final class InstallerContextResolver
         /** @var array<string, mixed> $paths */
         $paths = require base_path('chisel-paths.php');
 
-        $rawAnswers = $command->option('answers');
-        if (! is_string($rawAnswers) || $rawAnswers === '') {
-            $rawAnswers = self::environmentAnswers();
+        $rawAnswers = $command->hasOption('answers') ? $command->option('answers') : null;
+        $answersFile = $command->hasOption('answers-file') ? $command->option('answers-file') : null;
+        $preset = $command->hasOption('preset') ? $command->option('preset') : null;
+
+        $hasAnswersSource = false;
+        $providedAnswers = [];
+
+        if (is_string($rawAnswers) && mb_trim($rawAnswers) !== '') {
+            $hasAnswersSource = true;
+            $decoded = json_decode($rawAnswers, true, 512, JSON_THROW_ON_ERROR);
+            throw_unless(is_array($decoded), RuntimeException::class, 'The --answers option must decode to a JSON object.');
+            $providedAnswers = $decoded;
+        } elseif ($answersFile !== null) {
+            $hasAnswersSource = true;
+            $answersFilePath = is_string($answersFile) ? $answersFile : '';
+            $providedAnswers = self::loadAnswersFromFile($answersFilePath, isOption: true);
+        } elseif ($preset !== null) {
+            $hasAnswersSource = true;
+            $presetName = is_string($preset) ? $preset : '';
+            $resolvedPreset = Preset::fromName($presetName);
+            DependencyValidator::validate($resolvedPreset->answers());
+            $providedAnswers = $resolvedPreset->answers();
+        } elseif (($envAnswers = self::environmentAnswers()) !== null) {
+            $hasAnswersSource = true;
+            $decoded = json_decode($envAnswers, true, 512, JSON_THROW_ON_ERROR);
+            throw_unless(is_array($decoded), RuntimeException::class, 'The --answers option must decode to a JSON object.');
+            $providedAnswers = $decoded;
+        } elseif (($envAnswersFile = self::environmentAnswersFile()) !== null) {
+            $hasAnswersSource = true;
+            $providedAnswers = self::loadAnswersFromFile($envAnswersFile, isOption: false);
+        } elseif (($envPreset = self::environmentPreset()) !== null) {
+            $hasAnswersSource = true;
+            $resolvedPreset = Preset::fromName($envPreset);
+            DependencyValidator::validate($resolvedPreset->answers());
+            $providedAnswers = $resolvedPreset->answers();
         }
-
-        $providedAnswers = ($rawAnswers === null || $rawAnswers === '')
-            ? []
-            : json_decode($rawAnswers, true, 512, JSON_THROW_ON_ERROR);
-
-        throw_unless(is_array($providedAnswers), RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
         if (isset($providedAnswers['ai_tooling']) && ! isset($providedAnswers['ai_guidelines'])) {
             $providedAnswers['ai_guidelines'] = $providedAnswers['ai_tooling'];
@@ -105,7 +229,7 @@ final class InstallerContextResolver
             $providedAnswers['ai_guidelines'] = $providedAnswers['ai_guidelines'] ? ['guidelines'] : [];
         }
 
-        $isNonInteractive = $command->option('answers') !== null || ! $isInteractive || self::hasEnvironmentAnswers();
+        $isNonInteractive = $hasAnswersSource || ! $isInteractive;
         $isInteractivePrompting = $isInteractive && ! $isNonInteractive;
 
         /** @var array<string, mixed> $providedAnswers */

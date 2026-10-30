@@ -301,15 +301,87 @@ Include AI assistant guidelines?
  [x] AI assistant guidelines (.claude, .cursor, AGENTS.md, ...)
 ```
 
-#### Non-Interactive Installation
+#### Non-Interactive Installation & Presets
 
-Pass answers as a JSON string via the `--answers` option:
+The installer supports multiple flexible ways to configure features non-interactively in CI, local scripts, or project templates:
+
+##### 1. Named Presets (`--preset`)
+
+Choose from pre-configured, validated feature profiles:
+
+- `--preset=minimal` — Core application with a minimal authentication surface (`login`, `logout`) and zero optional modules.
+- `--preset=standard` — Sensible default application (`login`, `logout`, `registration`, `email-verification`, `password-reset`, `password-update` with `authorization`, `settings`, `user-management`, `notifications`).
+- `--preset=full` — All supported authentication features and optional modules.
+
+```bash
+# Standard starter application
+php artisan install:features --preset=standard --no-interaction
+
+# Minimal authentication core
+php artisan install:features --preset=minimal --no-interaction
+
+# Full feature suite
+php artisan install:features --preset=full --no-interaction
+```
+
+##### 2. Reproducible Configuration File (`--answers-file`)
+
+Provide an explicit JSON answers file for reproducible automation across environments and CI pipelines:
+
+```bash
+php artisan install:features --answers-file=starter-kit.json --no-interaction
+```
+
+Example `starter-kit.json`:
+
+```json
+{
+  "auth_features": [
+    "login",
+    "logout",
+    "registration",
+    "email-verification",
+    "password-reset",
+    "password-update"
+  ],
+  "optional_modules": [
+    "authorization",
+    "settings",
+    "user-management",
+    "notifications"
+  ],
+  "ai_guidelines": [
+    "guidelines"
+  ],
+  "admin": {
+    "name": "Administrator",
+    "email": "admin@example.com",
+    "password": "secret-password"
+  }
+}
+```
+
+##### 3. Inline JSON Answers (`--answers`)
+
+Pass a raw JSON string directly on the command line (backward compatible):
 
 ```bash
 php artisan install:features --answers='{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"],"ai_guidelines":["guidelines"]}' --no-interaction
 ```
 
 Pass `"ai_guidelines": []` (or `"ai_guidelines": false`) to decline and prune all maintainer AI configuration files (`.agents`, `.ai`, `.amp`, `.claude`, `.codex`, `.cursor`, `.gemini`, `.junie`, `.mcp.json`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `opencode.json`, `boost.json`).
+
+##### Precedence Order
+
+When multiple answer sources are present, they are resolved in this deterministic order:
+
+1. **Explicit CLI Inline Answers** (`--answers='{...}'`)
+2. **Explicit CLI Answers File** (`--answers-file=path/to/file.json`)
+3. **Explicit CLI Named Preset** (`--preset=standard`)
+4. **Environment Inline Answers** (`CHISEL_ANSWERS` or `LARAVEL_INSTALLER_ANSWERS`)
+5. **Environment Answers File** (`CHISEL_ANSWERS_FILE` or `LARAVEL_INSTALLER_ANSWERS_FILE`)
+6. **Environment Named Preset** (`CHISEL_PRESET` or `LARAVEL_INSTALLER_PRESET`)
+7. **Interactive Prompts / Defaults** (multiselect prompt when interactive, or default questions when non-interactive)
 
 Unselected modules and declined guidelines have all exclusive code, routes, permissions, translations, and configs cleanly pruned.
 
