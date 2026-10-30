@@ -40,6 +40,7 @@ final class Cleanup
             'app/Chisel/Installer/DirectoryPruner.php',
             'app/Chisel/Installer/ConfigCleaner.php',
             'app/Chisel/Installer/Cleanup.php',
+            'app/Chisel/Installer/FeaturePruner.php',
             'app/Chisel/Installer/AiToolingPruner.php',
             'app/Chisel/Installer/InstallationPlan.php',
             'app/Chisel/Installer/InstallerPlanner.php',
