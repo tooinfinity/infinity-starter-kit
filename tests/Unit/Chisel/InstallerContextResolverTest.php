@@ -121,11 +121,11 @@ test('resolve obtains answers from CHISEL_ANSWERS and LARAVEL_INSTALLER_ANSWERS 
     $script = $makeScript();
 
     // Test CHISEL_ANSWERS
-    putenv('CHISEL_ANSWERS={"auth_features":["registration"],"optional_modules":["authorization"]}');
-    $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["registration"],"optional_modules":["authorization"]}';
-    $_SERVER['CHISEL_ANSWERS'] = '{"auth_features":["registration"],"optional_modules":["authorization"]}';
-
     try {
+        putenv('CHISEL_ANSWERS={"auth_features":["registration"],"optional_modules":["authorization"]}');
+        $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["registration"],"optional_modules":["authorization"]}';
+        $_SERVER['CHISEL_ANSWERS'] = '{"auth_features":["registration"],"optional_modules":["authorization"]}';
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
         expect($context->selectedModules)->toBe(['authorization'])
             ->and($context->hasAuthorization)->toBeTrue();
@@ -159,17 +159,17 @@ test('resolve handles null and empty answers cleanly with default questions', fu
 test('resolve extracts admin credentials from answers flat fields and environment variables', function () use ($cleanEnv, $makeCommand, $makeScript): void {
     $cleanEnv('CHISEL_ADMIN_NAME', 'CHISEL_ADMIN_EMAIL', 'CHISEL_ADMIN_PASSWORD');
 
-    putenv('CHISEL_ADMIN_NAME=EnvName');
-    $_ENV['CHISEL_ADMIN_NAME'] = 'EnvName';
-    putenv('CHISEL_ADMIN_EMAIL=env@example.com');
-    $_ENV['CHISEL_ADMIN_EMAIL'] = 'env@example.com';
-    putenv('CHISEL_ADMIN_PASSWORD=envpass');
-    $_ENV['CHISEL_ADMIN_PASSWORD'] = 'envpass';
-
-    $command = $makeCommand();
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_ADMIN_NAME=EnvName');
+        $_ENV['CHISEL_ADMIN_NAME'] = 'EnvName';
+        putenv('CHISEL_ADMIN_EMAIL=env@example.com');
+        $_ENV['CHISEL_ADMIN_EMAIL'] = 'env@example.com';
+        putenv('CHISEL_ADMIN_PASSWORD=envpass');
+        $_ENV['CHISEL_ADMIN_PASSWORD'] = 'envpass';
+
+        $command = $makeCommand();
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
         expect($context->adminName)->toBe('EnvName')
             ->and($context->adminEmail)->toBe('env@example.com')
@@ -319,11 +319,19 @@ test('loadAnswersFromFile loads valid JSON from absolute and relative paths', fu
 });
 
 test('loadAnswersFromFile throws RuntimeException when file is unreadable', function (): void {
+    if (PHP_OS_FAMILY === 'Windows' || (function_exists('posix_geteuid') && posix_geteuid() === 0)) {
+        $this->markTestSkipped('File permissions cannot reliably prevent reads on Windows or as root.');
+    }
+
     $tempFile = sys_get_temp_dir().'/unreadable_'.bin2hex(random_bytes(4)).'.json';
     file_put_contents($tempFile, '{}');
-    chmod($tempFile, 0000);
 
     try {
+        chmod($tempFile, 0000);
+        if (is_readable($tempFile)) {
+            $this->markTestSkipped('File permissions do not prevent reads for this user.');
+        }
+
         expect(fn (): array => InstallerContextResolver::loadAnswersFromFile($tempFile))
             ->toThrow(RuntimeException::class, "Answers file [{$tempFile}] cannot be read.");
     } finally {
@@ -431,17 +439,17 @@ test('precedence: inline CLI answers take precedence over --answers-file, preset
         'optional_modules' => ['settings'],
     ], JSON_THROW_ON_ERROR));
 
-    putenv('CHISEL_ANSWERS={"auth_features":["two-factor"],"optional_modules":["reporting"]}');
-    $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["two-factor"],"optional_modules":["reporting"]}';
-
-    $command = $makeCommand([
-        '--answers' => '{"auth_features":["login","logout"],"optional_modules":["authorization"]}',
-        '--answers-file' => $tempFile,
-        '--preset' => 'full',
-    ]);
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_ANSWERS={"auth_features":["two-factor"],"optional_modules":["reporting"]}');
+        $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["two-factor"],"optional_modules":["reporting"]}';
+
+        $command = $makeCommand([
+            '--answers' => '{"auth_features":["login","logout"],"optional_modules":["authorization"]}',
+            '--answers-file' => $tempFile,
+            '--preset' => 'full',
+        ]);
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
 
         expect($context->selectedAuthFeatures)->toBe(['login', 'logout'])
@@ -461,16 +469,16 @@ test('precedence: --answers-file takes precedence over --preset and environment'
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR));
 
-    putenv('CHISEL_ANSWERS={"auth_features":["two-factor"],"optional_modules":["reporting"]}');
-    $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["two-factor"],"optional_modules":["reporting"]}';
-
-    $command = $makeCommand([
-        '--answers-file' => $tempFile,
-        '--preset' => 'full',
-    ]);
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_ANSWERS={"auth_features":["two-factor"],"optional_modules":["reporting"]}');
+        $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["two-factor"],"optional_modules":["reporting"]}';
+
+        $command = $makeCommand([
+            '--answers-file' => $tempFile,
+            '--preset' => 'full',
+        ]);
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
 
         expect($context->selectedAuthFeatures)->toBe(['login', 'logout'])
@@ -484,15 +492,15 @@ test('precedence: --answers-file takes precedence over --preset and environment'
 test('precedence: CLI --preset takes precedence over environment answers', function () use ($cleanEnv, $makeCommand, $makeScript): void {
     $cleanEnv('CHISEL_ANSWERS', 'CHISEL_ANSWERS_FILE', 'CHISEL_PRESET');
 
-    putenv('CHISEL_ANSWERS={"auth_features":["two-factor"],"optional_modules":["reporting"]}');
-    $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["two-factor"],"optional_modules":["reporting"]}';
-
-    $command = $makeCommand([
-        '--preset' => 'minimal',
-    ]);
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_ANSWERS={"auth_features":["two-factor"],"optional_modules":["reporting"]}');
+        $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["two-factor"],"optional_modules":["reporting"]}';
+
+        $command = $makeCommand([
+            '--preset' => 'minimal',
+        ]);
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
 
         expect($context->selectedAuthFeatures)->toBe(Preset::answersFor(Preset::MINIMAL)['auth_features'])
@@ -511,19 +519,19 @@ test('precedence: environment answers take precedence over environment answers-f
         'optional_modules' => ['settings'],
     ], JSON_THROW_ON_ERROR));
 
-    putenv('CHISEL_ANSWERS={"auth_features":["login","logout"],"optional_modules":["authorization"]}');
-    $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["login","logout"],"optional_modules":["authorization"]}';
-
-    putenv('CHISEL_ANSWERS_FILE='.$tempFile);
-    $_ENV['CHISEL_ANSWERS_FILE'] = $tempFile;
-
-    putenv('CHISEL_PRESET=full');
-    $_ENV['CHISEL_PRESET'] = 'full';
-
-    $command = $makeCommand();
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_ANSWERS={"auth_features":["login","logout"],"optional_modules":["authorization"]}');
+        $_ENV['CHISEL_ANSWERS'] = '{"auth_features":["login","logout"],"optional_modules":["authorization"]}';
+
+        putenv('CHISEL_ANSWERS_FILE='.$tempFile);
+        $_ENV['CHISEL_ANSWERS_FILE'] = $tempFile;
+
+        putenv('CHISEL_PRESET=full');
+        $_ENV['CHISEL_PRESET'] = 'full';
+
+        $command = $makeCommand();
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
 
         expect($context->selectedAuthFeatures)->toBe(['login', 'logout'])
@@ -543,16 +551,16 @@ test('precedence: environment answers-file takes precedence over environment pre
         'optional_modules' => ['authorization'],
     ], JSON_THROW_ON_ERROR));
 
-    putenv('CHISEL_ANSWERS_FILE='.$tempFile);
-    $_ENV['CHISEL_ANSWERS_FILE'] = $tempFile;
-
-    putenv('CHISEL_PRESET=full');
-    $_ENV['CHISEL_PRESET'] = 'full';
-
-    $command = $makeCommand();
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_ANSWERS_FILE='.$tempFile);
+        $_ENV['CHISEL_ANSWERS_FILE'] = $tempFile;
+
+        putenv('CHISEL_PRESET=full');
+        $_ENV['CHISEL_PRESET'] = 'full';
+
+        $command = $makeCommand();
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
 
         expect($context->selectedAuthFeatures)->toBe(['login', 'logout'])
@@ -566,13 +574,13 @@ test('precedence: environment answers-file takes precedence over environment pre
 test('precedence: environment preset applies when no higher precedence option is present', function () use ($cleanEnv, $makeCommand, $makeScript): void {
     $cleanEnv('CHISEL_ANSWERS', 'CHISEL_ANSWERS_FILE', 'CHISEL_PRESET');
 
-    putenv('CHISEL_PRESET=minimal');
-    $_ENV['CHISEL_PRESET'] = 'minimal';
-
-    $command = $makeCommand();
-    $script = $makeScript();
-
     try {
+        putenv('CHISEL_PRESET=minimal');
+        $_ENV['CHISEL_PRESET'] = 'minimal';
+
+        $command = $makeCommand();
+        $script = $makeScript();
+
         $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
 
         expect($context->selectedAuthFeatures)->toBe(Preset::answersFor(Preset::MINIMAL)['auth_features'])
