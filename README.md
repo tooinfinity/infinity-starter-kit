@@ -58,16 +58,24 @@ Select the features you want using `Space`, then press `Enter`.
 
 ### 3. Authorization & Super Admin (if enabled)
 
-During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively, need to bootstrap permissions later, or updated the `Permission` or `Role` enums:
+During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively, need to bootstrap a fresh production database, or updated the `Permission` or `Role` enums:
 
 ```bash
 php artisan authorization:setup   # Synchronizes permissions + Super Admin role
 ```
 
-To create or assign a Super Admin via Tinker:
+> **Note:** Always run `php artisan authorization:setup` before assigning the `super-admin` role so that the role and permissions exist in the database.
+
+To create the initial Super Admin via Tinker:
 
 ```bash
-php artisan tinker --execute 'App\Models\User::first()->assignRole("super-admin");'
+php artisan tinker --execute '$user = App\Models\User::create(["name" => "Administrator", "email" => "admin@example.com", "password" => "secure-password", "email_verified_at" => now()]); $user->assignRole("super-admin");'
+```
+
+Or to promote an existing registered user by email:
+
+```bash
+php artisan tinker --execute 'App\Models\User::where("email", "admin@example.com")->firstOrFail()->assignRole("super-admin");'
 ```
 
 ### 4. Start Development

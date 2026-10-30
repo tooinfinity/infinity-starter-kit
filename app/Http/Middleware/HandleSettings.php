@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Enums\SettingKey;
-use App\Queries\GetSetting;
+use App\Queries\SettingQuery;
 use Closure;
 use Exception;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -21,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class HandleSettings
 {
-    public function __construct(private GetSetting $getSetting) {}
+    public function __construct(private SettingQuery $settingQuery) {}
 
     /**
      * @param  Closure(Request): (Response)  $next
@@ -29,7 +28,7 @@ final readonly class HandleSettings
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            $settings = $this->getSetting->all();
+            $settings = $this->settingQuery->all();
 
             $name = $settings[SettingKey::ApplicationName->value] ?? null;
 
@@ -42,8 +41,8 @@ final readonly class HandleSettings
             if (is_string($timezone) && $timezone !== '') {
                 config(['app.display_timezone' => $timezone]);
             }
-        } catch (QueryException|Exception $e) {
-            report($e);
+        } catch (Exception $exception) {
+            report($exception);
         }
 
         return $next($request);

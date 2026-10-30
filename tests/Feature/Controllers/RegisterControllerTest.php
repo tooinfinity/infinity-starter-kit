@@ -40,6 +40,7 @@ it('may register a new user', function (): void {
     Event::assertDispatched(Registered::class);
 });
 
+/* @chisel-localization */
 it('persists guest locale cookie on registration', function (): void {
     Event::fake([Registered::class]);
 
@@ -57,6 +58,46 @@ it('persists guest locale cookie on registration', function (): void {
     expect($user)->not->toBeNull()
         ->and($user->locale?->value)->toBe('fr');
 });
+
+it('ignores invalid guest locale cookie on registration', function (mixed $localeCookie): void {
+    Event::fake([Registered::class]);
+
+    $this->withUnencryptedCookies(['locale' => $localeCookie])
+        ->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'invalid-locale@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $user = User::query()->where('email', 'invalid-locale@example.com')->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user->locale)->toBeNull();
+})->with([
+    'invalid string' => 'xx',
+    'array payload' => fn (): array => ['a'],
+]);
+
+it('registers user with null locale when guest locale cookie is missing', function (): void {
+    Event::fake([Registered::class]);
+
+    $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'No Locale User',
+            'email' => 'nolocale@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $user = User::query()->where('email', 'nolocale@example.com')->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user->locale)->toBeNull();
+});
+
+/* @end-chisel-localization */
 
 it('requires name', function (): void {
     $response = $this->fromRoute('register')

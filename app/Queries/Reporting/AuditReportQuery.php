@@ -110,7 +110,7 @@ final readonly class AuditReportQuery
         // 2. Time-series (events per day in display timezone)
         /** @var array<string, int> $countsByDate */
         $countsByDate = [];
-        $bucketSql = $this->timeBucketSql();
+        $bucketSql = TimeBucketSql::forDriver(column: 'created_at');
 
         /** @var list<object{bucket: string, count: int|string}> $rawSeries */
         $rawSeries = DB::table('audit_trails')
@@ -217,21 +217,5 @@ final readonly class AuditReportQuery
         }
 
         return $query;
-    }
-
-    /**
-     * @return literal-string
-     */
-    public function timeBucketSql(?string $driver = null): string
-    {
-        return ReportDateRange::timeBucketSql($driver);
-    }
-
-    /**
-     * @return literal-string
-     */
-    public function hourlyBucketSql(?string $driver = null): string
-    {
-        return $this->timeBucketSql($driver);
     }
 }

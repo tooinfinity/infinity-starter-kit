@@ -8,7 +8,7 @@ use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
-final readonly class GetSetting
+final readonly class SettingQuery
 {
     /**
      * @return array<string, mixed>
@@ -29,7 +29,7 @@ final readonly class GetSetting
         );
     }
 
-    public function handle(SettingKey $key): mixed
+    public function get(SettingKey $key): mixed
     {
         return $this->all()[$key->value] ?? $key->defaultValue();
     }

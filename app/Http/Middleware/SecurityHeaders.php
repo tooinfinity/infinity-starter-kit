@@ -20,30 +20,89 @@ final readonly class SecurityHeaders
 
         $response = $next($request);
 
-        $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $response->headers->set('X-Content-Type-Options', config()->string('security.headers.x_content_type_options', 'nosniff'));
+        $response->headers->set('Referrer-Policy', config()->string('security.headers.referrer_policy', 'strict-origin-when-cross-origin'));
+        $response->headers->set('X-Frame-Options', config()->string('security.headers.x_frame_options', 'DENY'));
+        $response->headers->set('Permissions-Policy', config()->string('security.headers.permissions_policy', 'camera=(), microphone=(), geolocation=()'));
 
         if (app()->isProduction() && $request->isSecure()) {
-            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            $response->headers->set('Strict-Transport-Security', config()->string('security.headers.strict_transport_security', 'max-age=31536000; includeSubDomains'));
         }
 
-        $csp = [
-            "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}'".(app()->isProduction() ? '' : " 'unsafe-eval'"),
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob:",
-            "font-src 'self' data:",
-            "connect-src 'self'".(app()->isProduction() ? '' : ' ws: wss: http: https:'),
-            "media-src 'self'",
-            "object-src 'none'",
-            "frame-ancestors 'none'",
-            "base-uri 'self'",
-            "form-action 'self'",
-        ];
+        if (config()->boolean('security.csp.enabled', true)) {
+            /** @var array<string, array<int, string>> $extraSources */
+            $extraSources = config('security.csp.extra_sources', []);
 
-        $response->headers->set('Content-Security-Policy', implode('; ', $csp));
+            $isSafeToken = static fn (string $value): bool => ! str_contains($value, ';')
+                && ! str_contains($value, "\r")
+                && ! str_contains($value, "\n");
+
+            /**
+             * @param  array<int, string>  $defaultSources
+             */
+            $formatDirective = function (string $name, array $defaultSources, string $extraKey) use ($extraSources, $isSafeToken): string {
+                /** @var array<int, string> $extra */
+                $extra = $extraSources[$extraKey] ?? [];
+                $sources = array_values(array_filter(
+                    array_map(trim(...), array_merge($defaultSources, $extra)),
+                    static fn (string $source): bool => $source !== '' && $isSafeToken($source) && preg_match('/\s/', $source) === 0,
+                ));
+
+                return $name.' '.implode(' ', $sources);
+            };
+
+            $scriptSources = ["'self'", "'nonce-{$nonce}'"];
+            if (! app()->isProduction()) {
+                $scriptSources[] = "'unsafe-eval'";
+            }
+
+            $connectSources = ["'self'"];
+            if (! app()->isProduction()) {
+                $connectSources = array_merge($connectSources, ['ws:', 'wss:', 'http:', 'https:']);
+            }
+
+            $csp = [
+                "default-src 'self'",
+                $formatDirective('script-src', $scriptSources, 'script_src'),
+                $formatDirective('style-src', ["'self'", "'unsafe-inline'"], 'style_src'),
+                $formatDirective('img-src', ["'self'", 'data:', 'blob:'], 'img_src'),
+                $formatDirective('font-src', ["'self'", 'data:'], 'font_src'),
+                $formatDirective('connect-src', $connectSources, 'connect_src'),
+                $formatDirective('media-src', ["'self'"], 'media_src'),
+                "object-src 'none'",
+                "frame-ancestors 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+            ];
+
+            if (! empty($extraSources['frame_src'])) {
+                $csp[] = $formatDirective('frame-src', ["'self'"], 'frame_src');
+            }
+
+            $reportingEndpoints = config('security.csp.reporting_endpoints');
+            if (is_string($reportingEndpoints) && $reportingEndpoints !== '') {
+                $sanitizedEndpoints = mb_trim(str_replace(["\r", "\n"], '', $reportingEndpoints));
+                if ($sanitizedEndpoints !== '') {
+                    $response->headers->set('Reporting-Endpoints', $sanitizedEndpoints);
+                }
+            }
+
+            $reportTo = config('security.csp.report_to');
+            if (is_string($reportTo) && $reportTo !== '' && $isSafeToken($reportTo)) {
+                $csp[] = 'report-to '.mb_trim($reportTo);
+            }
+
+            $reportUri = config('security.csp.report_uri');
+            if (is_string($reportUri) && $reportUri !== '' && $isSafeToken($reportUri)) {
+                $csp[] = 'report-uri '.mb_trim($reportUri);
+            }
+
+            $headerName = config()->boolean('security.csp.report_only', false)
+                ? 'Content-Security-Policy-Report-Only'
+                : 'Content-Security-Policy';
+
+            $response->headers->set($headerName, implode('; ', $csp));
+        }
 
         return $response;
     }

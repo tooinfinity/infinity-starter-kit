@@ -19,7 +19,7 @@ php artisan key:generate
 - **`APP_DEBUG=false`**: Never expose stack traces or detailed error messages to end users in production.
 - **`APP_URL=https://your-domain.com`**: Must use `https://` to ensure generated URLs match secure protocol expectations.
 - **`SESSION_SECURE_COOKIE=true`**: Enforces the `Secure` flag on session cookies so they are transmitted solely over HTTPS.
-- **`TRUSTED_PROXIES`**: Required when hosting behind load balancers or reverse proxies (AWS ALB/ELB, Cloudflare, Traefik, Nginx, Caddy).
+- **`TRUSTED_PROXIES`**: Required when hosting behind load balancers or reverse proxies (AWS ALB/ELB, Cloudflare, Traefik, Nginx, Caddy). Defined in `config/security.php` (`security.trusted_proxies`) and handled at request time by `App\Http\Middleware\TrustProxies` so it is safely preserved after `php artisan config:cache`.
   - Leave unset by default. Use `*` only when origin access is restricted to a trusted ingress that replaces client-supplied forwarding headers:
     ```ini
     TRUSTED_PROXIES=*
@@ -28,12 +28,14 @@ php artisan key:generate
     ```ini
     TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
     ```
+- **`NOTIFICATION_RETENTION_DAYS=30`**: The number of days read notifications are retained before automatic pruning (set `<= 0` to disable pruning).
+- **`NOTIFICATION_UNREAD_RETENTION_DAYS`**: (Optional) Number of days unread notifications are retained before pruning. Unset or null by default (unread notifications never expire).
 
 ---
 
 ## 2. Security Headers & CSP
 
-The application includes `App\Http\Middleware\SecurityHeaders`, which automatically adds defensive HTTP headers to responses:
+The application includes `App\Http\Middleware\SecurityHeaders`, configured via `config/security.php`, which automatically adds defensive HTTP headers to responses:
 
 - **`X-Content-Type-Options: nosniff`**: Prevents MIME-type sniffing.
 - **`Referrer-Policy: strict-origin-when-cross-origin`**: Limits referrer information to the origin when navigating cross-origin over HTTPS.
@@ -41,6 +43,13 @@ The application includes `App\Http\Middleware\SecurityHeaders`, which automatica
 - **`Permissions-Policy: camera=(), microphone=(), geolocation=()`**: Restricts access to sensitive browser capabilities.
 - **`Strict-Transport-Security` (HSTS)**: Automatically emitted in production environments on HTTPS requests (`max-age=31536000; includeSubDomains`).
 - **`Content-Security-Policy`**: Enforces strict origin restrictions and binds inline/external scripts using a cryptographically random per-request nonce (`Vite::useCspNonce()`).
+  - Configure CSP via `config/security.php` or environment variables:
+    - `SECURITY_CSP_ENABLED=true` (or `false` to disable CSP)
+    - `SECURITY_CSP_REPORT_ONLY=true` (for CSP report-only mode)
+    - `SECURITY_CSP_REPORT_TO=csp-endpoint` (CSP Level 3 reporting group name)
+    - `SECURITY_CSP_REPORTING_ENDPOINTS=csp-endpoint="https://example.com/csp-reports"` (sets `Reporting-Endpoints` header)
+    - `SECURITY_CSP_REPORT_URI=https://example.report-uri.com/r/d/csp/enforce` (legacy CSP report URI fallback)
+    - `SECURITY_CSP_SCRIPT_SRC`, `SECURITY_CSP_CONNECT_SRC`, `SECURITY_CSP_IMG_SRC`, `SECURITY_CSP_STYLE_SRC`, `SECURITY_CSP_FONT_SRC`, `SECURITY_CSP_MEDIA_SRC`, `SECURITY_CSP_FRAME_SRC`: Comma-separated extra origins for CDNs, analytics, or embeds. Semicolons and newlines are sanitized automatically.
 
 Self-hosted fonts are bundled at build time via `laravel-vite-plugin/fonts` (e.g. Instrument Sans) so no third-party font CDNs are queried at runtime.
 
@@ -121,13 +130,16 @@ Add a single cron entry on your production server to trigger scheduled tasks eve
 
 ---
 
-## 6. Production Optimization Checklist
+## 6. Production Deployment Checklist
 
-Run the following Artisan commands during deployment to cache routes, configuration, events, and views:
+Run the following Artisan commands during deployment to run migrations, synchronize roles and permissions, and cache routes, configuration, events, and views:
 
 ```bash
 # Run database migrations
 php artisan migrate --force
+
+# Synchronize authorization permissions and roles (idempotent; required if Authorization is enabled)
+php artisan authorization:setup
 
 # Optimize and cache configuration & routes
 php artisan config:cache
@@ -137,4 +149,54 @@ php artisan event:cache
 
 # Restart queue workers to pick up new code
 php artisan queue:restart
+```
+
+---
+
+## 7. Initial Production Bootstrap: Roles & First Super Admin
+
+On a fresh production database, the application contains no user accounts, and roles and permissions must be initialized before administrative access can be granted.
+
+### 1. Synchronize Roles and Permissions
+
+Ensure migrations have run and synchronize all permissions and roles defined in your PHP enums (`App\Enums\Permission` and `App\Enums\Role`):
+
+```bash
+php artisan migrate --force
+php artisan authorization:setup
+```
+
+The `authorization:setup` command is idempotent. It creates any missing permissions and the `super-admin` role in the database, associates all permissions with the Super Admin role, and clears the permission cache. Running it multiple times has no side effects and is safe to execute on every deployment (including after introducing new enum cases).
+
+### 2. Create or Assign the First Super Admin
+
+Because installer-only commands (such as `admin:setup`) are stripped during project generation to maintain a minimal runtime attack surface, bootstrap your first production administrator using Laravel Tinker.
+
+#### Option A: Create a New Administrator Account
+
+If user registration is disabled in production, or if you want to provision the first administrator directly from the command line:
+
+```bash
+php artisan tinker --execute '$user = App\Models\User::create(["name" => "Administrator", "email" => "admin@your-domain.com", "password" => "your-secure-password", "email_verified_at" => now()]); $user->assignRole("super-admin");'
+```
+
+> **Note:** The `User` model automatically hashes the `password` attribute via its `'hashed'` cast. Setting `'email_verified_at' => now()` ensures the account is verified immediately when email verification is enabled.
+
+#### Option B: Promote an Existing User by Email
+
+If the administrator has already registered an account via the web application:
+
+```bash
+php artisan tinker --execute 'App\Models\User::where("email", "admin@your-domain.com")->firstOrFail()->assignRole("super-admin");'
+```
+
+Alternatively, open an interactive Tinker session:
+
+```bash
+php artisan tinker
+```
+
+```php
+$user = App\Models\User::where('email', 'admin@your-domain.com')->firstOrFail();
+$user->assignRole('super-admin');
 ```

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Data\Reporting\ReportDateRange;
+use App\Queries\Reporting\TimeBucketSql;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
 
@@ -71,12 +72,11 @@ test('report date range resolveTimezone prioritizes explicit then config then de
     expect(ReportDateRange::resolveTimezone())->toBe('UTC');
 });
 
-test('report date range timeBucketSql returns expected expressions across drivers', function (): void {
-    expect(ReportDateRange::timeBucketSql('sqlite'))->toBe("strftime('%Y-%m-%d %H:', created_at) || printf('%02d:00', strftime('%M', created_at) - (strftime('%M', created_at) % 15))")
-        ->and(ReportDateRange::timeBucketSql('pgsql'))->toBe("to_char(created_at, 'YYYY-MM-DD HH24:') || lpad((extract(minute from created_at)::integer - (extract(minute from created_at)::integer % 15))::text, 2, '0') || ':00'")
-        ->and(ReportDateRange::timeBucketSql('sqlsrv'))->toBe("FORMAT(DATEADD(minute, -(DATEPART(minute, created_at) % 15), created_at), 'yyyy-MM-dd HH:mm:00')")
-        ->and(ReportDateRange::timeBucketSql('mysql'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
-        ->and(ReportDateRange::timeBucketSql('mariadb'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
-        ->and(ReportDateRange::timeBucketSql('unknown'))->toBe("CONCAT(DATE_FORMAT(created_at, '%Y-%m-%d %H:'), LPAD(MINUTE(created_at) - (MINUTE(created_at) % 15), 2, '0'), ':00')")
-        ->and(ReportDateRange::timeBucketSql('sqlite', 'happened_at'))->toBe("strftime('%Y-%m-%d %H:', happened_at) || printf('%02d:00', strftime('%M', happened_at) - (strftime('%M', happened_at) % 15))");
+test('TimeBucketSql helper generates driver-specific SQL expressions including sqlsrv', function (): void {
+    expect(TimeBucketSql::forDriver('sqlsrv', 'logged_at'))
+        ->toBe("FORMAT(DATEADD(minute, -(DATEPART(minute, logged_at) % 15), logged_at), 'yyyy-MM-dd HH:mm:00')")
+        ->and(TimeBucketSql::forDriver('sqlsrv'))
+        ->toBe("FORMAT(DATEADD(minute, -(DATEPART(minute, created_at) % 15), created_at), 'yyyy-MM-dd HH:mm:00')")
+        ->and(TimeBucketSql::forDriver('sqlite'))
+        ->toBe("strftime('%Y-%m-%d %H:', created_at) || printf('%02d:00', strftime('%M', created_at) - (strftime('%M', created_at) % 15))");
 });

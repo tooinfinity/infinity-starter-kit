@@ -154,7 +154,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                         {audit.tags && audit.tags.length > 0 && (
                             <div className="sm:col-span-2">
                                 <span className="text-xs font-medium text-muted-foreground">
-                                    Tags
+                                    {__('Tags')}
                                 </span>
                                 <div className="mt-1 flex flex-wrap gap-1">
                                     {audit.tags.map((tag) => (
@@ -173,7 +173,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                         {audit.user_agent && (
                             <div className="sm:col-span-2">
                                 <span className="text-xs font-medium text-muted-foreground">
-                                    User Agent
+                                    {__('User Agent')}
                                 </span>
                                 <p className="mt-1 font-mono text-xs break-all text-muted-foreground">
                                     {audit.user_agent}
@@ -237,7 +237,7 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                                                     </td>
                                                     <td className="px-1 py-2 text-muted-foreground">
                                                         {isChanged && (
-                                                            <ArrowRight className="size-3" />
+                                                            <ArrowRight className="size-3 rtl:rotate-180" />
                                                         )}
                                                     </td>
                                                     <td className="max-w-[200px] px-3 py-2 break-all text-emerald-600 dark:text-emerald-400">

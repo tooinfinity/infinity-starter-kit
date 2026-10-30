@@ -181,7 +181,7 @@ export default function UsersIndex({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="User Management" />
+            <Head title={__('User Management')} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
