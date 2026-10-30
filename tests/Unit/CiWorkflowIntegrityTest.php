@@ -54,9 +54,11 @@ test('tests workflow defines decoupled quality, database, browser, and installer
         ->and($content)->toContain('composer test:unit')
         ->and($content)->toContain('composer test:coverage');
 
-    // Database matrix covers sqlite, mysql, pgsql with database tests
+    // Database matrix covers sqlite, mysql, pgsql with database tests and builds assets for Inertia views
     expect($content)->toContain('db: [sqlite, mysql, pgsql]')
         ->and($content)->toContain('composer test:database');
+    $databaseSection = mb_strstr($content, '  database:');
+    expect($databaseSection)->toContain('bun run build');
 
     // Browser tests run browser suite
     expect($content)->toContain('composer test:browser');
