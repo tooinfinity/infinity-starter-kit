@@ -70,6 +70,7 @@ final class Cleanup
             'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
             'tests/Feature/Chisel/RegistryIntegrityTest.php',
+            'tests/Feature/Chisel/FeatureContractTest.php',
             'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
         ];
     }

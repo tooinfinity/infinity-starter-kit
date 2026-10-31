@@ -6,211 +6,221 @@ use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\Cleanup;
 
-/**
- * Creates an isolated sandbox of git-tracked files, executes chisel.php, and yields sandbox directory.
- *
- * @param  array<string, mixed>  $answers
- * @param  (Closure(string): void)|null  $beforeRun
- * @return array{dir: string, cleanup: Closure(): void}
- */
-function runChiselSandbox(array $answers, ?Closure $beforeRun = null): array
-{
-    $tempDir = sys_get_temp_dir().'/chisel_comb_'.uniqid();
-    mkdir($tempDir, 0777, true);
+if (! function_exists('runChiselSandbox')) {
+    /**
+     * Creates an isolated sandbox of git-tracked files, executes chisel.php, and yields sandbox directory.
+     *
+     * @param  array<string, mixed>  $answers
+     * @param  (Closure(string): void)|null  $beforeRun
+     * @return array{dir: string, cleanup: Closure(): void}
+     */
+    function runChiselSandbox(array $answers, ?Closure $beforeRun = null): array
+    {
+        $tempDir = sys_get_temp_dir().'/chisel_comb_'.uniqid();
+        mkdir($tempDir, 0777, true);
 
-    $files = explode("\n", mb_trim((string) shell_exec('git ls-files -c -o --exclude-standard')));
-    foreach ($files as $file) {
-        if ($file === '' || $file === 'composer.lock' || ! file_exists(base_path($file))) {
-            continue;
-        }
-
-        $target = $tempDir.'/'.$file;
-        @mkdir(dirname($target), 0777, true);
-        copy(base_path($file), $target);
-    }
-
-    @symlink(base_path('vendor'), $tempDir.'/vendor');
-
-    if ($beforeRun instanceof Closure) {
-        $beforeRun($tempDir);
-    }
-
-    putenv('LARAVEL_INSTALLER_NO_NODE=true');
-    $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
-
-    try {
-        $script = require $tempDir.'/chisel.php';
-        $script->chisel($answers);
-
-        /** @var array<string, mixed> $paths */
-        $paths = require $tempDir.'/chisel-paths.php';
-        chiselCleanup($tempDir, $paths);
-    } finally {
-        putenv('LARAVEL_INSTALLER_NO_NODE');
-        unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
-    }
-
-    return [
-        'dir' => $tempDir,
-        'cleanup' => function () use ($tempDir): void {
-            exec('rm -rf '.escapeshellarg($tempDir));
-        },
-    ];
-}
-
-/**
- * Asserts all PHP files in directory pass syntax check.
- *
- * Files are parsed in-process with the tokenizer rather than spawning one `php -l`
- * process per file, which dominated the runtime of this test file.
- */
-function assertPhpSyntaxValid(string $directory): void
-{
-    $rdi = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
-    $syntaxErrors = [];
-
-    foreach ($rdi as $file) {
-        if ($file->isFile() && $file->getExtension() === 'php' && ! str_contains($file->getPathname(), '.blade.php')) {
-            try {
-                token_get_all((string) file_get_contents($file->getPathname()), TOKEN_PARSE);
-            } catch (ParseError $parseError) {
-                $syntaxErrors[] = $file->getPathname().': '.$parseError->getMessage().' on line '.$parseError->getLine();
+        $files = explode("\n", mb_trim((string) shell_exec('git ls-files -c -o --exclude-standard')));
+        foreach ($files as $file) {
+            if ($file === '' || $file === 'composer.lock' || ! file_exists(base_path($file))) {
+                continue;
             }
+
+            $target = $tempDir.'/'.$file;
+            @mkdir(dirname($target), 0777, true);
+            copy(base_path($file), $target);
         }
-    }
 
-    expect($syntaxErrors)->toBeEmpty('Found PHP syntax errors in sandbox: '.implode("\n", $syntaxErrors));
-}
+        @symlink(base_path('vendor'), $tempDir.'/vendor');
 
-/**
- * Asserts no remaining @chisel or @end-chisel markers exist in source or test files.
- */
-function assertNoOrphanedMarkersInSandbox(string $directory): void
-{
-    $rdi = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
-    $filesWithMarkers = [];
-
-    foreach ($rdi as $file) {
-        if ($file->isFile() && ! str_starts_with($file->getFilename(), '.') && $file->getFilename() !== 'README.md') {
-            $content = (string) file_get_contents($file->getPathname());
-            if (str_contains($content, '@chisel-') || str_contains($content, '@end-chisel-')) {
-                $filesWithMarkers[] = str_replace($directory.'/', '', $file->getPathname());
-            }
+        if ($beforeRun instanceof Closure) {
+            $beforeRun($tempDir);
         }
-    }
 
-    expect($filesWithMarkers)->toBeEmpty('Found unhandled chisel markers in: '.implode(', ', $filesWithMarkers));
-}
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'] = 'true';
 
-/**
- * Asserts all feature-owned files, packages, and markers for an unselected feature are completely removed.
- */
-function assertFeaturePruned(string $directory, FeatureDefinition $feature): void
-{
-    foreach ($feature->exclusiveFiles as $file) {
-        expect(file_exists($directory.'/'.$file))
-            ->toBeFalse("Expected exclusive file [{$file}] for pruned feature [{$feature->key}] to be removed.");
-    }
+        try {
+            $script = require $tempDir.'/chisel.php';
+            $script->chisel($answers);
 
-    if ($feature->composerPackages !== []) {
-        $composerPath = $directory.'/composer.json';
-        if (file_exists($composerPath)) {
-            $composer = json_decode((string) file_get_contents($composerPath), true);
-            foreach ($feature->composerPackages as $pkg) {
-                expect(isset($composer['require'][$pkg]) || isset($composer['require-dev'][$pkg]))
-                    ->toBeFalse("Expected composer package [{$pkg}] for pruned feature [{$feature->key}] to be removed.");
-            }
+            /** @var array<string, mixed> $paths */
+            $paths = require $tempDir.'/chisel-paths.php';
+            chiselCleanup($tempDir, $paths);
+        } finally {
+            putenv('LARAVEL_INSTALLER_NO_NODE');
+            unset($GLOBALS['_ENV']['LARAVEL_INSTALLER_NO_NODE'], $GLOBALS['_SERVER']['LARAVEL_INSTALLER_NO_NODE']);
         }
-    }
 
-    if ($feature->frontendPackages !== []) {
-        $packagePath = $directory.'/package.json';
-        if (file_exists($packagePath)) {
-            $packageJson = json_decode((string) file_get_contents($packagePath), true);
-            foreach ($feature->frontendPackages as $pkg) {
-                expect(isset($packageJson['dependencies'][$pkg]) || isset($packageJson['devDependencies'][$pkg]))
-                    ->toBeFalse("Expected frontend package [{$pkg}] for pruned feature [{$feature->key}] to be removed.");
-            }
-        }
-    }
-
-    if ($feature->sectionMarker !== null) {
-        foreach ($feature->markerFiles as $markerFile) {
-            $fullPath = $directory.'/'.$markerFile;
-            if (file_exists($fullPath)) {
-                $content = (string) file_get_contents($fullPath);
-                expect(str_contains($content, '@chisel-'.$feature->sectionMarker) || str_contains($content, '@end-chisel-'.$feature->sectionMarker))
-                    ->toBeFalse("Marker tag [{$feature->sectionMarker}] still present in [{$markerFile}] after pruning.");
-            }
-        }
+        return [
+            'dir' => $tempDir,
+            'cleanup' => function () use ($tempDir): void {
+                exec('rm -rf '.escapeshellarg($tempDir));
+            },
+        ];
     }
 }
 
-/**
- * Asserts all feature-owned files, packages, and marker sections for a selected feature are retained.
- *
- * @param  list<string>  $selectedModules
- */
-function assertFeatureRetained(string $directory, FeatureDefinition $feature, array $selectedModules = []): void
-{
-    $cleanupFiles = Cleanup::files();
+if (! function_exists('assertPhpSyntaxValid')) {
+    /**
+     * Asserts all PHP files in directory pass syntax check.
+     *
+     * Files are parsed in-process with the tokenizer rather than spawning one `php -l`
+     * process per file, which dominated the runtime of this test file.
+     */
+    function assertPhpSyntaxValid(string $directory): void
+    {
+        $rdi = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
+        $syntaxErrors = [];
 
-    foreach ($feature->exclusiveFiles as $file) {
-        if (in_array($file, $cleanupFiles, true)) {
-            continue;
+        foreach ($rdi as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php' && ! str_contains($file->getPathname(), '.blade.php')) {
+                try {
+                    token_get_all((string) file_get_contents($file->getPathname()), TOKEN_PARSE);
+                } catch (ParseError $parseError) {
+                    $syntaxErrors[] = $file->getPathname().': '.$parseError->getMessage().' on line '.$parseError->getLine();
+                }
+            }
         }
 
-        // If another feature in the registry also claims this file as exclusive,
-        // and that co-owning feature was not selected, the file was pruned by that unselected feature.
-        if ($selectedModules !== []) {
-            $isPrunedByOtherFeature = false;
-            foreach (FeatureRegistry::all() as $otherKey => $otherFeature) {
-                if ($otherKey !== $feature->key && in_array($file, $otherFeature->exclusiveFiles, true)) {
-                    if (! in_array($otherKey, $selectedModules, true)) {
-                        $isPrunedByOtherFeature = true;
-                        break;
+        expect($syntaxErrors)->toBeEmpty('Found PHP syntax errors in sandbox: '.implode("\n", $syntaxErrors));
+    }
+}
+
+if (! function_exists('assertNoOrphanedMarkersInSandbox')) {
+    /**
+     * Asserts no remaining @chisel or @end-chisel markers exist in source or test files.
+     */
+    function assertNoOrphanedMarkersInSandbox(string $directory): void
+    {
+        $rdi = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
+        $filesWithMarkers = [];
+
+        foreach ($rdi as $file) {
+            if ($file->isFile() && ! str_starts_with($file->getFilename(), '.') && $file->getFilename() !== 'README.md') {
+                $content = (string) file_get_contents($file->getPathname());
+                if (str_contains($content, '@chisel-') || str_contains($content, '@end-chisel-')) {
+                    $filesWithMarkers[] = str_replace($directory.'/', '', $file->getPathname());
+                }
+            }
+        }
+
+        expect($filesWithMarkers)->toBeEmpty('Found unhandled chisel markers in: '.implode(', ', $filesWithMarkers));
+    }
+}
+
+if (! function_exists('assertFeaturePruned')) {
+    /**
+     * Asserts all feature-owned files, packages, and markers for an unselected feature are completely removed.
+     */
+    function assertFeaturePruned(string $directory, FeatureDefinition $feature): void
+    {
+        foreach ($feature->exclusiveFiles as $file) {
+            expect(file_exists($directory.'/'.$file))
+                ->toBeFalse("Expected exclusive file [{$file}] for pruned feature [{$feature->key}] to be removed.");
+        }
+
+        if ($feature->composerPackages !== []) {
+            $composerPath = $directory.'/composer.json';
+            if (file_exists($composerPath)) {
+                $composer = json_decode((string) file_get_contents($composerPath), true);
+                foreach ($feature->composerPackages as $pkg) {
+                    expect(isset($composer['require'][$pkg]) || isset($composer['require-dev'][$pkg]))
+                        ->toBeFalse("Expected composer package [{$pkg}] for pruned feature [{$feature->key}] to be removed.");
+                }
+            }
+        }
+
+        if ($feature->frontendPackages !== []) {
+            $packagePath = $directory.'/package.json';
+            if (file_exists($packagePath)) {
+                $packageJson = json_decode((string) file_get_contents($packagePath), true);
+                foreach ($feature->frontendPackages as $pkg) {
+                    expect(isset($packageJson['dependencies'][$pkg]) || isset($packageJson['devDependencies'][$pkg]))
+                        ->toBeFalse("Expected frontend package [{$pkg}] for pruned feature [{$feature->key}] to be removed.");
+                }
+            }
+        }
+
+        if ($feature->sectionMarker !== null) {
+            foreach ($feature->markerFiles as $markerFile) {
+                $fullPath = $directory.'/'.$markerFile;
+                if (file_exists($fullPath)) {
+                    $content = (string) file_get_contents($fullPath);
+                    expect(str_contains($content, '@chisel-'.$feature->sectionMarker) || str_contains($content, '@end-chisel-'.$feature->sectionMarker))
+                        ->toBeFalse("Marker tag [{$feature->sectionMarker}] still present in [{$markerFile}] after pruning.");
+                }
+            }
+        }
+    }
+}
+
+if (! function_exists('assertFeatureRetained')) {
+    /**
+     * Asserts all feature-owned files, packages, and marker sections for a selected feature are retained.
+     *
+     * @param  list<string>  $selectedModules
+     */
+    function assertFeatureRetained(string $directory, FeatureDefinition $feature, array $selectedModules = []): void
+    {
+        $cleanupFiles = Cleanup::files();
+
+        foreach ($feature->exclusiveFiles as $file) {
+            if (in_array($file, $cleanupFiles, true)) {
+                continue;
+            }
+
+            // If another feature in the registry also claims this file as exclusive,
+            // and that co-owning feature was not selected, the file was pruned by that unselected feature.
+            if ($selectedModules !== []) {
+                $isPrunedByOtherFeature = false;
+                foreach (FeatureRegistry::all() as $otherKey => $otherFeature) {
+                    if ($otherKey !== $feature->key && in_array($file, $otherFeature->exclusiveFiles, true)) {
+                        if (! in_array($otherKey, $selectedModules, true)) {
+                            $isPrunedByOtherFeature = true;
+                            break;
+                        }
                     }
+                }
+
+                if ($isPrunedByOtherFeature) {
+                    continue;
                 }
             }
 
-            if ($isPrunedByOtherFeature) {
-                continue;
+            expect(file_exists($directory.'/'.$file))
+                ->toBeTrue("Expected exclusive file [{$file}] for retained feature [{$feature->key}] to exist.");
+        }
+
+        if ($feature->composerPackages !== []) {
+            $composerPath = $directory.'/composer.json';
+            if (file_exists($composerPath)) {
+                $composer = json_decode((string) file_get_contents($composerPath), true);
+                foreach ($feature->composerPackages as $pkg) {
+                    expect(isset($composer['require'][$pkg]) || isset($composer['require-dev'][$pkg]))
+                        ->toBeTrue("Expected composer package [{$pkg}] for retained feature [{$feature->key}] to exist.");
+                }
             }
         }
 
-        expect(file_exists($directory.'/'.$file))
-            ->toBeTrue("Expected exclusive file [{$file}] for retained feature [{$feature->key}] to exist.");
-    }
-
-    if ($feature->composerPackages !== []) {
-        $composerPath = $directory.'/composer.json';
-        if (file_exists($composerPath)) {
-            $composer = json_decode((string) file_get_contents($composerPath), true);
-            foreach ($feature->composerPackages as $pkg) {
-                expect(isset($composer['require'][$pkg]) || isset($composer['require-dev'][$pkg]))
-                    ->toBeTrue("Expected composer package [{$pkg}] for retained feature [{$feature->key}] to exist.");
+        if ($feature->frontendPackages !== []) {
+            $packagePath = $directory.'/package.json';
+            if (file_exists($packagePath)) {
+                $packageJson = json_decode((string) file_get_contents($packagePath), true);
+                foreach ($feature->frontendPackages as $pkg) {
+                    expect(isset($packageJson['dependencies'][$pkg]) || isset($packageJson['devDependencies'][$pkg]))
+                        ->toBeTrue("Expected frontend package [{$pkg}] for retained feature [{$feature->key}] to exist.");
+                }
             }
         }
-    }
 
-    if ($feature->frontendPackages !== []) {
-        $packagePath = $directory.'/package.json';
-        if (file_exists($packagePath)) {
-            $packageJson = json_decode((string) file_get_contents($packagePath), true);
-            foreach ($feature->frontendPackages as $pkg) {
-                expect(isset($packageJson['dependencies'][$pkg]) || isset($packageJson['devDependencies'][$pkg]))
-                    ->toBeTrue("Expected frontend package [{$pkg}] for retained feature [{$feature->key}] to exist.");
-            }
-        }
-    }
-
-    if ($feature->sectionMarker !== null) {
-        foreach ($feature->markerFiles as $markerFile) {
-            $fullPath = $directory.'/'.$markerFile;
-            if (file_exists($fullPath)) {
-                $content = (string) file_get_contents($fullPath);
-                expect(str_contains($content, '@chisel-'.$feature->sectionMarker) || str_contains($content, '@end-chisel-'.$feature->sectionMarker))
-                    ->toBeFalse("Marker delimiter [{$feature->sectionMarker}] was not stripped in [{$markerFile}] for retained feature.");
+        if ($feature->sectionMarker !== null) {
+            foreach ($feature->markerFiles as $markerFile) {
+                $fullPath = $directory.'/'.$markerFile;
+                if (file_exists($fullPath)) {
+                    $content = (string) file_get_contents($fullPath);
+                    expect(str_contains($content, '@chisel-'.$feature->sectionMarker) || str_contains($content, '@end-chisel-'.$feature->sectionMarker))
+                        ->toBeFalse("Marker delimiter [{$feature->sectionMarker}] was not stripped in [{$markerFile}] for retained feature.");
+                }
             }
         }
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
-use App\Models\Setting;
 use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
 use App\Queries\Reporting\ExportAuditReportStream;
@@ -66,9 +65,9 @@ test('audit report query computes accurate summary metrics and event breakdown',
     // System audit event (user_id is null)
     AuditTrail::factory()->create([
         'user_id' => null,
-        'event' => AuditEvent::SettingsUpdated,
-        'auditable_type' => Setting::class,
-        'auditable_id' => '1',
+        'event' => AuditEvent::UserDeleted,
+        'auditable_type' => User::class,
+        'auditable_id' => $user1->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(6),
     ]);
 

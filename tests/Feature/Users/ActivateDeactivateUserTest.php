@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
+/* @chisel-notifications */
 use App\Notifications\UserActivated;
 use App\Notifications\UserDeactivated;
+/* @end-chisel-notifications */
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -27,9 +29,9 @@ it('activates an inactive user', function (): void {
 
     expect($inactiveUser->fresh()->is_active)->toBeTrue();
 
-    if (class_exists(UserActivated::class)) {
-        Notification::assertSentTo($inactiveUser, UserActivated::class);
-    }
+    /* @chisel-notifications */
+    Notification::assertSentTo($inactiveUser, UserActivated::class);
+    /* @end-chisel-notifications */
 });
 
 it('deactivates an active user', function (): void {
@@ -48,9 +50,9 @@ it('deactivates an active user', function (): void {
 
     expect($activeUser->fresh()->is_active)->toBeFalse();
 
-    if (class_exists(UserDeactivated::class)) {
-        Notification::assertSentTo($activeUser, UserDeactivated::class);
-    }
+    /* @chisel-notifications */
+    Notification::assertSentTo($activeUser, UserDeactivated::class);
+    /* @end-chisel-notifications */
 });
 
 it('forbids unauthorized users from activating or deactivating another user', function (): void {
