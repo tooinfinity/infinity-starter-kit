@@ -28,7 +28,9 @@ final class InstallerContextResolver
             || ($command->hasOption('answers-file') && $command->option('answers-file') !== null)
             || ($command->hasOption('preset') && $command->option('preset') !== null);
 
-        if ($hasCliAnswers || self::hasEnvironmentAnswers() || self::hasEnvironmentAnswersFile() || self::hasEnvironmentPreset()) {
+        $isDryRun = ($command->hasOption('dry-run') && (bool) $command->option('dry-run'));
+
+        if ($hasCliAnswers || $isDryRun || self::hasEnvironmentAnswers() || self::hasEnvironmentAnswersFile() || self::hasEnvironmentPreset()) {
             return false;
         }
 
@@ -282,6 +284,9 @@ final class InstallerContextResolver
             : (is_string($adminData['password'] ?? null) ? $adminData['password'] : (is_string($providedAnswers['admin_password'] ?? null) ? $providedAnswers['admin_password'] : null));
 
         $skipNode = self::shouldSkipNode();
+        $isDryRun = ($command->hasOption('dry-run') && (bool) $command->option('dry-run'))
+            || self::installerFlag('CHISEL_DRY_RUN')
+            || self::installerFlag('LARAVEL_INSTALLER_DRY_RUN');
 
         return new InstallerContext(
             providedAnswers: $providedAnswers,
@@ -297,6 +302,7 @@ final class InstallerContextResolver
             skipNode: $skipNode,
             isMockedScript: $isMockedScript,
             includeAiGuidelines: $includeAiGuidelines,
+            isDryRun: $isDryRun,
         );
     }
 }

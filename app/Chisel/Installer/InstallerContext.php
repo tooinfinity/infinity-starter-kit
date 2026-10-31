@@ -33,6 +33,7 @@ final readonly class InstallerContext
         public bool $skipNode,
         public bool $isMockedScript,
         public bool $includeAiGuidelines = true,
+        public bool $isDryRun = false,
     ) {}
 
     public function redact(string $message): string
