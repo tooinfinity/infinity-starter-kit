@@ -6,6 +6,7 @@ namespace Tests\Unit\Chisel;
 
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\PreflightValidator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
 
@@ -135,6 +136,7 @@ test('preflight database check validates sqlite directory and throws when non-sq
         File::ensureDirectoryExists($tempDir);
 
         // Test non-sqlite connection failure
+        DB::purge('mysql');
         config([
             'database.default' => 'mysql',
             'database.connections.mysql.port' => 49999,
@@ -159,6 +161,9 @@ test('preflight database check validates sqlite directory and throws when non-sq
         if ($origMysqlPort !== null) {
             config(['database.connections.mysql.port' => $origMysqlPort]);
         }
+
+        DB::purge('mysql');
+        DB::purge('sqlite');
     }
 });
 
