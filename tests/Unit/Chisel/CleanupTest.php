@@ -81,3 +81,27 @@ test('cleanup clean succeeds idempotently when declared files and directories ar
 
     expect(fn () => Cleanup::clean($this->tempDir, $paths))->not->toThrow(Throwable::class);
 });
+
+test('cleanup clean rethrows ComposerLockSynchronizer failure with recovery guidance', function (): void {
+    $composerJson = [
+        'name' => 'test/project',
+        'require' => ['php' => '^8.5.0'],
+    ];
+    $composerLock = [
+        'packages' => [['name' => 'spatie/laravel-permission']],
+        'packages-dev' => [],
+    ];
+    file_put_contents($this->tempDir.'/composer.json', json_encode($composerJson));
+    file_put_contents($this->tempDir.'/composer.lock', json_encode($composerLock));
+
+    $paths = [
+        'authorization' => ['composer_package' => 'spatie/laravel-permission'],
+        'chisel' => [
+            'files' => [],
+            'empty_dirs' => [],
+        ],
+    ];
+
+    expect(fn () => Cleanup::clean($this->tempDir, $paths))
+        ->toThrow(RuntimeException::class, 'Installer files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.');
+});

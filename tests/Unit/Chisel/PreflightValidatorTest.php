@@ -128,12 +128,17 @@ test('preflight database check validates sqlite directory and throws when non-sq
     putenv('CHISEL_RUN_MIGRATIONS=true');
     $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
 
+    $origMysqlPort = config('database.connections.mysql.port');
+
     try {
         $tempDir = sys_get_temp_dir().'/chisel_db_test_'.uniqid();
         File::ensureDirectoryExists($tempDir);
 
         // Test non-sqlite connection failure
-        config(['database.default' => 'mysql']);
+        config([
+            'database.default' => 'mysql',
+            'database.connections.mysql.port' => 49999,
+        ]);
         $context = makePreflightContext(isMockedScript: false);
 
         expect(fn () => PreflightValidator::validate($context, $tempDir))
@@ -151,6 +156,9 @@ test('preflight database check validates sqlite directory and throws when non-sq
         $cleanEnv('CHISEL_RUN_MIGRATIONS');
         config(['database.default' => 'sqlite']);
         config(['database.connections.sqlite.database' => ':memory:']);
+        if ($origMysqlPort !== null) {
+            config(['database.connections.mysql.port' => $origMysqlPort]);
+        }
     }
 });
 
@@ -163,6 +171,13 @@ test('preflight database check throws when sqlite database file exists but is no
     $dbFile = $tempDir.'/database.sqlite';
     File::put($dbFile, '');
     chmod($dbFile, 0444);
+
+    if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        chmod($dbFile, 0666);
+        File::deleteDirectory($tempDir);
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+        $this->markTestSkipped('File permission checks do not apply to the root user.');
+    }
 
     try {
         config(['database.default' => 'sqlite']);

@@ -1,7 +1,9 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Models\User;
+use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Artisan;
@@ -1381,6 +1383,110 @@ test('failure at post_scaffold stage records failure and retry skips completed p
 
         expect(file_exists($stateFile))->toBeFalse();
     } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure at cleanup stage records failure and outputs recovery instructions', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=cleanup');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'cleanup';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [cleanup]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $state = json_decode((string) file_get_contents($stateFile), true);
+        expect($state['failed_phase'])->toBe('cleanup')
+            ->and($state['status'])->toBe('failed');
+
+        // Clear failure trigger for retry
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect(file_exists($stateFile))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure at cleanup stage after installer files are removed outputs manual composer instructions', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    $chiselPath = base_path('chisel.php');
+    $commandPath = app_path('Console/Commands/InstallFeaturesCommand.php');
+    $chiselBak = $chiselPath.'.testbak';
+    $commandBak = $commandPath.'.testbak';
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=cleanup');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'cleanup';
+
+        Process::fake(function () use ($chiselPath, $chiselBak, $commandPath, $commandBak): ProcessResult {
+            if (file_exists($chiselPath)) {
+                rename($chiselPath, $chiselBak);
+            }
+
+            if (file_exists($commandPath)) {
+                rename($commandPath, $commandBak);
+            }
+
+            return Process::result();
+        });
+
+        $script = Chisel::script(base_path())
+            ->questions([
+                Question::multiselect(
+                    name: 'auth_features',
+                    label: 'Auth features',
+                    options: ['registration' => 'Registration'],
+                    default: ['registration'],
+                ),
+                Question::multiselect(
+                    name: 'optional_modules',
+                    label: 'Optional modules',
+                    options: ['authorization' => 'Authorization'],
+                    default: ['authorization'],
+                ),
+            ]);
+
+        app()->instance(Script::class, $script);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [cleanup]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $state = json_decode((string) file_get_contents($stateFile), true);
+        expect($state['failed_phase'])->toBe('cleanup');
+    } finally {
+        if (file_exists($chiselBak)) {
+            rename($chiselBak, $chiselPath);
+        }
+
+        if (file_exists($commandBak)) {
+            rename($commandBak, $commandPath);
+        }
+
         $restoreEnv();
     }
 });

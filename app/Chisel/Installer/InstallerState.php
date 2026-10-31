@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Chisel\Installer;
 
+use RuntimeException;
 use Throwable;
 
 /**
@@ -14,7 +15,7 @@ final class InstallerState
     public const string STATE_FILE = '.installer-state.json';
 
     /**
-     * @param  array{auth_features: list<string>, optional_modules: list<string>}  $answers
+     * @param  array{auth_features: list<string>, optional_modules: list<string>, ai_guidelines?: list<string>}  $answers
      * @param  list<string>  $completedPhases
      * @param  array<string, mixed>  $metadata
      */
@@ -68,15 +69,21 @@ final class InstallerState
             $status = isset($data['status']) && is_string($data['status']) ? $data['status'] : 'in_progress';
             $currentPhase = isset($data['current_phase']) && is_string($data['current_phase']) ? $data['current_phase'] : 'unknown';
 
+            $answers = [
+                'auth_features' => array_values(array_filter($auth, is_string(...))),
+                'optional_modules' => array_values(array_filter($modules, is_string(...))),
+            ];
+
+            if (array_key_exists('ai_guidelines', $rawAnswers) && is_array($rawAnswers['ai_guidelines'])) {
+                $answers['ai_guidelines'] = array_values(array_filter($rawAnswers['ai_guidelines'], is_string(...)));
+            }
+
             return new self(
                 version: $version,
                 startedAt: $startedAt,
                 updatedAt: $updatedAt,
                 status: $status,
-                answers: [
-                    'auth_features' => array_values(array_filter($auth, is_string(...))),
-                    'optional_modules' => array_values(array_filter($modules, is_string(...))),
-                ],
+                answers: $answers,
                 completedPhases: array_values(array_filter($completedPhases, is_string(...))),
                 currentPhase: $currentPhase,
                 failedPhase: isset($data['failed_phase']) && is_string($data['failed_phase']) ? $data['failed_phase'] : null,
@@ -121,7 +128,7 @@ final class InstallerState
 
     /**
      * @param  array<string, mixed>  $answers
-     * @return array{auth_features: list<string>, optional_modules: list<string>}
+     * @return array{auth_features: list<string>, optional_modules: list<string>, ai_guidelines?: list<string>}
      */
     public static function sanitizeAnswers(array $answers): array
     {
@@ -133,10 +140,19 @@ final class InstallerState
         $modules = array_values(array_filter($rawModules, is_string(...)));
         sort($modules);
 
-        return [
+        $sanitized = [
             'auth_features' => $auth,
             'optional_modules' => $modules,
         ];
+
+        if (array_key_exists('ai_guidelines', $answers)) {
+            $rawGuidelines = (array) $answers['ai_guidelines'];
+            $guidelines = array_values(array_filter($rawGuidelines, is_string(...)));
+            sort($guidelines);
+            $sanitized['ai_guidelines'] = $guidelines;
+        }
+
+        return $sanitized;
     }
 
     /**
@@ -211,10 +227,19 @@ final class InstallerState
             'metadata' => self::sanitizeMetadata($this->metadata),
         ];
 
-        file_put_contents(
-            self::statePath($basePath),
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
-        );
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $path = self::statePath($basePath);
+        $tmpPath = $path.'.tmp.'.bin2hex(random_bytes(16));
+
+        $written = @file_put_contents($tmpPath, $json);
+        if ($written === false) {
+            throw new RuntimeException(sprintf('Failed to write temporary installer state to [%s].', $tmpPath));
+        }
+
+        if (! @rename($tmpPath, $path)) {
+            @unlink($tmpPath);
+            throw new RuntimeException(sprintf('Failed to atomically rename installer state from [%s] to [%s].', $tmpPath, $path));
+        }
     }
 
     public function delete(string $basePath): bool
@@ -239,7 +264,20 @@ final class InstallerState
         sort($savedModules);
         sort($currentModules);
 
-        return $savedAuth !== $currentAuth || $savedModules !== $currentModules;
+        if ($savedAuth !== $currentAuth || $savedModules !== $currentModules) {
+            return true;
+        }
+
+        if (array_key_exists('ai_guidelines', $this->answers) && array_key_exists('ai_guidelines', $context->answers)) {
+            $savedGuidelines = (array) $this->answers['ai_guidelines'];
+            $currentGuidelines = (array) $context->answers['ai_guidelines'];
+            sort($savedGuidelines);
+            sort($currentGuidelines);
+
+            return $savedGuidelines !== $currentGuidelines;
+        }
+
+        return false;
     }
 
     public function formatConflictMessage(InstallerContext $context): string
@@ -249,17 +287,31 @@ final class InstallerState
         $savedModules = $this->answers['optional_modules'];
         $currentModules = $context->selectedModules;
 
-        return "Conflicting answers on installer retry.\n"
+        $msg = "Conflicting answers on installer retry.\n"
             ."The project was already partially pruned with:\n"
             .'  Authentication: '.($savedAuth !== [] ? implode(', ', $savedAuth) : '(none)')."\n"
-            .'  Optional modules: '.($savedModules !== [] ? implode(', ', $savedModules) : '(none)')."\n\n"
-            ."Attempted retry with:\n"
+            .'  Optional modules: '.($savedModules !== [] ? implode(', ', $savedModules) : '(none)')."\n";
+
+        if (isset($this->answers['ai_guidelines'])) {
+            $msg .= '  AI guidelines: '.($this->answers['ai_guidelines'] !== [] ? implode(', ', $this->answers['ai_guidelines']) : '(none)')."\n";
+        }
+
+        $msg .= "\nAttempted retry with:\n"
             .'  Authentication: '.($currentAuth !== [] ? implode(', ', $currentAuth) : '(none)')."\n"
-            .'  Optional modules: '.($currentModules !== [] ? implode(', ', $currentModules) : '(none)')."\n\n"
-            ."The file structure has already been pruned according to the original selection and cannot be safely changed.\n"
+            .'  Optional modules: '.($currentModules !== [] ? implode(', ', $currentModules) : '(none)')."\n";
+
+        if (isset($context->answers['ai_guidelines']) && is_array($context->answers['ai_guidelines'])) {
+            $contextGuidelines = array_values(array_filter($context->answers['ai_guidelines'], is_string(...)));
+            $msg .= '  AI guidelines: '.($contextGuidelines !== [] ? implode(', ', $contextGuidelines) : '(none)')."\n";
+        }
+
+        $msg .= "\nThe file structure has already been pruned according to the original selection and cannot be safely changed.\n"
             ."To retry with the previous answers, run:\n"
             ."  php artisan install:features\n"
+            ."If administrator setup was requested, provide a new password with --admin-password or CHISEL_ADMIN_PASSWORD; passwords are not stored in the checkpoint.\n"
             .'To start over with different features, delete this directory and run composer create-project again.';
+
+        return $msg;
     }
 
     private function redactErrorMessage(string $message): string

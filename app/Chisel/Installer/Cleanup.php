@@ -6,6 +6,7 @@ namespace App\Chisel\Installer;
 
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Filesystem\PendingFiles;
+use RuntimeException;
 
 /**
  * Removes Chisel installer machinery and synchronizes configuration files after successful installation.
@@ -127,6 +128,10 @@ final class Cleanup
 
         DirectoryPruner::prune($directory, $paths['chisel']['empty_dirs'] ?? self::directories());
 
-        ComposerLockSynchronizer::sync($directory, $paths);
+        try {
+            ComposerLockSynchronizer::sync($directory, $paths);
+        } catch (RuntimeException $runtimeException) {
+            throw new RuntimeException($runtimeException->getMessage()."\nInstaller files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.", $runtimeException->getCode(), previous: $runtimeException);
+        }
     }
 }

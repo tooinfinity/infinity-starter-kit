@@ -169,7 +169,6 @@ final class InstallFeaturesCommand extends Command
 
         try {
             GeneratedApplicationValidator::injectTestFailureIfRequested('post_scaffold');
-            GeneratedApplicationValidator::injectTestFailureIfRequested();
         } catch (Throwable $throwable) {
             $state->recordFailure($basePath, 'post_scaffold', $context->redact($throwable->getMessage()));
             $this->outputActionableRecovery($state);
@@ -177,9 +176,27 @@ final class InstallFeaturesCommand extends Command
             throw $throwable;
         }
 
-        GeneratedApplicationValidator::validatePreCleanup($basePath);
-        $didCleanup = $this->cleanupInstaller($context);
-        GeneratedApplicationValidator::validatePostCleanup($context, $didCleanup, $basePath);
+        try {
+            GeneratedApplicationValidator::injectTestFailureIfRequested('cleanup');
+            GeneratedApplicationValidator::validatePreCleanup($basePath);
+            $didCleanup = $this->cleanupInstaller($context);
+            GeneratedApplicationValidator::validatePostCleanup($context, $didCleanup, $basePath);
+        } catch (Throwable $throwable) {
+            $state->recordFailure($basePath, 'cleanup', $context->redact($throwable->getMessage()));
+
+            if ($this->hasInstallerFiles()) {
+                $this->outputActionableRecovery($state);
+            } else {
+                $this->components->warn('Installation halted at phase [cleanup].');
+                $this->components->info(sprintf('Checkpoint saved to [%s].', InstallerState::STATE_FILE));
+                $this->newLine();
+                $this->line('Installer files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.');
+                $this->line('To start fresh with a clean directory:');
+                $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
+            }
+
+            throw $throwable;
+        }
 
         $state->delete($basePath);
 
@@ -195,6 +212,7 @@ final class InstallFeaturesCommand extends Command
         $this->newLine();
         $this->line('To retry and resume the installation:');
         $this->line('  <comment>php artisan install:features</comment>');
+        $this->line('If administrator setup was requested, provide a new password with <comment>--admin-password</comment> or <comment>CHISEL_ADMIN_PASSWORD</comment>; passwords are not stored in the checkpoint.');
         $this->line('To start fresh with a clean directory:');
         $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
     }
@@ -218,6 +236,7 @@ final class InstallFeaturesCommand extends Command
         $this->line('The file structure has already been pruned according to the original selection and cannot be safely changed.');
         $this->line('To retry with the previous answers, run:');
         $this->line('  <comment>php artisan install:features</comment>');
+        $this->line('If administrator setup was requested, provide a new password with <comment>--admin-password</comment> or <comment>CHISEL_ADMIN_PASSWORD</comment>; passwords are not stored in the checkpoint.');
         $this->newLine();
         $this->line('To start over with different features:');
         $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
@@ -287,5 +306,12 @@ final class InstallFeaturesCommand extends Command
         Cleanup::clean(base_path(), $paths);
 
         return true;
+    }
+
+    private function hasInstallerFiles(): bool
+    {
+        clearstatcache();
+
+        return file_exists(base_path('chisel.php')) || file_exists(app_path('Console/Commands/InstallFeaturesCommand.php'));
     }
 }

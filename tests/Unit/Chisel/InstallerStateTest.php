@@ -235,3 +235,63 @@ test('sanitizeMetadata filters nested secrets and keeps scalar values', function
         ->and($sanitized['nested'])->not->toHaveKey('api_secret')
         ->and($sanitized['nested'])->not->toHaveKey('admin_password');
 });
+
+test('save writes atomically and throws RuntimeException if temporary write fails', function (): void {
+    $context = makeTestContext(answers: ['auth_features' => ['login'], 'optional_modules' => []]);
+    $state = InstallerState::initialize($this->tempDir, $context);
+
+    expect(fn () => $state->save('/nonexistent_path_xyz_123/sub'))
+        ->toThrow(RuntimeException::class, 'Failed to write temporary installer state');
+});
+
+test('save throws RuntimeException and cleans up temp file if rename fails', function (): void {
+    $context = makeTestContext(answers: ['auth_features' => ['login'], 'optional_modules' => []]);
+    $state = InstallerState::initialize($this->tempDir, $context);
+
+    $stateFile = $this->tempDir.'/'.InstallerState::STATE_FILE;
+    @unlink($stateFile);
+    mkdir($stateFile);
+
+    expect(fn () => $state->save($this->tempDir))
+        ->toThrow(RuntimeException::class, 'Failed to atomically rename installer state');
+
+    @rmdir($stateFile);
+});
+
+test('sanitizeAnswers and answersConflict preserve and compare ai_guidelines', function (): void {
+    $sanitized = InstallerState::sanitizeAnswers([
+        'auth_features' => ['login'],
+        'optional_modules' => ['settings'],
+        'ai_guidelines' => ['guidelines', 123, 'extra'],
+    ]);
+
+    expect($sanitized['ai_guidelines'])->toBe(['extra', 'guidelines']);
+
+    $contextOriginal = makeTestContext(
+        answers: [
+            'auth_features' => ['login'],
+            'optional_modules' => [],
+            'ai_guidelines' => ['guidelines'],
+        ],
+    );
+
+    $state = InstallerState::initialize($this->tempDir, $contextOriginal);
+
+    $loaded = InstallerState::load($this->tempDir);
+    expect($loaded?->answers['ai_guidelines'])->toBe(['guidelines']);
+
+    // Conflicting ai_guidelines
+    $contextConflictingAi = makeTestContext(
+        answers: [
+            'auth_features' => ['login'],
+            'optional_modules' => [],
+            'ai_guidelines' => [],
+        ],
+    );
+    expect($state->answersConflict($contextConflictingAi))->toBeTrue();
+
+    $conflictMessage = $state->formatConflictMessage($contextConflictingAi);
+    expect($conflictMessage)->toContain('AI guidelines: guidelines')
+        ->and($conflictMessage)->toContain('AI guidelines: (none)')
+        ->and($conflictMessage)->toContain('--admin-password');
+});
