@@ -106,6 +106,11 @@
         "test:coverage": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0 --exclude-testsuite=Browser --exclude-group=installer-e2e",
         "test:quick": "pest --parallel --exclude-testsuite=Browser --exclude-group=installer-e2e",
         "test:installer": "pest --group=installer-e2e --compact",
+        "test:dependencies": [
+            "composer validate --strict --check-lock",
+            "composer check-platform-reqs --lock",
+            "bun install --frozen-lockfile --dry-run"
+        ],
         "test:quality": [
             "@test:lint",
             "@test:types",

@@ -100,6 +100,66 @@ jobs:
       - name: Code Coverage
         run: composer test:coverage
 
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+          extensions: pdo, pdo_sqlite, pdo_mysql, pdo_pgsql
+          ini-values: zend.assertions=1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          run-install: false
+
+      - name: Validate Composer Manifest & Lockfile
+        run: composer validate --strict --check-lock
+
+      - name: Verify Supported Platform Requirements (Backend)
+        run: composer check-platform-reqs --lock
+
+      - name: Clean Composer Dependency Resolution & Install
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Clean Frontend Dependency Resolution & Install
+        run: bun install --frozen-lockfile
+
+      - name: Verify Frontend Peer Dependencies & Lockfile Integrity
+        run: |
+          bun pm ls
+          bun pm hash
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Verify Critical Framework Integration (Backend Package Discovery)
+        run: php artisan package:discover --ansi
+
+      - name: Verify Critical Framework Integration (Wayfinder Route & Action Generation)
+        run: php artisan wayfinder:generate --ansi
+
+      - name: Verify Critical Framework Integration (Frontend Production Asset Build)
+        run: bun run build
+
+      - name: Verify Framework Runtime Bootstrap
+        run: php artisan about
+
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 15
