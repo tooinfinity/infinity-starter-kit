@@ -37,6 +37,7 @@ function makePreflightContext(
 
 afterEach(function () use ($cleanEnv): void {
     $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+    $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
 });
 
 test('preflight passes on standard valid environment', function (): void {
@@ -252,5 +253,253 @@ test('preflight database check passes when sqlite database is valid and writable
             'database.default' => $origDefault,
             'database.connections.sqlite.database' => $origSqliteDb,
         ]);
+    }
+});
+
+test('preflight throws when a required core php extension is missing', function () use ($cleanEnv): void {
+    putenv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS=openssl');
+    $GLOBALS['_ENV']['CHISEL_PREFLIGHT_DISABLE_EXTENSIONS'] = 'openssl';
+
+    $context = makePreflightContext();
+
+    try {
+        expect(fn () => PreflightValidator::validate($context, base_path()))
+            ->toThrow(RuntimeException::class, 'Missing required PHP extension [openssl]. Please install or enable the [openssl] extension in your php.ini.');
+    } finally {
+        $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
+    }
+});
+
+test('preflight database check throws when pdo driver extension is missing', function () use ($cleanEnv): void {
+    putenv('CHISEL_RUN_MIGRATIONS=true');
+    $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
+    putenv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS=pdo_sqlsrv');
+    $GLOBALS['_ENV']['CHISEL_PREFLIGHT_DISABLE_EXTENSIONS'] = 'pdo_sqlsrv';
+
+    $origDefault = config('database.default');
+    $origConn = config('database.connections.sqlsrv_test');
+
+    try {
+        config([
+            'database.default' => 'sqlsrv_test',
+            'database.connections.sqlsrv_test' => [
+                'driver' => 'sqlsrv',
+            ],
+        ]);
+        $context = makePreflightContext(isMockedScript: false);
+
+        expect(fn () => PreflightValidator::validate($context, sys_get_temp_dir()))
+            ->toThrow(RuntimeException::class, 'Missing required PHP extension [pdo_sqlsrv] for database connection [sqlsrv_test]');
+    } finally {
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+        $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
+        config([
+            'database.default' => $origDefault,
+            'database.connections.sqlsrv_test' => $origConn,
+        ]);
+    }
+});
+
+test('preflight database check validates known database drivers', function () use ($cleanEnv): void {
+    putenv('CHISEL_RUN_MIGRATIONS=true');
+    $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+    $origDefault = config('database.default');
+
+    try {
+        config([
+            'database.default' => 'pgsql_test',
+            'database.connections.pgsql_test' => [
+                'driver' => 'pgsql',
+                'host' => '127.0.0.1',
+                'port' => 49998,
+                'database' => 'unreachable_db',
+                'username' => 'user',
+                'password' => 'secret',
+            ],
+        ]);
+        $context = makePreflightContext(isMockedScript: false);
+
+        expect(fn () => PreflightValidator::validate($context, sys_get_temp_dir()))
+            ->toThrow(RuntimeException::class, 'Preflight check failed: Database connection [pgsql_test] could not be established');
+    } finally {
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+        config(['database.default' => $origDefault]);
+    }
+});
+
+test('preflight database check ignores unknown driver without specific extension requirement', function () use ($cleanEnv): void {
+    putenv('CHISEL_RUN_MIGRATIONS=true');
+    $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+    $origDefault = config('database.default');
+
+    try {
+        config([
+            'database.default' => 'custom_test',
+            'database.connections.custom_test' => [
+                'driver' => 'custom_driver',
+                'host' => '127.0.0.1',
+                'port' => 49997,
+                'database' => 'custom_db',
+                'username' => 'user',
+                'password' => 'secret',
+            ],
+        ]);
+        $context = makePreflightContext(isMockedScript: false);
+
+        expect(fn () => PreflightValidator::validate($context, sys_get_temp_dir()))
+            ->toThrow(RuntimeException::class, 'Preflight check failed: Database connection [custom_test] could not be established');
+    } finally {
+        $cleanEnv('CHISEL_RUN_MIGRATIONS');
+        config(['database.default' => $origDefault]);
+    }
+});
+
+test('preflight composer check validates composer executable availability', function () use ($cleanEnv): void {
+    $tempDir = sys_get_temp_dir().'/chisel_composer_'.uniqid();
+    File::ensureDirectoryExists($tempDir);
+    File::put($tempDir.'/composer.json', json_encode(['name' => 'test/app']));
+
+    putenv('CHISEL_RUN_COMPOSER=true');
+    $GLOBALS['_ENV']['CHISEL_RUN_COMPOSER'] = 'true';
+
+    $context = makePreflightContext(isMockedScript: false);
+
+    try {
+        if (PreflightValidator::isExecutableInPath('composer')) {
+            expect(fn () => PreflightValidator::validate($context, $tempDir))->not->toThrow(RuntimeException::class);
+        }
+
+        $origPath = getenv('PATH');
+        putenv('PATH=');
+        try {
+            expect(fn () => PreflightValidator::validate($context, $tempDir))
+                ->toThrow(RuntimeException::class, 'Composer executable [composer] was not found in PATH');
+        } finally {
+            putenv('PATH='.$origPath);
+        }
+
+        File::delete($tempDir.'/composer.json');
+        putenv('PATH=');
+        try {
+            expect(fn () => PreflightValidator::validate($context, $tempDir))->not->toThrow(RuntimeException::class);
+        } finally {
+            putenv('PATH='.$origPath);
+        }
+    } finally {
+        $cleanEnv('CHISEL_RUN_COMPOSER');
+        File::deleteDirectory($tempDir);
+    }
+});
+
+test('preflight frontend check validates node runtime when package manager is not bun', function (): void {
+    $tempDir = sys_get_temp_dir().'/chisel_npm_'.uniqid();
+    File::ensureDirectoryExists($tempDir);
+    File::put($tempDir.'/package.json', json_encode(['scripts' => ['build' => 'vite build']]));
+    File::put($tempDir.'/package-lock.json', '{}');
+
+    $context = makePreflightContext(skipNode: false);
+
+    if (PreflightValidator::isExecutableInPath('npm') && PreflightValidator::isExecutableInPath('node')) {
+        expect(fn () => PreflightValidator::validate($context, $tempDir))->not->toThrow(RuntimeException::class);
+    }
+
+    File::deleteDirectory($tempDir);
+});
+
+test('preflight frontend check throws when node is missing for non-bun package manager', function (): void {
+    $tempDir = sys_get_temp_dir().'/chisel_node_missing_'.uniqid();
+    File::ensureDirectoryExists($tempDir);
+    File::put($tempDir.'/package.json', json_encode(['scripts' => ['build' => 'vite build']]));
+    File::put($tempDir.'/package-lock.json', '{}');
+
+    $binDir = $tempDir.'/bin';
+    File::ensureDirectoryExists($binDir);
+    $mockNpm = $binDir.'/npm';
+    File::put($mockNpm, "#!/bin/sh\nexit 0");
+    chmod($mockNpm, 0755);
+
+    $origPath = getenv('PATH');
+    putenv('PATH='.$binDir);
+
+    $context = makePreflightContext(skipNode: false);
+
+    try {
+        expect(fn () => PreflightValidator::validate($context, $tempDir))
+            ->toThrow(RuntimeException::class, 'Node.js runtime [node] is required for frontend steps but was not found in PATH');
+    } finally {
+        putenv('PATH='.$origPath);
+        File::deleteDirectory($tempDir);
+    }
+});
+
+test('preflight post scaffold tooling throws when pint is present but not executable', function (): void {
+    $tempDir = sys_get_temp_dir().'/chisel_pint_'.uniqid();
+    File::ensureDirectoryExists($tempDir.'/vendor/bin');
+    $pintFile = $tempDir.'/vendor/bin/pint';
+    File::put($pintFile, '#!/bin/sh');
+    chmod($pintFile, 0644);
+
+    if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        chmod($pintFile, 0755);
+        File::deleteDirectory($tempDir);
+        $this->markTestSkipped('File permission checks do not apply to the root user.');
+    }
+
+    $context = makePreflightContext();
+
+    try {
+        expect(fn () => PreflightValidator::validate($context, $tempDir))
+            ->toThrow(RuntimeException::class, 'Pint executable');
+    } finally {
+        chmod($pintFile, 0755);
+        File::deleteDirectory($tempDir);
+    }
+});
+
+test('preflight throws when installer files are not writable', function (): void {
+    $tempDir = sys_get_temp_dir().'/chisel_unwritable_file_'.uniqid();
+    File::ensureDirectoryExists($tempDir);
+    $envFile = $tempDir.'/.env';
+    File::put($envFile, 'APP_NAME=Laravel');
+    chmod($envFile, 0444);
+
+    if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        chmod($envFile, 0666);
+        File::deleteDirectory($tempDir);
+        $this->markTestSkipped('File permission checks do not apply to the root user.');
+    }
+
+    $context = makePreflightContext();
+
+    try {
+        expect(fn () => PreflightValidator::validate($context, $tempDir))
+            ->toThrow(RuntimeException::class, "Preflight check failed: File [{$envFile}] must be writable.");
+    } finally {
+        chmod($envFile, 0666);
+        File::deleteDirectory($tempDir);
+    }
+});
+
+test('preflight throws when installer directories are not writable', function (): void {
+    $tempDir = sys_get_temp_dir().'/chisel_unwritable_dir_'.uniqid();
+    File::ensureDirectoryExists($tempDir.'/storage');
+    chmod($tempDir.'/storage', 0444);
+
+    if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        chmod($tempDir.'/storage', 0755);
+        File::deleteDirectory($tempDir);
+        $this->markTestSkipped('File permission checks do not apply to the root user.');
+    }
+
+    $context = makePreflightContext();
+
+    try {
+        expect(fn () => PreflightValidator::validate($context, $tempDir))
+            ->toThrow(RuntimeException::class, "Preflight check failed: Directory [{$tempDir}/storage] must be writable.");
+    } finally {
+        chmod($tempDir.'/storage', 0755);
+        File::deleteDirectory($tempDir);
     }
 });
