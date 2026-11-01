@@ -385,7 +385,7 @@ function assertSandboxBootsCleanly(string $directory): void
 
     $process->run();
 
-    expect($process->isSuccessful())->toBeTrue('Sandbox application boot failed: '.$process->getErrorOutput())
+    expect($process->isSuccessful())->toBeTrue('Sandbox application boot failed: '.$process->getErrorOutput().' '.$process->getOutput())
         ->and($process->getOutput())->toContain('BOOT_SUCCESSFUL');
 }
 

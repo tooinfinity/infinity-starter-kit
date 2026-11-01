@@ -41,6 +41,18 @@ $preserveEnv = function (string ...$keys): Closure {
     };
 };
 
+beforeEach(function (): void {
+    if (file_exists(base_path('.installer-state.json'))) {
+        @unlink(base_path('.installer-state.json'));
+    }
+});
+
+afterEach(function (): void {
+    if (file_exists(base_path('.installer-state.json'))) {
+        @unlink(base_path('.installer-state.json'));
+    }
+});
+
 test('environment cleanup restores the original migration opt-in state', function (string|false $value, array $env, array $server, bool $throw) use ($cleanEnv, $preserveEnv): void {
     $key = 'CHISEL_RUN_MIGRATIONS';
     $restoreCallerEnv = $preserveEnv($key);
@@ -1123,6 +1135,337 @@ test('command dry-run fails with invalid feature dependencies identical to norma
         '--dry-run' => true,
     ]);
 })->throws(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
+
+test('preflight failure stops before pruning and does not create installer state file', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=preflight');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'preflight';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [preflight]');
+
+        expect(file_exists(base_path('.installer-state.json')))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure after pruning generates installer state file without secrets and outputs actionable recovery', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        bindMockChiselScript();
+
+        $secret = 'UltraSecretPassword999';
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+            'admin' => [
+                'name' => 'Admin User',
+                'email' => 'admin@example.com',
+                'password' => $secret,
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_chisel]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $content = (string) file_get_contents($stateFile);
+        expect($content)->not->toContain($secret);
+
+        $json = json_decode($content, true);
+        expect($json['status'])->toBe('failed')
+            ->and($json['failed_phase'])->toBe('post_chisel')
+            ->and($json['completed_phases'])->toContain('preflight', 'prune')
+            ->and($json['metadata']['admin_name'])->toBe('Admin User')
+            ->and($json['metadata']['admin_email'])->toBe('admin@example.com')
+            ->and($json['metadata'])->not->toHaveKey('admin_password');
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('retry with identical answers skips pruning and removes state file upon success', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        // First attempt fails at post_chisel
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class);
+
+        expect(file_exists(base_path('.installer-state.json')))->toBeTrue();
+
+        // Clear failure trigger for retry
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        // Second attempt with identical answers skips pruning and completes
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Resuming previous installation from phase [post_chisel]')
+            ->expectsOutputToContain('Feature pruning already completed (skipped on retry)')
+            ->assertSuccessful();
+
+        expect(file_exists(base_path('.installer-state.json')))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('retry with conflicting answers is rejected with exit code 1 and error message', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        bindMockChiselScript();
+
+        $originalAnswers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $originalAnswers]))
+            ->toThrow(RuntimeException::class);
+
+        expect(file_exists(base_path('.installer-state.json')))->toBeTrue();
+
+        // Clear failure trigger
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        $conflictingAnswers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization', 'settings'],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->artisan('install:features', ['--answers' => $conflictingAnswers])
+            ->expectsOutputToContain('Conflicting answers on installer retry.')
+            ->expectsOutputToContain('The project was already partially pruned with:')
+            ->expectsOutputToContain('Attempted retry with:')
+            ->expectsOutputToContain('To retry with the previous answers, run:')
+            ->assertFailed();
+
+        // State file is preserved
+        expect(file_exists(base_path('.installer-state.json')))->toBeTrue();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('retry with omitted answers resumes using previous answers from state file', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class);
+
+        expect(file_exists(base_path('.installer-state.json')))->toBeTrue();
+
+        // Clear failure trigger
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        // Run without --answers
+        $this->artisan('install:features', ['--no-interaction' => true])
+            ->expectsOutputToContain('Resuming previous installation from phase [post_chisel]')
+            ->expectsOutputToContain('Feature pruning already completed (skipped on retry)')
+            ->assertSuccessful();
+
+        expect(file_exists(base_path('.installer-state.json')))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure at post_migration stage records failure and retry skips migration', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_migration');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_migration';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_migration]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $state = json_decode((string) file_get_contents($stateFile), true);
+        expect($state['failed_phase'])->toBe('post_migration')
+            ->and($state['completed_phases'])->toContain('preflight', 'prune', 'migrate');
+
+        // Clear failure trigger for retry
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Resuming previous installation from phase [post_migration]')
+            ->expectsOutputToContain('Database migration already completed')
+            ->assertSuccessful();
+
+        expect(file_exists($stateFile))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure at post_scaffold stage records failure and retry skips completed phases', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_scaffold');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_scaffold';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_scaffold]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $state = json_decode((string) file_get_contents($stateFile), true);
+        expect($state['failed_phase'])->toBe('post_scaffold')
+            ->and($state['completed_phases'])->toContain('preflight', 'prune', 'migrate', 'configure', 'post_scaffold');
+
+        // Clear failure trigger for retry
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->expectsOutputToContain('Resuming previous installation from phase [post_scaffold]')
+            ->expectsOutputToContain('Application configuration already completed')
+            ->assertSuccessful();
+
+        expect(file_exists($stateFile))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure at cleanup stage records failure and outputs recovery instructions', function () use ($cleanEnv, $preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=cleanup');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'cleanup';
+
+        bindMockChiselScript();
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [cleanup]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $state = json_decode((string) file_get_contents($stateFile), true);
+        expect($state['failed_phase'])->toBe('cleanup')
+            ->and($state['status'])->toBe('failed');
+
+        // Clear failure trigger for retry
+        $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+
+        $this->artisan('install:features', ['--answers' => $answers])
+            ->assertSuccessful();
+
+        expect(file_exists($stateFile))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('failure at cleanup stage after installer files are removed outputs manual composer instructions', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'CHISEL_TEST_NO_INSTALLER_FILES');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=cleanup');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'cleanup';
+        putenv('CHISEL_TEST_NO_INSTALLER_FILES=true');
+        $_ENV['CHISEL_TEST_NO_INSTALLER_FILES'] = 'true';
+
+        $script = Chisel::script(base_path())
+            ->questions([
+                Question::multiselect(
+                    name: 'auth_features',
+                    label: 'Auth features',
+                    options: ['registration' => 'Registration'],
+                    default: ['registration'],
+                ),
+                Question::multiselect(
+                    name: 'optional_modules',
+                    label: 'Optional modules',
+                    options: ['authorization' => 'Authorization'],
+                    default: ['authorization'],
+                ),
+            ]);
+
+        app()->instance(Script::class, $script);
+
+        $answers = json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization'],
+        ], JSON_THROW_ON_ERROR);
+
+        expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [cleanup]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        $state = json_decode((string) file_get_contents($stateFile), true);
+        expect($state['failed_phase'])->toBe('cleanup');
+    } finally {
+        $restoreEnv();
+    }
+});
 
 /**
  * @param  array<string, mixed>  $processFakes

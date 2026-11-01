@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Chisel\Installer;
 
 use Laravel\Chisel\Chisel;
+use Laravel\Chisel\Filesystem\PendingFiles;
+use RuntimeException;
 
 /**
  * Removes Chisel installer machinery and synchronizes configuration files after successful installation.
@@ -31,6 +33,8 @@ final class Cleanup
             'app/Chisel/Installer/InstallerContext.php',
             'app/Chisel/Installer/InstallerContextResolver.php',
             'app/Chisel/Installer/Preset.php',
+            'app/Chisel/Installer/InstallerState.php',
+            'app/Chisel/Installer/PreflightValidator.php',
             'app/Chisel/Installer/PostScaffoldRunner.php',
             'app/Chisel/Installer/GeneratedApplicationValidator.php',
             'app/Chisel/Installer/GeneratedApplicationConfigurator.php',
@@ -63,6 +67,8 @@ final class Cleanup
             'tests/Unit/Chisel/InstallationPlanTest.php',
             'tests/Unit/Chisel/InstallerPlannerTest.php',
             'tests/Feature/Chisel/AiGuidelinesInstallationTest.php',
+            'tests/Unit/Chisel/InstallerStateTest.php',
+            'tests/Unit/Chisel/PreflightValidatorTest.php',
             'tests/Feature/Chisel/DependencyValidationTest.php',
             'tests/Feature/Chisel/FeatureCombinationTest.php',
             'tests/Feature/Chisel/GeneratedProjectLifecycleTest.php',
@@ -106,11 +112,14 @@ final class Cleanup
         class_exists(ComposerLockSynchronizer::class);
         class_exists(DirectoryPruner::class);
         class_exists(AiToolingPruner::class);
+        class_exists(InstallerState::class);
+        class_exists(PreflightValidator::class);
+        class_exists(Chisel::class);
+        class_exists(PendingFiles::class);
 
         ConfigCleaner::cleanPhpunit($directory);
         ConfigCleaner::cleanPhpstan($directory);
         ComposerManifestPruner::cleanPostCreate($directory);
-        ComposerLockSynchronizer::sync($directory, $paths);
 
         $chisel = Chisel::in($directory);
         $chiselFiles = $paths['chisel']['files'] ?? self::files();
@@ -118,5 +127,11 @@ final class Cleanup
         $chisel->files(...$chiselFiles)->delete();
 
         DirectoryPruner::prune($directory, $paths['chisel']['empty_dirs'] ?? self::directories());
+
+        try {
+            ComposerLockSynchronizer::sync($directory, $paths);
+        } catch (RuntimeException $runtimeException) {
+            throw new RuntimeException($runtimeException->getMessage()."\nInstaller files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.", $runtimeException->getCode(), previous: $runtimeException);
+        }
     }
 }
