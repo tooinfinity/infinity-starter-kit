@@ -7,7 +7,8 @@
         "dev": "vp dev",
         "lint": "NODE_OPTIONS='--experimental-strip-types' vp fmt resources/ && NODE_OPTIONS='--experimental-strip-types' vp lint --fix",
         "test:lint": "NODE_OPTIONS='--experimental-strip-types' vp fmt --check resources/ && NODE_OPTIONS='--experimental-strip-types' vp lint",
-        "test:types": "tsc --noEmit"
+        "test:types": "tsc --noEmit",
+        "test:peers": "bun scripts/check-peer-dependencies.js"
     },
     "devDependencies": {
         "@inertiajs/vite": "^3.7.1",
