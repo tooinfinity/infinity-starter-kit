@@ -111,7 +111,6 @@ final class PreflightValidator
         }
 
         try {
-            DB::purge($connection);
             DB::connection($connection)->getPdo();
         } catch (Throwable $throwable) {
             throw new RuntimeException("Preflight check failed: Database connection [{$connection}] could not be established: "

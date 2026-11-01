@@ -310,6 +310,10 @@ final class InstallFeaturesCommand extends Command
 
     private function hasInstallerFiles(): bool
     {
+        if (getenv('CHISEL_TEST_NO_INSTALLER_FILES') === 'true') {
+            return false;
+        }
+
         clearstatcache();
 
         return file_exists(base_path('chisel.php')) || file_exists(app_path('Console/Commands/InstallFeaturesCommand.php'));

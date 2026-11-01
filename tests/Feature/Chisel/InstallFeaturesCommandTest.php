@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Artisan;
@@ -1424,28 +1423,13 @@ test('failure at cleanup stage records failure and outputs recovery instructions
 });
 
 test('failure at cleanup stage after installer files are removed outputs manual composer instructions', function () use ($preserveEnv): void {
-    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
-
-    $chiselPath = base_path('chisel.php');
-    $commandPath = app_path('Console/Commands/InstallFeaturesCommand.php');
-    $chiselBak = $chiselPath.'.testbak';
-    $commandBak = $commandPath.'.testbak';
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'CHISEL_TEST_NO_INSTALLER_FILES');
 
     try {
         putenv('CHISEL_TEST_FAIL_STAGE=cleanup');
         $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'cleanup';
-
-        Process::fake(function () use ($chiselPath, $chiselBak, $commandPath, $commandBak): ProcessResult {
-            if (file_exists($chiselPath)) {
-                rename($chiselPath, $chiselBak);
-            }
-
-            if (file_exists($commandPath)) {
-                rename($commandPath, $commandBak);
-            }
-
-            return Process::result();
-        });
+        putenv('CHISEL_TEST_NO_INSTALLER_FILES=true');
+        $_ENV['CHISEL_TEST_NO_INSTALLER_FILES'] = 'true';
 
         $script = Chisel::script(base_path())
             ->questions([
@@ -1479,14 +1463,6 @@ test('failure at cleanup stage after installer files are removed outputs manual 
         $state = json_decode((string) file_get_contents($stateFile), true);
         expect($state['failed_phase'])->toBe('cleanup');
     } finally {
-        if (file_exists($chiselBak)) {
-            rename($chiselBak, $chiselPath);
-        }
-
-        if (file_exists($commandBak)) {
-            rename($commandBak, $commandPath);
-        }
-
         $restoreEnv();
     }
 });

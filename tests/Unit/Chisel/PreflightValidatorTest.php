@@ -6,7 +6,6 @@ namespace Tests\Unit\Chisel;
 
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\PreflightValidator;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
 
@@ -129,24 +128,31 @@ test('preflight database check validates sqlite directory and throws when non-sq
     putenv('CHISEL_RUN_MIGRATIONS=true');
     $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
 
-    $origMysqlPort = config('database.connections.mysql.port');
+    $origDefault = config('database.default');
+    $origSqliteDb = config('database.connections.sqlite.database');
 
     try {
         $tempDir = sys_get_temp_dir().'/chisel_db_test_'.uniqid();
         File::ensureDirectoryExists($tempDir);
 
-        // Test non-sqlite connection failure
-        DB::purge('mysql');
+        // Test non-sqlite connection failure using an isolated unreachable connection
         config([
-            'database.default' => 'mysql',
-            'database.connections.mysql.port' => 49999,
+            'database.default' => 'unreachable_connection',
+            'database.connections.unreachable_connection' => [
+                'driver' => 'mysql',
+                'host' => '127.0.0.1',
+                'port' => 49999,
+                'database' => 'unreachable_db',
+                'username' => 'unreachable_user',
+                'password' => 'unreachable_password',
+            ],
         ]);
         $context = makePreflightContext(isMockedScript: false);
 
         expect(fn () => PreflightValidator::validate($context, $tempDir))
-            ->toThrow(RuntimeException::class, 'Preflight check failed: Database connection [mysql] could not be established');
+            ->toThrow(RuntimeException::class, 'Preflight check failed: Database connection [unreachable_connection] could not be established');
 
-        // Restore default sqlite
+        // Test sqlite directory validation
         config(['database.default' => 'sqlite']);
         config(['database.connections.sqlite.database' => 'database/nonexistent_dir_xyz/database.sqlite']);
 
@@ -156,20 +162,19 @@ test('preflight database check validates sqlite directory and throws when non-sq
         File::deleteDirectory($tempDir);
     } finally {
         $cleanEnv('CHISEL_RUN_MIGRATIONS');
-        config(['database.default' => 'sqlite']);
-        config(['database.connections.sqlite.database' => ':memory:']);
-        if ($origMysqlPort !== null) {
-            config(['database.connections.mysql.port' => $origMysqlPort]);
-        }
-
-        DB::purge('mysql');
-        DB::purge('sqlite');
+        config([
+            'database.default' => $origDefault,
+            'database.connections.sqlite.database' => $origSqliteDb,
+        ]);
     }
 });
 
 test('preflight database check throws when sqlite database file exists but is not writable', function () use ($cleanEnv): void {
     putenv('CHISEL_RUN_MIGRATIONS=true');
     $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
+
+    $origDefault = config('database.default');
+    $origSqliteDb = config('database.connections.sqlite.database');
 
     $tempDir = sys_get_temp_dir().'/chisel_db_unwritable_'.uniqid();
     File::ensureDirectoryExists($tempDir);
@@ -195,8 +200,10 @@ test('preflight database check throws when sqlite database file exists but is no
         chmod($dbFile, 0666);
         File::deleteDirectory($tempDir);
         $cleanEnv('CHISEL_RUN_MIGRATIONS');
-        config(['database.default' => 'sqlite']);
-        config(['database.connections.sqlite.database' => ':memory:']);
+        config([
+            'database.default' => $origDefault,
+            'database.connections.sqlite.database' => $origSqliteDb,
+        ]);
     }
 });
 
@@ -224,6 +231,9 @@ test('preflight database check passes when sqlite database is valid and writable
     putenv('CHISEL_RUN_MIGRATIONS=true');
     $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
 
+    $origDefault = config('database.default');
+    $origSqliteDb = config('database.connections.sqlite.database');
+
     $tempDir = sys_get_temp_dir().'/chisel_db_valid_'.uniqid();
     File::ensureDirectoryExists($tempDir);
     $dbFile = $tempDir.'/database.sqlite';
@@ -238,7 +248,9 @@ test('preflight database check passes when sqlite database is valid and writable
     } finally {
         File::deleteDirectory($tempDir);
         $cleanEnv('CHISEL_RUN_MIGRATIONS');
-        config(['database.default' => 'sqlite']);
-        config(['database.connections.sqlite.database' => ':memory:']);
+        config([
+            'database.default' => $origDefault,
+            'database.connections.sqlite.database' => $origSqliteDb,
+        ]);
     }
 });
