@@ -18,6 +18,7 @@
     <groups>
         <exclude>
             <group>installer-e2e</group>
+            <group>installer-smoke</group>
         </exclude>
     </groups>
     <source>

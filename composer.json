@@ -103,9 +103,10 @@
         "test:unit": "pest --testsuite=Unit --parallel",
         "test:database": "pest --testsuite=Feature --parallel",
         "test:browser": "pest --testsuite=Browser",
-        "test:coverage": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0 --exclude-testsuite=Browser --exclude-group=installer-e2e",
-        "test:quick": "pest --parallel --exclude-testsuite=Browser --exclude-group=installer-e2e",
+        "test:coverage": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0 --exclude-testsuite=Browser --exclude-group=installer-e2e,installer-smoke",
+        "test:quick": "pest --parallel --exclude-testsuite=Browser --exclude-group=installer-e2e,installer-smoke",
         "test:installer": "pest --group=installer-e2e --compact",
+        "test:smoke": "pest --group=installer-smoke --compact",
         "test:quality": [
             "@test:lint",
             "@test:types",

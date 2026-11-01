@@ -11,11 +11,11 @@ use InvalidArgumentException;
  */
 final readonly class Preset
 {
-    public const string MINIMAL = 'minimal';
+    public const string MINIMAL = Profile::MINIMAL;
 
-    public const string STANDARD = 'standard';
+    public const string STANDARD = Profile::STANDARD;
 
-    public const string FULL = 'full';
+    public const string FULL = Profile::FULL;
 
     public function __construct(
         public string $name,
@@ -26,56 +26,17 @@ final readonly class Preset
      */
     public static function answersFor(string $name): array
     {
-        return match (self::normalize($name)) {
-            self::MINIMAL => [
-                'auth_features' => [
-                    'login',
-                    'logout',
-                ],
-                'optional_modules' => [],
-            ],
-            self::STANDARD => [
-                'auth_features' => [
-                    'login',
-                    'logout',
-                    'registration',
-                    'email-verification',
-                    'password-reset',
-                    'password-update',
-                ],
-                'optional_modules' => [
-                    'authorization',
-                    'settings',
-                    'user-management',
-                    'notifications',
-                ],
-            ],
-            self::FULL => [
-                'auth_features' => [
-                    'login',
-                    'logout',
-                    'registration',
-                    'email-verification',
-                    'password-reset',
-                    'password-update',
-                    'two-factor',
-                ],
-                'optional_modules' => [
-                    'authorization',
-                    'settings',
-                    'user-management',
-                    'localization',
-                    'notifications',
-                    'audit-trails',
-                    'reporting',
-                ],
-            ],
-            default => throw new InvalidArgumentException(sprintf(
+        $normalized = self::normalize($name);
+
+        if (! in_array($normalized, self::names(), true) && $normalized !== Profile::DEFAULT) {
+            throw new InvalidArgumentException(sprintf(
                 'Unknown preset [%s]. Available presets: %s.',
                 $name,
                 implode(', ', self::names()),
-            )),
-        };
+            ));
+        }
+
+        return Profile::answersFor($normalized);
     }
 
     /**
@@ -86,6 +47,10 @@ final readonly class Preset
     public static function fromName(string $name): self
     {
         $normalized = self::normalize($name);
+
+        if ($normalized === Profile::DEFAULT) {
+            $normalized = self::STANDARD;
+        }
 
         if (! in_array($normalized, self::names(), true)) {
             throw new InvalidArgumentException(sprintf(

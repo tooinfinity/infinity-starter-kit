@@ -362,3 +362,75 @@ jobs:
 
       - name: Installer E2E Tests
         run: composer test:installer
+
+  installer-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [minimal, default, full]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+          ini-values: zend.assertions=1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          run-install: false
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Cache Bun Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - name: Get Composer Download Cache Directory
+        id: composer-download-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer Downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-download-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-downloads-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-downloads-
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Install Bun Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Assets
+        run: bun run build
+
+      - name: Generated Application Smoke Tests (${{ matrix.profile }})
+        run: composer test:smoke -- --filter="${{ matrix.profile }}"

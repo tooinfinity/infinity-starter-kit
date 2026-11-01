@@ -17,6 +17,7 @@ test('composer manifest defines all required test commands and scripts', functio
         ->and($scripts)->toHaveKey('test:coverage')
         ->and($scripts)->toHaveKey('test:quick')
         ->and($scripts)->toHaveKey('test:installer')
+        ->and($scripts)->toHaveKey('test:smoke')
         ->and($scripts)->toHaveKey('test:quality')
         ->and($scripts)->toHaveKey('test');
 
@@ -35,17 +36,18 @@ test('composer manifest defines all required test commands and scripts', functio
     ]);
 });
 
-test('tests workflow defines decoupled quality, database, browser, and installer jobs', function (): void {
+test('tests workflow defines decoupled quality, database, browser, installer, and smoke jobs', function (): void {
     $workflowPath = base_path('.github/workflows/tests.yml');
     expect(file_exists($workflowPath))->toBeTrue();
 
     $content = (string) file_get_contents($workflowPath);
 
-    // Verify all 4 required jobs are present
+    // Verify all 5 required jobs are present
     expect($content)->toContain('  quality:')
         ->and($content)->toContain('  database:')
         ->and($content)->toContain('  browser:')
-        ->and($content)->toContain('  installer-e2e:');
+        ->and($content)->toContain('  installer-e2e:')
+        ->and($content)->toContain('  installer-smoke:');
 
     // Quality job runs database-independent checks and coverage
     expect($content)->toContain('composer test:lint')
@@ -65,6 +67,10 @@ test('tests workflow defines decoupled quality, database, browser, and installer
 
     // Installer E2E runs installer suite
     expect($content)->toContain('composer test:installer');
+
+    // Installer Smoke runs smoke suite for representative profiles
+    expect($content)->toContain('profile: [minimal, default, full]')
+        ->and($content)->toContain('composer test:smoke');
 });
 
 test('phpunit configuration registers browser, unit, and feature testsuites', function (): void {
