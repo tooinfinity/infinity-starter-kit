@@ -67,6 +67,19 @@ final class PreflightValidator
         return false;
     }
 
+    public static function isExtensionLoaded(string $extension): bool
+    {
+        $disabled = getenv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
+        if (is_string($disabled) && $disabled !== '') {
+            $disabledList = array_map(trim(...), explode(',', $disabled));
+            if (in_array($extension, $disabledList, true)) {
+                return false;
+            }
+        }
+
+        return extension_loaded($extension);
+    }
+
     private static function validatePhpEnvironment(): void
     {
         throw_if(
@@ -78,7 +91,7 @@ final class PreflightValidator
         $requiredExtensions = ['pdo', 'mbstring', 'tokenizer', 'xml', 'ctype', 'json', 'filter', 'openssl'];
         foreach ($requiredExtensions as $extension) {
             throw_unless(
-                extension_loaded($extension),
+                self::isExtensionLoaded($extension),
                 RuntimeException::class,
                 "Preflight check failed: Missing required PHP extension [{$extension}]. Please install or enable the [{$extension}] extension in your php.ini.",
             );
@@ -136,7 +149,7 @@ final class PreflightValidator
             default => null,
         };
 
-        if ($requiredExtension !== null && ! extension_loaded($requiredExtension)) {
+        if ($requiredExtension !== null && ! self::isExtensionLoaded($requiredExtension)) {
             throw new RuntimeException(sprintf(
                 'Preflight check failed: Missing required PHP extension [%s] for database connection [%s]. Please install or enable the [%s] extension in your php.ini.',
                 $requiredExtension,

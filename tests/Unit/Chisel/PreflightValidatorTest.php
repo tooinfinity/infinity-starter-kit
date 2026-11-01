@@ -37,6 +37,7 @@ function makePreflightContext(
 
 afterEach(function () use ($cleanEnv): void {
     $cleanEnv('CHISEL_TEST_FAIL_STAGE');
+    $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
 });
 
 test('preflight passes on standard valid environment', function (): void {
@@ -255,9 +256,25 @@ test('preflight database check passes when sqlite database is valid and writable
     }
 });
 
+test('preflight throws when a required core php extension is missing', function () use ($cleanEnv): void {
+    putenv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS=openssl');
+    $GLOBALS['_ENV']['CHISEL_PREFLIGHT_DISABLE_EXTENSIONS'] = 'openssl';
+
+    $context = makePreflightContext();
+
+    try {
+        expect(fn () => PreflightValidator::validate($context, base_path()))
+            ->toThrow(RuntimeException::class, 'Missing required PHP extension [openssl]. Please install or enable the [openssl] extension in your php.ini.');
+    } finally {
+        $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
+    }
+});
+
 test('preflight database check throws when pdo driver extension is missing', function () use ($cleanEnv): void {
     putenv('CHISEL_RUN_MIGRATIONS=true');
     $GLOBALS['_ENV']['CHISEL_RUN_MIGRATIONS'] = 'true';
+    putenv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS=pdo_sqlsrv');
+    $GLOBALS['_ENV']['CHISEL_PREFLIGHT_DISABLE_EXTENSIONS'] = 'pdo_sqlsrv';
 
     $origDefault = config('database.default');
     $origConn = config('database.connections.sqlsrv_test');
@@ -275,6 +292,7 @@ test('preflight database check throws when pdo driver extension is missing', fun
             ->toThrow(RuntimeException::class, 'Missing required PHP extension [pdo_sqlsrv] for database connection [sqlsrv_test]');
     } finally {
         $cleanEnv('CHISEL_RUN_MIGRATIONS');
+        $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
         config([
             'database.default' => $origDefault,
             'database.connections.sqlsrv_test' => $origConn,
