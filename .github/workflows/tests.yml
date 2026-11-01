@@ -139,6 +139,7 @@ jobs:
 
       - name: Verify Frontend Peer Dependencies & Lockfile Integrity
         run: |
+          bun run test:peers
           bun pm ls
           bun pm hash
 

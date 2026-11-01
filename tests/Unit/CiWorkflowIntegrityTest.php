@@ -25,6 +25,7 @@ test('composer manifest defines all required test commands and scripts', functio
         'composer validate --strict --check-lock',
         'composer check-platform-reqs --lock',
         'bun install --frozen-lockfile --dry-run',
+        'bun run test:peers',
     ]);
 
     expect($scripts['test'])->toBe([
@@ -71,6 +72,7 @@ test('tests workflow defines decoupled quality, dependencies, database, browser,
         ->and($dependenciesJob)->toContain('composer check-platform-reqs --lock')
         ->and($dependenciesJob)->toContain('composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress')
         ->and($dependenciesJob)->toContain('bun install --frozen-lockfile')
+        ->and($dependenciesJob)->toContain('bun run test:peers')
         ->and($dependenciesJob)->toContain('bun pm ls')
         ->and($dependenciesJob)->toContain('php artisan package:discover')
         ->and($dependenciesJob)->toContain('php artisan wayfinder:generate')
