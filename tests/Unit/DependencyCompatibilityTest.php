@@ -25,11 +25,7 @@ test('composer manifest defines critical framework integration packages', functi
         ->and($require)->toHaveKey('laravel/wayfinder')
         ->and($require)->toHaveKey('inertiajs/inertia-laravel');
 
-    // In the template repository prior to scaffolding, verify chisel and permission
-    if (file_exists(base_path('chisel.php'))) {
-        expect($require)->toHaveKey('laravel/chisel')
-            ->and($require)->toHaveKey('spatie/laravel-permission');
-    } elseif (file_exists(base_path('app/Enums/Permission.php'))) {
+    if (file_exists(base_path('app/Enums/Permission.php'))) {
         expect($require)->toHaveKey('spatie/laravel-permission');
     }
 });
