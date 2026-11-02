@@ -20,6 +20,23 @@ Designed for speed and cleanliness: choose your features during `composer create
 
 ---
 
+## 📋 Supported Runtime & Toolchain Versions
+
+| Component | Supported Version / Constraint | Notes |
+| :--- | :--- | :--- |
+| **PHP** | `^8.5.0` (8.5+) | Required extensions: `pdo`, `pdo_sqlite`, `pdo_mysql`, `pdo_pgsql`, `pcov`, `mbstring`, `openssl`, `tokenizer`, `xml` |
+| **Composer** | `v2.x` | Strictly reproducible installs with `composer.lock` |
+| **Bun** | `^1.2` / `^1.3` (1.2+) | Fast package manager, scripts, and runtime |
+| **Node.js** | `>= 24.x` | Used by Vite+ toolchain and Playwright |
+| **Laravel** | `^13.32.0` (Laravel 13) | Core application framework |
+| **Inertia.js** | `^3.0.6` (Laravel) / `^3.7.1` (React) | Full-stack SPA bridge |
+| **React** | `^19.3.0` (React 19) | Frontend UI library |
+| **TypeScript** | `^7.0.2` | Typed frontend codebase and Wayfinder routes |
+| **Tailwind CSS** | `^4.3.3` (Tailwind 4) | CSS compiler & styling |
+| **Database Engines** | SQLite 3.35+, MySQL 8.0+, PostgreSQL 16+ | Tested continuously across all 3 engines |
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Create a New Project
@@ -474,6 +491,9 @@ composer test:database
 # Invariant quality checks (linting, types, type coverage, unit tests)
 composer test:quality
 
+# Dependency compatibility and resolution verification
+composer test:dependencies
+
 # End-to-end browser tests (Playwright)
 composer test:browser
 
@@ -489,9 +509,10 @@ composer test:installer
 Continuous Integration separates database-independent invariant checks from the database integration matrix:
 
 1. **`quality`** (runs once): Installs dependencies, builds frontend assets, runs Pint/Rector/Vite+ linting, PHPStan & TypeScript checks, Pest type coverage (100%), database-independent unit & architecture tests, and full code coverage verification (100%).
-2. **`database`** (matrix: SQLite, MySQL, PostgreSQL): Exercises database-sensitive feature and query behavior across supported database engines without repeating frontend, lint, or static-analysis overhead.
-3. **`browser`** (runs once): Executes browser end-to-end tests on the canonical test database with Playwright.
-4. **`installer-e2e`** (runs once): Validates Chisel scaffolding and project lifecycle generation.
+2. **`dependencies`** (runs once): Verifies clean backend and frontend dependency resolution, strict lockfile reproducibility, supported PHP/toolchain constraints, and critical framework integration compatibility (package discovery, Wayfinder routes, asset compilation) without relying on pre-cached vendor or package stores.
+3. **`database`** (matrix: SQLite, MySQL, PostgreSQL): Exercises database-sensitive feature and query behavior across supported database engines without repeating frontend, lint, or static-analysis overhead.
+4. **`browser`** (runs once): Executes browser end-to-end tests on the canonical test database with Playwright.
+5. **`installer-e2e`** (runs once): Validates Chisel scaffolding and project lifecycle generation.
 
 ---
 

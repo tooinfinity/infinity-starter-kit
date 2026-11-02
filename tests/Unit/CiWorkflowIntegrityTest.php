@@ -21,6 +21,13 @@ test('composer manifest defines all required test commands and scripts', functio
         ->and($scripts)->toHaveKey('test:quality')
         ->and($scripts)->toHaveKey('test');
 
+    expect($scripts['test:dependencies'])->toBe([
+        'composer validate --strict --check-lock',
+        'composer check-platform-reqs --lock',
+        'bun install --frozen-lockfile --dry-run',
+        'bun run test:peers',
+    ]);
+
     expect($scripts['test'])->toBe([
         '@test:lint',
         '@test:type-coverage',
@@ -44,6 +51,7 @@ test('tests workflow defines decoupled quality, database, browser, installer, an
 
     // Verify all 5 required jobs are present
     expect($content)->toContain('  quality:')
+        ->and($content)->toContain('  dependencies:')
         ->and($content)->toContain('  database:')
         ->and($content)->toContain('  browser:')
         ->and($content)->toContain('  installer-e2e:')
@@ -55,6 +63,23 @@ test('tests workflow defines decoupled quality, database, browser, installer, an
         ->and($content)->toContain('composer test:type-coverage')
         ->and($content)->toContain('composer test:unit')
         ->and($content)->toContain('composer test:coverage');
+
+    // Dependencies job acts as clean compatibility guard without cache
+    $dependenciesSection = mb_strstr($content, '  dependencies:');
+    $databaseSection = mb_strstr((string) $dependenciesSection, '  database:');
+    $dependenciesJob = mb_substr((string) $dependenciesSection, 0, mb_strlen((string) $dependenciesSection) - mb_strlen((string) $databaseSection));
+
+    expect($dependenciesJob)->toContain('composer validate --strict --check-lock')
+        ->and($dependenciesJob)->toContain('composer check-platform-reqs --lock')
+        ->and($dependenciesJob)->toContain('composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress')
+        ->and($dependenciesJob)->toContain('bun install --frozen-lockfile')
+        ->and($dependenciesJob)->toContain('bun run test:peers')
+        ->and($dependenciesJob)->toContain('bun pm ls')
+        ->and($dependenciesJob)->toContain('php artisan package:discover')
+        ->and($dependenciesJob)->toContain('php artisan wayfinder:generate')
+        ->and($dependenciesJob)->toContain('bun run build')
+        ->and($dependenciesJob)->toContain('php artisan about')
+        ->and($dependenciesJob)->not->toContain('actions/cache@v4');
 
     // Database matrix covers sqlite, mysql, pgsql with database tests and builds assets for Inertia views
     expect($content)->toContain('db: [sqlite, mysql, pgsql]')
