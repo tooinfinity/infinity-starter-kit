@@ -29,6 +29,8 @@ test('preset fromName resolves valid preset names case-insensitively with trimmi
     'standard mixed' => ['Standard', Preset::STANDARD],
     'full exact' => ['full', Preset::FULL],
     'full uppercase' => ['FULL', Preset::FULL],
+    'default alias' => ['default', Preset::STANDARD],
+    'default uppercase' => ['DEFAULT', Preset::STANDARD],
 ]);
 
 test('preset fromName throws InvalidArgumentException for unknown preset names', function (string $invalid): void {
@@ -39,6 +41,10 @@ test('preset fromName throws InvalidArgumentException for unknown preset names',
     'unknown' => ['unknown'],
     'custom' => ['custom-preset'],
 ]);
+
+test('preset answersFor resolves default alias to standard preset', function (): void {
+    expect(Preset::answersFor('default'))->toBe(Preset::answersFor(Preset::STANDARD));
+});
 
 test('preset answersFor throws InvalidArgumentException for unknown preset name', function (): void {
     expect(fn (): array => Preset::answersFor('unknown'))
