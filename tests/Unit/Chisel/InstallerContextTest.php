@@ -18,6 +18,7 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         isNonInteractive: true,
         skipNode: false,
         isMockedScript: true,
+        preset: 'minimal',
     );
 
     expect($context->providedAnswers)->toBe(['auth_features' => ['login', 'registration']])
@@ -32,7 +33,8 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         ->and($context->isNonInteractive)->toBeTrue()
         ->and($context->skipNode)->toBeFalse()
         ->and($context->isMockedScript)->toBeTrue()
-        ->and($context->isDryRun)->toBeFalse();
+        ->and($context->isDryRun)->toBeFalse()
+        ->and($context->preset)->toBe('minimal');
 
     $dryRunContext = new InstallerContext(
         providedAnswers: [],

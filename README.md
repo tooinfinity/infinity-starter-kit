@@ -430,6 +430,39 @@ Upon finishing execution, Chisel automatically cleans up the repository:
 
 > **Note:** `InstallFeaturesCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files. `SetupAuthorizationCommand` is a persistent runtime command that remains available in the generated application when Authorization is enabled.
 
+#### Generated Application Manifest (`starter-kit-manifest.json`)
+
+Upon completing a successful and validated installation, Chisel records a non-secret configuration manifest at the project root (`starter-kit-manifest.json`).
+
+This manifest serves as a machine-readable record for debugging, support requests, and future upgrade tooling. Generated applications are **not** required to consume this file at runtime (zero runtime overhead).
+
+**Key Guarantees:**
+- **Strictly Non-Secret:** Contains no passwords, API tokens, database credentials, or secret environment blobs.
+- **Versioned Schema:** Includes `schema_version` (currently `1`) to facilitate future tool compatibility.
+- **Deterministic & Reproducible:** Supports reproducible builds via standard environment variables (`SOURCE_DATE_EPOCH`, `CHISEL_MANIFEST_TIMESTAMP`, or `CHISEL_DETERMINISTIC_MANIFEST`).
+- **Zero Runtime Dependencies:** Plain JSON that can be inspected with standard tools (`jq`, `json_decode()`) without needing any installer classes.
+
+**Structure Overview:**
+```json
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-02T22:00:00+00:00",
+  "source_revision": "1c253c2...",
+  "preset": "standard",
+  "features": {
+    "enabled": ["authorization", "teams", "api", "health-checks"],
+    "pruned": ["billing", "notifications"]
+  },
+  "guidelines": {
+    "enabled": ["ai", "actions", "queries", "rules", "wayfinder"]
+  },
+  "options": {
+    "dry_run": false,
+    "no_node": false
+  }
+}
+```
+
 ---
 
 ### 🏛️ Installer Architecture & Responsibilities

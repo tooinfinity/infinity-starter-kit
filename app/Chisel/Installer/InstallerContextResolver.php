@@ -192,6 +192,7 @@ final class InstallerContextResolver
 
         $hasAnswersSource = false;
         $providedAnswers = [];
+        $resolvedPresetName = null;
 
         if (is_string($rawAnswers) && mb_trim($rawAnswers) !== '') {
             $hasAnswersSource = true;
@@ -208,6 +209,7 @@ final class InstallerContextResolver
             $resolvedPreset = Preset::fromName($presetName);
             DependencyValidator::validate($resolvedPreset->answers());
             $providedAnswers = $resolvedPreset->answers();
+            $resolvedPresetName = $resolvedPreset->name;
         } elseif (($envAnswers = self::environmentAnswers()) !== null) {
             $hasAnswersSource = true;
             $decoded = json_decode($envAnswers, true, 512, JSON_THROW_ON_ERROR);
@@ -221,6 +223,11 @@ final class InstallerContextResolver
             $resolvedPreset = Preset::fromName($envPreset);
             DependencyValidator::validate($resolvedPreset->answers());
             $providedAnswers = $resolvedPreset->answers();
+            $resolvedPresetName = $resolvedPreset->name;
+        }
+
+        if ($resolvedPresetName === null && isset($providedAnswers['preset']) && is_string($providedAnswers['preset'])) {
+            $resolvedPresetName = Preset::fromName($providedAnswers['preset'])->name;
         }
 
         $savedState = null;
@@ -317,6 +324,7 @@ final class InstallerContextResolver
             isMockedScript: $isMockedScript,
             includeAiGuidelines: $includeAiGuidelines,
             isDryRun: $isDryRun,
+            preset: $resolvedPresetName,
         );
     }
 }

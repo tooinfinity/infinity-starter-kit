@@ -34,6 +34,7 @@ final readonly class InstallerContext
         public bool $isMockedScript,
         public bool $includeAiGuidelines = true,
         public bool $isDryRun = false,
+        public ?string $preset = null,
     ) {}
 
     public function redact(string $message): string

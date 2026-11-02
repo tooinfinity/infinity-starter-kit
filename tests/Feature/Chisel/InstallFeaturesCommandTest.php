@@ -45,11 +45,19 @@ beforeEach(function (): void {
     if (file_exists(base_path('.installer-state.json'))) {
         @unlink(base_path('.installer-state.json'));
     }
+
+    if (file_exists(base_path('starter-kit-manifest.json'))) {
+        @unlink(base_path('starter-kit-manifest.json'));
+    }
 });
 
 afterEach(function (): void {
     if (file_exists(base_path('.installer-state.json'))) {
         @unlink(base_path('.installer-state.json'));
+    }
+
+    if (file_exists(base_path('starter-kit-manifest.json'))) {
+        @unlink(base_path('starter-kit-manifest.json'));
     }
 });
 
@@ -1467,12 +1475,74 @@ test('failure at cleanup stage after installer files are removed outputs manual 
     }
 });
 
+test('successful validated installation records non-secret starter-kit-manifest.json', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', [
+        '--preset' => 'standard',
+        '--admin-name' => 'Super Admin',
+        '--admin-email' => 'admin@example.com',
+        '--admin-password' => 'super_secret_admin_pass',
+    ])->assertSuccessful();
+
+    $manifestPath = base_path('starter-kit-manifest.json');
+    expect(file_exists($manifestPath))->toBeTrue();
+
+    $raw = (string) file_get_contents($manifestPath);
+    expect($raw)->not->toContain('super_secret_admin_pass');
+
+    $manifest = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    expect($manifest['schema_version'])->toBe(1)
+        ->and($manifest['preset'])->toBe('standard')
+        ->and($manifest['features']['explicit']['auth_features'])->toContain('login', 'registration')
+        ->and($manifest['features']['explicit']['optional_modules'])->toContain('authorization', 'settings')
+        ->and($manifest['features']['dependency_derived'])->toContain('login', 'authorization')
+        ->and($manifest['auth_capabilities'])->toContain('login', 'registration')
+        ->and($manifest)->toHaveKey('generated_at')
+        ->and($manifest)->not->toHaveKey('admin')
+        ->and($manifest)->not->toHaveKey('admin_password');
+});
+
+test('manifest is not recorded when installation fails prior to cleanup validation', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+
+        bindMockChiselScript();
+
+        expect(fn () => $this->artisan('install:features', ['--preset' => 'standard']))
+            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_chisel]');
+
+        expect(file_exists(base_path('starter-kit-manifest.json')))->toBeFalse();
+    } finally {
+        $restoreEnv();
+    }
+});
+
+test('manifest is not recorded during dry-run', function (): void {
+    bindMockChiselScript();
+    Process::fake();
+
+    $this->artisan('install:features', [
+        '--preset' => 'standard',
+        '--dry-run' => true,
+    ])->assertSuccessful();
+
+    expect(file_exists(base_path('starter-kit-manifest.json')))->toBeFalse();
+});
+
 /**
  * @param  array<string, mixed>  $processFakes
  */
 function bindMockChiselScript(array $processFakes = []): Script
 {
     Process::fake($processFakes === [] ? ['*' => Process::result()] : $processFakes + ['*' => Process::result()]);
+
+    if (! function_exists('chiselRun') && file_exists(base_path('chisel.php'))) {
+        require_once base_path('chisel.php');
+    }
 
     $script = Chisel::script(base_path())
         ->questions([
