@@ -90,11 +90,14 @@
             "pint --parallel",
             "bun run lint"
         ],
+        "docs:generate": "@php artisan chisel:docs",
+        "docs:check": "@php artisan chisel:docs --check",
         "test:type-coverage": "pest --type-coverage --min=100",
         "test:lint": [
             "pint --parallel --test",
             "rector --dry-run",
-            "bun run test:lint"
+            "bun run test:lint",
+            "@php artisan chisel:docs --check"
         ],
         "test:types": [
             "phpstan",
@@ -135,6 +138,7 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "process-timeout": 0,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true

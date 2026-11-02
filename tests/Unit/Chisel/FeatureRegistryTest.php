@@ -62,6 +62,11 @@ test('feature definition constructor sets all typed properties', function (): vo
         composerPackages: ['vendor/sample'],
         frontendPackages: ['sample-npm'],
         dependencies: ['dep1'],
+        optionalDependencies: ['opt1'],
+        description: 'Sample description.',
+        capabilities: ['Cap 1', 'Cap 2'],
+        permissions: ['perm.sample'],
+        default: false,
     );
 
     expect($def->key)->toBe('sample')
@@ -72,7 +77,12 @@ test('feature definition constructor sets all typed properties', function (): vo
         ->and($def->emptyDirectories)->toBe(['sample-dir'])
         ->and($def->composerPackages)->toBe(['vendor/sample'])
         ->and($def->frontendPackages)->toBe(['sample-npm'])
-        ->and($def->dependencies)->toBe(['dep1']);
+        ->and($def->dependencies)->toBe(['dep1'])
+        ->and($def->optionalDependencies)->toBe(['opt1'])
+        ->and($def->description)->toBe('Sample description.')
+        ->and($def->capabilities)->toBe(['Cap 1', 'Cap 2'])
+        ->and($def->permissions)->toBe(['perm.sample'])
+        ->and($def->default)->toBeFalse();
 });
 
 test('feature keys in registry are unique and match their definition key', function (): void {

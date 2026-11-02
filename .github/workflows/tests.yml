@@ -88,6 +88,9 @@ jobs:
       - name: Lint Checks (Pint, Rector, Vite+)
         run: composer test:lint
 
+      - name: Verify Feature Documentation Freshness
+        run: php artisan chisel:docs --check
+
       - name: Type Checks (PHPStan, TypeScript)
         run: composer test:types
 
