@@ -89,11 +89,14 @@ final class GeneratedProjectFixture
 
     public static function remove(string $dir): void
     {
-        if (! is_dir($dir)) {
+        $base = realpath(storage_path('framework/testing'));
+        $resolved = realpath($dir);
+
+        if ($base === false || $resolved === false || dirname($resolved) !== $base || ! str_starts_with(basename($resolved), 'generated_project_')) {
             return;
         }
 
-        new Process(['rm', '-rf', $dir])
+        new Process(['rm', '-rf', $resolved])
             ->setTimeout(60)
             ->run();
     }

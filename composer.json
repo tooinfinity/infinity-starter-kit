@@ -107,6 +107,12 @@
         "test:quick": "pest --parallel --exclude-testsuite=Browser --exclude-group=installer-e2e,installer-smoke",
         "test:installer": "pest --group=installer-e2e --compact",
         "test:smoke": "pest --group=installer-smoke --compact",
+        "test:dependencies": [
+            "composer validate --strict --check-lock",
+            "composer check-platform-reqs --lock",
+            "bun install --frozen-lockfile --dry-run",
+            "bun run test:peers"
+        ],
         "test:quality": [
             "@test:lint",
             "@test:types",

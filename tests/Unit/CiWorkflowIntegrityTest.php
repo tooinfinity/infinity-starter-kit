@@ -18,6 +18,7 @@ test('composer manifest defines all required test commands and scripts', functio
         ->and($scripts)->toHaveKey('test:quick')
         ->and($scripts)->toHaveKey('test:installer')
         ->and($scripts)->toHaveKey('test:smoke')
+        ->and($scripts)->toHaveKey('test:dependencies')
         ->and($scripts)->toHaveKey('test:quality')
         ->and($scripts)->toHaveKey('test');
 
@@ -43,13 +44,13 @@ test('composer manifest defines all required test commands and scripts', functio
     ]);
 });
 
-test('tests workflow defines decoupled quality, database, browser, installer, and smoke jobs', function (): void {
+test('tests workflow defines decoupled quality, dependencies, database, browser, installer, and smoke jobs', function (): void {
     $workflowPath = base_path('.github/workflows/tests.yml');
     expect(file_exists($workflowPath))->toBeTrue();
 
     $content = (string) file_get_contents($workflowPath);
 
-    // Verify all 5 required jobs are present
+    // Verify all 6 required jobs are present
     expect($content)->toContain('  quality:')
         ->and($content)->toContain('  dependencies:')
         ->and($content)->toContain('  database:')
