@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Chisel\Installer;
 
+use App\Chisel\FeatureRegistry;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Filesystem\PendingFiles;
 use RuntimeException;
@@ -41,6 +42,7 @@ final class Cleanup
             'app/Chisel/Installer/PostScaffoldRunner.php',
             'app/Chisel/Installer/GeneratedApplicationValidator.php',
             'app/Chisel/Installer/GeneratedApplicationConfigurator.php',
+            'app/Chisel/Installer/GeneratedApplicationManifest.php',
             'app/Chisel/Installer/ComposerManifestPruner.php',
             'app/Chisel/Installer/ComposerLockSynchronizer.php',
             'app/Chisel/Installer/FrontendPackagePruner.php',
@@ -69,6 +71,7 @@ final class Cleanup
             'tests/Unit/Chisel/ComposerLockSynchronizerTest.php',
             'tests/Unit/Chisel/GeneratedApplicationConfiguratorTest.php',
             'tests/Unit/Chisel/GeneratedApplicationValidatorTest.php',
+            'tests/Unit/Chisel/GeneratedApplicationManifestTest.php',
             'tests/Unit/Chisel/InstallerContextResolverTest.php',
             'tests/Unit/Chisel/InstallationPlanTest.php',
             'tests/Unit/Chisel/InstallerPlannerTest.php',
@@ -117,6 +120,9 @@ final class Cleanup
     public static function clean(string $directory, array $paths): void
     {
         // Preload installer classes before their files are removed from disk
+        FeatureRegistry::all();
+        class_exists(Preset::class);
+        class_exists(Profile::class);
         class_exists(ConfigCleaner::class);
         class_exists(ComposerManifestPruner::class);
         class_exists(ComposerLockSynchronizer::class);
@@ -124,6 +130,7 @@ final class Cleanup
         class_exists(AiToolingPruner::class);
         class_exists(InstallerState::class);
         class_exists(PreflightValidator::class);
+        class_exists(GeneratedApplicationManifest::class);
         class_exists(Chisel::class);
         class_exists(PendingFiles::class);
 

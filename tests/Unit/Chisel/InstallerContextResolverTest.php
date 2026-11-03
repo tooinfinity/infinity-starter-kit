@@ -418,7 +418,8 @@ test('resolve loads answers from --preset and marks context non-interactive', fu
 
     expect($context->isNonInteractive)->toBeTrue()
         ->and($context->selectedAuthFeatures)->toBe(Preset::answersFor($presetName)['auth_features'])
-        ->and($context->selectedModules)->toBe(Preset::answersFor($presetName)['optional_modules']);
+        ->and($context->selectedModules)->toBe(Preset::answersFor($presetName)['optional_modules'])
+        ->and($context->preset)->toBe($presetName);
 })->with([
     'minimal' => ['minimal'],
     'standard' => ['standard'],
@@ -630,5 +631,23 @@ test('resolve correctly sets isDryRun from option or environment variables', fun
         expect($contextInstallerEnv->isDryRun)->toBeTrue();
     } finally {
         $cleanEnv('LARAVEL_INSTALLER_DRY_RUN');
+    }
+});
+
+test('resolve extracts preset from answers payload', function () use ($cleanEnv, $makeCommand, $makeScript): void {
+    $cleanEnv('CHISEL_ANSWERS');
+
+    $command = $makeCommand();
+    $script = $makeScript();
+
+    putenv('CHISEL_ANSWERS={"preset":"minimal","auth_features":["login"]}');
+    $_ENV['CHISEL_ANSWERS'] = '{"preset":"minimal","auth_features":["login"]}';
+    $_SERVER['CHISEL_ANSWERS'] = '{"preset":"minimal","auth_features":["login"]}';
+
+    try {
+        $context = InstallerContextResolver::resolve($command, $script, isMockedScript: true, isInteractive: false);
+        expect($context->preset)->toBe('minimal');
+    } finally {
+        $cleanEnv('CHISEL_ANSWERS');
     }
 });

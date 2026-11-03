@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\DependencyValidator;
 use App\Chisel\Installer\GeneratedApplicationConfigurator;
+use App\Chisel\Installer\GeneratedApplicationManifest;
 use App\Chisel\Installer\GeneratedApplicationValidator;
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\InstallerContextResolver;
@@ -179,8 +180,10 @@ final class InstallFeaturesCommand extends Command
         try {
             GeneratedApplicationValidator::injectTestFailureIfRequested('cleanup');
             GeneratedApplicationValidator::validatePreCleanup($basePath);
+            $manifest = GeneratedApplicationManifest::fromContext($context, $basePath);
             $didCleanup = $this->cleanupInstaller($context);
             GeneratedApplicationValidator::validatePostCleanup($context, $didCleanup, $basePath);
+            $manifest->save($basePath);
         } catch (Throwable $throwable) {
             $state->recordFailure($basePath, 'cleanup', $context->redact($throwable->getMessage()));
 

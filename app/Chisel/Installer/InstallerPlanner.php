@@ -201,6 +201,7 @@ final class InstallerPlanner
             'Composer Lock Synchronization' => 'ComposerLockSynchronizer (synchronize composer.lock with pruned dependencies)',
             'Installer Machinery Cleanup' => 'Cleanup::clean (remove installer files and empty directories)',
             'Post-Cleanup Validation' => 'GeneratedApplicationValidator::validatePostCleanup (verify clean post-installation state)',
+            'Configuration Manifest' => 'GeneratedApplicationManifest::write (record non-secret configuration manifest)',
         ];
 
         return new InstallationPlan(
