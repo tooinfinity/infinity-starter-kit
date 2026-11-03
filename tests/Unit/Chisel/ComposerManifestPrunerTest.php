@@ -138,3 +138,22 @@ test('composer manifest pruner cleanPostCreate handles composer.json without scr
     $decoded = json_decode((string) file_get_contents($file), true);
     expect($decoded['require-dev'])->not->toHaveKey('laravel/chisel');
 });
+
+test('composer manifest pruner cleanPostCreate removes separate standalone exclude-group flags from test scripts', function (): void {
+    $composerJson = [
+        'name' => 'test/project',
+        'scripts' => [
+            'test:coverage' => 'pest --coverage --exclude-group=installer-e2e --exclude-group=installer-smoke --min=100',
+            'test:quick' => 'pest --parallel --exclude-group=installer-smoke',
+        ],
+    ];
+
+    $file = $this->tempDir.'/composer.json';
+    file_put_contents($file, json_encode($composerJson, JSON_PRETTY_PRINT));
+
+    ComposerManifestPruner::cleanPostCreate($this->tempDir);
+
+    $decoded = json_decode((string) file_get_contents($file), true);
+    expect($decoded['scripts']['test:coverage'])->toBe('pest --coverage --min=100')
+        ->and($decoded['scripts']['test:quick'])->toBe('pest --parallel');
+});

@@ -261,14 +261,30 @@ final class GeneratedApplicationSmokePipeline
                 "Canonical request [{$request}] returned HTTP {$data['status']} instead of 200 for profile [{$profile->name}]."
             );
 
-            $budget = PerformanceBudget::queryBudget($profile->name, $request);
-            $actual = $data['queries'];
-            $sqlList = implode("\n  - ", $data['sql'] ?? []);
-
-            expect($actual)->toBeLessThanOrEqual(
-                $budget,
-                "Query count regression on [{$request}] for profile [{$profile->name}]: expected at most {$budget} queries, got {$actual} queries.\nExecuted SQL:\n  - {$sqlList}"
+            self::assertWithinCanonicalQueryBudget(
+                $request,
+                $profile->name,
+                $data['queries'],
+                $data['sql'] ?? [],
             );
         }
+    }
+
+    /**
+     * @param  list<string>  $sql
+     */
+    public static function assertWithinCanonicalQueryBudget(
+        string $request,
+        string $profileName,
+        int $actualQueries,
+        array $sql = [],
+    ): void {
+        $budget = PerformanceBudget::queryBudget($profileName, $request);
+        $sqlList = implode("\n  - ", $sql);
+
+        expect($actualQueries)->toBeLessThanOrEqual(
+            $budget,
+            "Query count regression on [{$request}] for profile [{$profileName}]: expected at most {$budget} queries, got {$actualQueries} queries.\nExecuted SQL:\n  - {$sqlList}"
+        );
     }
 }

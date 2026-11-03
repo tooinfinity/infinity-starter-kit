@@ -7,7 +7,9 @@ namespace Tests\Unit\Chisel;
 use App\Chisel\Installer\PerformanceBudget;
 use App\Chisel\Installer\Profile;
 use InvalidArgumentException;
+use PHPUnit\Framework\ExpectationFailedException;
 use RuntimeException;
+use Tests\Support\GeneratedApplicationSmokePipeline;
 
 test('performance budget canonicalProfileName resolves valid profile names case-insensitively with trimming', function (string $input, string $expected): void {
     expect(PerformanceBudget::canonicalProfileName($input))->toBe($expected);
@@ -219,6 +221,30 @@ test('performance budget generateHttpQueryMeasurementScript returns valid PHP st
         ->and($script)->toContain(PerformanceBudget::REQUEST_LOGIN)
         ->and($script)->toContain(PerformanceBudget::REQUEST_DASHBOARD)
         ->and($script)->toContain('json_encode($results)');
+
+    // Parse the generated PHP script to ensure it is syntactically valid
+    $tokens = token_get_all("<?php\n".$script, TOKEN_PARSE);
+    expect($tokens)->toBeArray();
+});
+
+test('smoke pipeline assertWithinCanonicalQueryBudget catches regressions and passes within budget', function (): void {
+    // Within budget should pass
+    GeneratedApplicationSmokePipeline::assertWithinCanonicalQueryBudget(
+        PerformanceBudget::REQUEST_WELCOME,
+        Profile::MINIMAL,
+        0,
+        [],
+    );
+
+    // Over budget should fail with actionable message
+    expect(function (): void {
+        GeneratedApplicationSmokePipeline::assertWithinCanonicalQueryBudget(
+            PerformanceBudget::REQUEST_WELCOME,
+            Profile::MINIMAL,
+            1,
+            ['SELECT 1 FROM users'],
+        );
+    })->toThrow(ExpectationFailedException::class, 'Query count regression on [GET /]');
 });
 
 test('performance budget allBaselines returns complete structured schema', function (): void {

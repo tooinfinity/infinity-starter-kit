@@ -81,7 +81,7 @@ Performance budgets are verified automatically in multiple layers:
 ### 3. Dedicated Performance Test Suite
 
 - Feature Test: `tests/Feature/Chisel/GeneratedApplicationPerformanceTest.php`
-- Verifies performance budgets against representative generated profiles (`minimal`, `default`, `full`).
+- Verifies the root application's frontend production bundle and canonical request query counts against full-profile budgets, including intentional regression detection. (Representative generated profiles `minimal`, `default`, and `full` are validated end-to-end by the smoke pipeline).
 
 ---
 

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -59,7 +60,7 @@ final readonly class PerformanceBudget
      * - No Settings module, no RBAC, no Notifications.
      * - GET /: 0 queries (pure static Inertia welcome view)
      * - GET /login: 0 queries (pure Fortify guest view)
-     * - GET /dashboard: 0 queries (auth session resolution, no middleware or prop queries)
+     * - GET /dashboard: 0 queries (uses an authenticated user preloaded in memory with an array session driver, excluding database lookup overhead from a persistent session)
      *
      * Default / Standard profile:
      * - Includes Settings, RBAC (roles + permissions), User Management, Notifications.
@@ -328,43 +329,56 @@ final readonly class PerformanceBudget
     public static function generateHttpQueryMeasurementScript(): string
     {
         return 'require "vendor/autoload.php"; '
-            .'$app = require "bootstrap/app.php"; '
-            .('$kernel = $app->make('.Kernel::class.'::class); ')
-            .'$kernel->bootstrap(); '
-            .'config(["session.driver" => "array", "cache.default" => "array"]); '
+            .'$bootApp = function (): \Illuminate\Contracts\Foundation\Application { '
+            .'    $app = require "bootstrap/app.php"; '
+            .'    $kernel = $app->make('.Kernel::class.'::class); '
+            .'    $kernel->bootstrap(); '
+            .'    config(["session.driver" => "array", "cache.default" => "array"]); '
+            .'    return $app; '
+            .'}; '
             .'$results = []; '
+            .'$app1 = $bootApp(); '
             .(DB::class.'::flushQueryLog(); ')
             .(DB::class.'::enableQueryLog(); ')
             .('$welcomeRequest = '.Request::class.'::create("/", "GET"); ')
-            .'$welcomeResponse = $app->handle($welcomeRequest); '
+            .'$welcomeResponse = $app1->handle($welcomeRequest); '
             .'$results["'.self::REQUEST_WELCOME.'"] = ['
             .'    "status" => $welcomeResponse->getStatusCode(), '
             .('    "queries" => count('.DB::class.'::getQueryLog()), ')
             .('    "sql" => array_column('.DB::class.'::getQueryLog(), "query"), ')
             .']; '
+            .'$app2 = $bootApp(); '
             .(DB::class.'::flushQueryLog(); ')
             .(DB::class.'::enableQueryLog(); ')
             .'$inertiaMiddlewareClass = implode("\\\\", ["App", "Http", "Middleware", "HandleInertiaRequests"]); '
-            .'$inertiaMiddleware = $app->make($inertiaMiddlewareClass); '
+            .'$inertiaMiddleware = $app2->make($inertiaMiddlewareClass); '
             .('$loginReq = '.Request::class.'::create("/login", "GET"); ')
             .'$version = $inertiaMiddleware->version($loginReq); '
             .'$server = ["HTTP_X_INERTIA" => "true"]; '
             .'if ($version !== null) { $server["HTTP_X_INERTIA_VERSION"] = $version; } '
             .('$loginRequest = '.Request::class.'::create("/login", "GET", [], [], [], $server); ')
-            .'$loginResponse = $app->handle($loginRequest); '
+            .'$loginResponse = $app2->handle($loginRequest); '
             .'$results["'.self::REQUEST_LOGIN.'"] = ['
             .'    "status" => $loginResponse->getStatusCode(), '
             .('    "queries" => count('.DB::class.'::getQueryLog()), ')
             .('    "sql" => array_column('.DB::class.'::getQueryLog(), "query"), ')
             .']; '
-            .('$user = '.User::class.'::first() ?? '.User::class.'::factory()->create(); ')
-            .'if ($user->email_verified_at === null) { $user->email_verified_at = now(); $user->saveQuietly(); } '
-            .'auth()->setUser($user); '
+            .'$app3 = $bootApp(); '
+            .('$user = '.User::class.'::first(); ')
+            .'if (! $user) { '
+            .('    $user = new '.User::class.'(["name" => "Smoke User", "email" => "smoke@example.com", "password" => "password"]); ')
+            .('    if ('.Schema::class.'::hasColumn("users", "email_verified_at")) { $user->email_verified_at = now(); } ')
+            .'    $user->saveQuietly(); '
+            .('} elseif ('.Schema::class.'::hasColumn("users", "email_verified_at") && $user->email_verified_at === null) { ')
+            .'    $user->email_verified_at = now(); '
+            .'    $user->saveQuietly(); '
+            .'} '
+            .'$app3->make("auth")->setUser($user); '
             .(DB::class.'::flushQueryLog(); ')
             .(DB::class.'::enableQueryLog(); ')
             .('$dashRequest = '.Request::class.'::create("/dashboard", "GET"); ')
             .'$dashRequest->setUserResolver(fn () => $user); '
-            .'$dashResponse = $app->handle($dashRequest); '
+            .'$dashResponse = $app3->handle($dashRequest); '
             .'$results["'.self::REQUEST_DASHBOARD.'"] = ['
             .'    "status" => $dashResponse->getStatusCode(), '
             .('    "queries" => count('.DB::class.'::getQueryLog()), ')
