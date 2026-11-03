@@ -17,6 +17,8 @@ final readonly class FeatureDefinition
      * @param  list<string>  $frontendPackages
      * @param  list<string>  $dependencies  Keys of features required for a valid, supported starter-kit application configuration.
      * @param  list<string>  $optionalDependencies  Keys of features that this feature optionally integrates with.
+     * @param  list<string>  $capabilities  Relevant high-level capabilities provided by the feature.
+     * @param  list<string>  $permissions  Permissions associated with this feature.
      */
     public function __construct(
         public string $key,
@@ -29,5 +31,9 @@ final readonly class FeatureDefinition
         public array $frontendPackages = [],
         public array $dependencies = [],
         public array $optionalDependencies = [],
+        public string $description = '',
+        public array $capabilities = [],
+        public array $permissions = [],
+        public bool $default = true,
     ) {}
 }

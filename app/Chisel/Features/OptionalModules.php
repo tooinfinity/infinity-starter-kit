@@ -52,6 +52,17 @@ final class OptionalModules
                 composerPackages: [
                     'spatie/laravel-permission',
                 ],
+                description: 'Policy-free role-based access control powered by Spatie Permission, PHP enums, and super-admin gate bypass.',
+                capabilities: [
+                    'Role & permission management',
+                    'Super-admin gate bypass',
+                    'Inertia shared auth props',
+                    '<Can> component & useAuthorization hook',
+                ],
+                permissions: [
+                    'authorization.manage',
+                ],
+                default: true,
             ),
             'settings' => new FeatureDefinition(
                 key: 'settings',
@@ -93,6 +104,17 @@ final class OptionalModules
                 dependencies: [
                     'authorization',
                 ],
+                description: 'Key-value application settings storage with per-request caching and dynamic runtime configuration.',
+                capabilities: [
+                    'Key-value settings storage',
+                    'Cached per-request runtime resolution',
+                    'Application name & timezone configuration',
+                    'Settings management UI',
+                ],
+                permissions: [
+                    'settings.manage',
+                ],
+                default: true,
             ),
             'user-management' => new FeatureDefinition(
                 key: 'user-management',
@@ -183,6 +205,23 @@ final class OptionalModules
                 dependencies: [
                     'authorization',
                 ],
+                description: 'Administrative user directory with user creation, profile editing, role assignment, and lifecycle controls.',
+                capabilities: [
+                    'User directory listing & filtering',
+                    'User creation & editing',
+                    'Role assignment & self-protection',
+                    'Account activation & deactivation',
+                    'Password management',
+                ],
+                permissions: [
+                    'users.view',
+                    'users.create',
+                    'users.update',
+                    'users.delete',
+                    'users.manage-roles',
+                    'users.manage-password',
+                ],
+                default: true,
             ),
             'localization' => new FeatureDefinition(
                 key: 'localization',
@@ -254,6 +293,16 @@ final class OptionalModules
                 frontendPackages: [
                     '@erag/lang-sync-inertia',
                 ],
+                description: 'Trilingual localization with real-time language switching, RTL layout support, and Inertia translation sync.',
+                capabilities: [
+                    'Trilingual support (EN, FR, AR)',
+                    'RTL layout auto-switching',
+                    'Language selector component',
+                    'Persistent guest & user locale cookie',
+                    'Inertia translation synchronization',
+                ],
+                permissions: [],
+                default: true,
             ),
             'notifications' => new FeatureDefinition(
                 key: 'notifications',
@@ -338,6 +387,16 @@ final class OptionalModules
                     'tests/Unit/Actions/Notifications',
                     'tests/Unit/Notifications',
                 ],
+                description: 'Database and email notification system with user channel preferences and interactive notification center.',
+                capabilities: [
+                    'Database & email notifications',
+                    'User notification channel preferences',
+                    'Header bell & interactive dropdown',
+                    'Mark all as read & batch prune',
+                    'Security event alerts',
+                ],
+                permissions: [],
+                default: true,
             ),
             'audit-trails' => new FeatureDefinition(
                 key: 'audit-trails',
@@ -404,6 +463,17 @@ final class OptionalModules
                 dependencies: [
                     'authorization',
                 ],
+                description: 'Security audit logging capturing actor context, IP addresses, events, and automated retention pruning.',
+                capabilities: [
+                    'Security & activity event tracking',
+                    'Actor, IP, and user agent recording',
+                    'Searchable audit log viewer',
+                    'Automated log pruning command',
+                ],
+                permissions: [
+                    'audit.view',
+                ],
+                default: true,
             ),
             'reporting' => new FeatureDefinition(
                 key: 'reporting',
@@ -473,6 +543,19 @@ final class OptionalModules
                     'user-management',
                     'authorization',
                 ],
+                description: 'Read-only analytics dashboards, accessible SVG trend charts, date filtering, and streaming CSV exports.',
+                capabilities: [
+                    'User growth & activity analytics',
+                    'Audit event trend dashboards',
+                    'Zero-dependency accessible SVG charts',
+                    'Formula-safe streaming CSV export',
+                    'Multi-day date range filtering',
+                ],
+                permissions: [
+                    'reports.view',
+                    'reports.export',
+                ],
+                default: true,
             ),
         ];
     }

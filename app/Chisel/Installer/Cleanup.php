@@ -21,10 +21,12 @@ final class Cleanup
         return [
             'app/Console/Commands/InstallFeaturesCommand.php',
             'app/Console/Commands/SetupAdminUserCommand.php',
+            'app/Console/Commands/GenerateFeatureDocsCommand.php',
             'chisel.php',
             'chisel-paths.php',
             'app/Chisel/FeatureDefinition.php',
             'app/Chisel/FeatureRegistry.php',
+            'app/Chisel/FeatureMatrixGenerator.php',
             'app/Chisel/LegacyPathsAdapter.php',
             'app/Chisel/Features/AuthFeatures.php',
             'app/Chisel/Features/OptionalModules.php',
@@ -82,6 +84,9 @@ final class Cleanup
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
             'tests/Feature/Chisel/RegistryIntegrityTest.php',
             'tests/Feature/Chisel/FeatureContractTest.php',
+            'tests/Feature/Chisel/GenerateFeatureDocsCommandTest.php',
+            'tests/Feature/Chisel/FeatureMatrixDocumentationTest.php',
+            'tests/Unit/Chisel/FeatureMatrixGeneratorTest.php',
             'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
         ];
     }

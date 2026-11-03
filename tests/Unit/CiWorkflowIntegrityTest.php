@@ -60,6 +60,7 @@ test('tests workflow defines decoupled quality, dependencies, database, browser,
 
     // Quality job runs database-independent checks and coverage
     expect($content)->toContain('composer test:lint')
+        ->and($content)->toContain('php artisan chisel:docs --check')
         ->and($content)->toContain('composer test:types')
         ->and($content)->toContain('composer test:type-coverage')
         ->and($content)->toContain('composer test:unit')

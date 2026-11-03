@@ -297,15 +297,17 @@ The Infinity Starter Kit features a deterministic, declarative feature configura
 
 ### 🗺️ Feature Compatibility Matrix
 
-| Module | Identifier | Composer Packages | Frontend Packages (Bun) | Permissions |
-| :--- | :--- | :--- | :--- | :--- |
-| **Authorization** | `authorization` | `spatie/laravel-permission` | — | `authorization.manage` |
-| **Settings** | `settings` | — | — | `settings.manage` |
-| **User Management** | `user-management` | `spatie/laravel-data` | — | `users.view`, `users.create`, `users.update`, `users.delete`, `users.manage-roles`, `users.manage-password` |
-| **Localization** | `localization` | `erag/laravel-lang-sync-inertia` | `@erag/lang-sync-inertia` | — |
-| **Notifications** | `notifications` | — | — | — |
-| **Audit Trails** | `audit-trails` | — | — | `audit.view` |
-| **Reporting** | `reporting` | `spatie/laravel-data` | — | `reports.view`, `reports.export` |
+<!-- @chisel-feature-matrix -->
+| Module | Identifier | Description | Required Dependencies | Optional Dependencies | Composer Packages | Frontend Packages (Bun) | Permissions | Default | Capabilities |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Authorization** | `authorization` | Policy-free role-based access control powered by Spatie Permission, PHP enums, and super-admin gate bypass. | — | — | `spatie/laravel-permission` | — | `authorization.manage` | Enabled | Role & permission management, Super-admin gate bypass, Inertia shared auth props, <Can> component & useAuthorization hook |
+| **Settings** | `settings` | Key-value application settings storage with per-request caching and dynamic runtime configuration. | `authorization` | — | — | — | `settings.manage` | Enabled | Key-value settings storage, Cached per-request runtime resolution, Application name & timezone configuration, Settings management UI |
+| **User Management** | `user-management` | Administrative user directory with user creation, profile editing, role assignment, and lifecycle controls. | `authorization` | — | — | — | `users.view`, `users.create`, `users.update`, `users.delete`, `users.manage-roles`, `users.manage-password` | Enabled | User directory listing & filtering, User creation & editing, Role assignment & self-protection, Account activation & deactivation, Password management |
+| **Localization** | `localization` | Trilingual localization with real-time language switching, RTL layout support, and Inertia translation sync. | — | — | `erag/laravel-lang-sync-inertia` | `@erag/lang-sync-inertia` | — | Enabled | Trilingual support (EN, FR, AR), RTL layout auto-switching, Language selector component, Persistent guest & user locale cookie, Inertia translation synchronization |
+| **Notifications** | `notifications` | Database and email notification system with user channel preferences and interactive notification center. | — | — | — | — | — | Enabled | Database & email notifications, User notification channel preferences, Header bell & interactive dropdown, Mark all as read & batch prune, Security event alerts |
+| **Audit Trails** | `audit-trails` | Security audit logging capturing actor context, IP addresses, events, and automated retention pruning. | `authorization` | — | — | — | `audit.view` | Enabled | Security & activity event tracking, Actor, IP, and user agent recording, Searchable audit log viewer, Automated log pruning command |
+| **Reporting** | `reporting` | Read-only analytics dashboards, accessible SVG trend charts, date filtering, and streaming CSV exports. | `audit-trails`, `user-management`, `authorization` | — | — | — | `reports.view`, `reports.export` | Enabled | User growth & activity analytics, Audit event trend dashboards, Zero-dependency accessible SVG charts, Formula-safe streaming CSV export, Multi-day date range filtering |
+<!-- @end-chisel-feature-matrix -->
 
 ---
 
@@ -522,6 +524,7 @@ Continuous Integration separates database-independent invariant checks from the 
 ├── app/
 │   ├── Actions/                  # Reusable business logic actions
 │   ├── Console/Commands/         # Artisan commands
+│   │   ├── GenerateFeatureDocsCommand.php # ⚙️ Installer-only (removed after install)
 │   │   ├── InstallFeaturesCommand.php    # ⚙️ Installer-only (removed after install)
 │   │   ├── SetupAuthorizationCommand.php # 🛡️ Authorization runtime synchronization
 │   │   └── SetupAdminUserCommand.php     # ⚙️ Installer-only (removed after install)

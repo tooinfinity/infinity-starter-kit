@@ -41,6 +41,8 @@ final class AuthFeatures
                     'resources/js/pages/session',
                 ],
                 dependencies: [],
+                description: 'Core session authentication with rate limiting and remember-me support.',
+                default: true,
             ),
             'logout' => new FeatureDefinition(
                 key: 'logout',
@@ -57,6 +59,8 @@ final class AuthFeatures
                 ],
                 emptyDirectories: [],
                 dependencies: ['login'],
+                description: 'Session invalidation and token destruction.',
+                default: true,
             ),
             'registration' => new FeatureDefinition(
                 key: 'registration',
@@ -81,6 +85,8 @@ final class AuthFeatures
                     'resources/js/pages/user',
                 ],
                 dependencies: ['login'],
+                description: 'User registration form, routes, and user creation action.',
+                default: true,
             ),
             'email-verification' => new FeatureDefinition(
                 key: 'email-verification',
@@ -120,6 +126,8 @@ final class AuthFeatures
                     'resources/js/pages/user-email-verification-notification',
                 ],
                 dependencies: ['login'],
+                description: 'Native Fortify email verification flow, notice page, and resend notifications.',
+                default: true,
             ),
             'password-reset' => new FeatureDefinition(
                 key: 'password-reset',
@@ -148,6 +156,8 @@ final class AuthFeatures
                     'resources/js/pages/user-email-reset-notification',
                 ],
                 dependencies: ['login'],
+                description: 'Password reset link generation, email notifications, and token verification.',
+                default: true,
             ),
             'password-update' => new FeatureDefinition(
                 key: 'password-update',
@@ -167,6 +177,8 @@ final class AuthFeatures
                 ],
                 emptyDirectories: [],
                 dependencies: ['login'],
+                description: 'Authenticated user password change and security verification.',
+                default: true,
             ),
             'two-factor' => new FeatureDefinition(
                 key: 'two-factor',
@@ -204,6 +216,8 @@ final class AuthFeatures
                     'resources/js/pages/user-two-factor-authentication-challenge',
                 ],
                 dependencies: ['login'],
+                description: 'Two-factor authentication with TOTP QR codes, recovery codes, and challenge flow.',
+                default: true,
             ),
         ];
     }

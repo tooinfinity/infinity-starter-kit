@@ -6,6 +6,7 @@ use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\DependencyValidator;
+use App\Enums\Permission;
 use Illuminate\Contracts\Console\Kernel;
 use PHPUnit\Framework\ExpectationFailedException;
 use Symfony\Component\Process\Process;
@@ -178,6 +179,17 @@ function validateFeatureContract(FeatureDefinition $feature): void
 
         if (! in_array($dep, $validModules, true)) {
             throw new InvalidArgumentException("Feature [{$feature->key}] references unknown dependency module [{$dep}].");
+        }
+    }
+
+    if (mb_trim($feature->description) === '') {
+        throw new InvalidArgumentException("Optional feature [{$feature->key}] must specify a non-empty description.");
+    }
+
+    $validPermissions = Permission::values();
+    foreach ($feature->permissions as $permission) {
+        if (! in_array($permission, $validPermissions, true)) {
+            throw new InvalidArgumentException("Optional feature [{$feature->key}] references unknown permission [{$permission}].");
         }
     }
 }
@@ -585,6 +597,33 @@ test('contract validation fails when feature declares self-dependency', function
 
     expect(fn () => validateFeatureContract($invalid))
         ->toThrow(InvalidArgumentException::class, 'cannot depend on itself');
+});
+
+test('contract validation fails when optional feature has empty description', function (): void {
+    $invalid = new FeatureDefinition(
+        key: 'no-desc',
+        label: 'No Description',
+        sectionMarker: 'no-desc',
+        exclusiveFiles: ['app/Models/User.php'],
+        description: '',
+    );
+
+    expect(fn () => validateFeatureContract($invalid))
+        ->toThrow(InvalidArgumentException::class, 'must specify a non-empty description');
+});
+
+test('contract validation fails when optional feature declares unknown permission', function (): void {
+    $invalid = new FeatureDefinition(
+        key: 'bad-perm',
+        label: 'Bad Permission',
+        sectionMarker: 'bad-perm',
+        exclusiveFiles: ['app/Models/User.php'],
+        description: 'Valid description',
+        permissions: ['unknown.permission.fake'],
+    );
+
+    expect(fn () => validateFeatureContract($invalid))
+        ->toThrow(InvalidArgumentException::class, 'references unknown permission');
 });
 
 // =========================================================================
