@@ -537,7 +537,19 @@ composer test:coverage
 
 # Installer end-to-end scaffolding tests
 composer test:installer
+
+# Generated application smoke & performance budget verification
+composer test:smoke
 ```
+
+### Performance Budgets for Generated Applications
+
+Lightweight, deterministic performance budgets are established and continuously verified for representative generated application profiles (`minimal`, `default`, `full`):
+- **Deterministic Query Budgets**: Zero-query guarantee for `minimal` canonical endpoints (`GET /`, `GET /login`, `GET /dashboard`), and bounded query ceilings for `default` and `full` absorbing `HandleSettings` middleware, permissions, roles, and unread notifications.
+- **Frontend Production Bundle Ceilings**: Strict byte budgets for entry JavaScript (`resources/js/app.tsx`), entry CSS (`resources/css/app.css`), and total built bundle assets.
+- **Flaky Timing Exclusion**: Strictly deterministic metrics (query counts and file sizes) preventing flaky false positives on shared CI runners.
+
+For complete baselines, metrics, and policy for updating budgets, see **[docs/performance-budgets.md](docs/performance-budgets.md)**.
 
 ### CI Pipeline Architecture
 
@@ -548,6 +560,7 @@ Continuous Integration separates database-independent invariant checks from the 
 3. **`database`** (matrix: SQLite, MySQL, PostgreSQL): Exercises database-sensitive feature and query behavior across supported database engines without repeating frontend, lint, or static-analysis overhead.
 4. **`browser`** (runs once): Executes browser end-to-end tests on the canonical test database with Playwright.
 5. **`installer-e2e`** (runs once): Validates Chisel scaffolding and project lifecycle generation.
+6. **`installer-smoke`** (matrix: `minimal`, `default`, `full`): Generates and verifies real application lifecycles, database schema, frontend builds, TypeScript types, and lightweight performance budgets.
 
 ---
 

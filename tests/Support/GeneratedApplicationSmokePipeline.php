@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Chisel\Installer\PerformanceBudget;
 use App\Chisel\Installer\Profile;
 use App\Http\Middleware\HandleInertiaRequests;
 use FilesystemIterator;
@@ -31,6 +32,7 @@ final class GeneratedApplicationSmokePipeline
         self::validateTypeScript($projectDir, $profile);
         self::validateHttpRequests($projectDir, $profile);
         self::validateFeatureAbsence($projectDir, $profile);
+        self::validatePerformanceBudgets($projectDir, $profile);
     }
 
     public static function validateApplicationBoot(string $projectDir, Profile $profile): void
@@ -221,5 +223,52 @@ final class GeneratedApplicationSmokePipeline
         }
 
         GeneratedProjectFixture::assertCleanOfInstallerArtifacts($projectDir, $profile->hasAuthorization());
+    }
+
+    public static function validatePerformanceBudgets(string $projectDir, Profile $profile): void
+    {
+        // 1. Validate frontend production bundle size budgets against Vite manifest and built assets
+        $bundleStats = PerformanceBudget::measureFrontendBundle($projectDir);
+        foreach (PerformanceBudget::BUNDLE_METRICS as $metric) {
+            $actual = $bundleStats[$metric];
+            $budget = PerformanceBudget::bundleBudget($profile->name, $metric);
+            expect($actual)->toBeLessThanOrEqual(
+                $budget,
+                "Bundle budget exceeded for [{$metric}] in profile [{$profile->name}]: expected at most {$budget} bytes, got {$actual} bytes."
+            );
+        }
+
+        // 2. Validate query count budgets on canonical requests in generated application
+        $queryScript = PerformanceBudget::generateHttpQueryMeasurementScript();
+        $queryProcess = GeneratedProjectFixture::run($projectDir, [PHP_BINARY, '-r', $queryScript]);
+        expect($queryProcess->getExitCode())->toBe(
+            0,
+            "Query measurement script failed for profile [{$profile->name}]:\n".$queryProcess->getErrorOutput()
+        );
+
+        /** @var array<string, array{status: int, queries: int, sql: list<string>}>|null $queryResults */
+        $queryResults = json_decode($queryProcess->getOutput(), true);
+        expect($queryResults)->toBeArray(
+            "Failed to decode query measurement output for profile [{$profile->name}]: {$queryProcess->getOutput()}"
+        );
+
+        foreach (PerformanceBudget::CANONICAL_REQUESTS as $request) {
+            $data = $queryResults[$request] ?? null;
+            expect($data)->not->toBeNull(
+                "Canonical request [{$request}] missing in query measurement results for profile [{$profile->name}]."
+            )->and($data['status'])->toBe(
+                200,
+                "Canonical request [{$request}] returned HTTP {$data['status']} instead of 200 for profile [{$profile->name}]."
+            );
+
+            $budget = PerformanceBudget::queryBudget($profile->name, $request);
+            $actual = $data['queries'];
+            $sqlList = implode("\n  - ", $data['sql'] ?? []);
+
+            expect($actual)->toBeLessThanOrEqual(
+                $budget,
+                "Query count regression on [{$request}] for profile [{$profile->name}]: expected at most {$budget} queries, got {$actual} queries.\nExecuted SQL:\n  - {$sqlList}"
+            );
+        }
     }
 }
