@@ -288,7 +288,11 @@ final readonly class PerformanceBudget
 
             $assetPath = $projectDir.'/public/build/'.$file;
             if (! file_exists($assetPath)) {
-                continue;
+                throw new RuntimeException(sprintf(
+                    'Vite manifest entry [%s] references missing asset [%s].',
+                    $key,
+                    $assetPath,
+                ));
             }
 
             $size = (int) filesize($assetPath);

@@ -149,7 +149,6 @@ test('performance budget measureFrontendBundle reads real manifest and computes 
             'resources/css/app.css' => ['file' => 'assets/app.css', 'isEntry' => true],
             'resources/js/pages/welcome.tsx' => ['file' => 'assets/chunk.js'],
             'missing_file' => ['isEntry' => false],
-            'absent_on_disk' => ['file' => 'assets/does_not_exist.js'],
         ];
 
         file_put_contents($tempDir.'/public/build/manifest.json', json_encode($manifestData));
@@ -183,6 +182,29 @@ test('performance budget measureFrontendBundle throws when manifest is missing o
             ->toThrow(RuntimeException::class, 'Failed to parse Vite manifest');
     } finally {
         exec('rm -rf '.escapeshellarg($emptyDir));
+    }
+});
+
+test('performance budget measureFrontendBundle throws when a manifest entry references a missing asset', function (): void {
+    $tempDir = sys_get_temp_dir().'/perf_manifest_absent_asset_'.uniqid();
+    mkdir($tempDir.'/public/build/assets', 0777, true);
+
+    try {
+        file_put_contents($tempDir.'/public/build/assets/app.js', 'console.log(1);');
+        file_put_contents($tempDir.'/public/build/assets/app.css', 'body {}');
+        file_put_contents($tempDir.'/public/build/manifest.json', json_encode([
+            'resources/js/app.tsx' => ['file' => 'assets/app.js', 'isEntry' => true],
+            'resources/css/app.css' => ['file' => 'assets/app.css', 'isEntry' => true],
+            'resources/js/pages/welcome.tsx' => ['file' => 'assets/does_not_exist.js'],
+        ]));
+
+        expect(fn (): array => PerformanceBudget::measureFrontendBundle($tempDir))
+            ->toThrow(
+                RuntimeException::class,
+                'Vite manifest entry [resources/js/pages/welcome.tsx] references missing asset ['.$tempDir.'/public/build/assets/does_not_exist.js].',
+            );
+    } finally {
+        exec('rm -rf '.escapeshellarg($tempDir));
     }
 });
 
