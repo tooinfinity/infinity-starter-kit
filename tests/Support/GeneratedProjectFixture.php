@@ -108,12 +108,21 @@ final class GeneratedProjectFixture
     public static function run(string $dir, array $command, array $env = [], int $timeout = 300): Process
     {
         $baseEnv = getenv();
-        $mergedEnv = array_merge(is_array($baseEnv) ? $baseEnv : [], [
+        $envClean = is_array($baseEnv) ? $baseEnv : [];
+
+        $existing = mb_trim($envClean['NODE_OPTIONS'] ?? '');
+        $dnsOption = '--dns-result-order=ipv4first';
+        $nodeOptions = $existing !== '' && ! str_contains($existing, $dnsOption)
+            ? "{$existing} {$dnsOption}"
+            : ($existing !== '' ? $existing : $dnsOption);
+
+        $mergedEnv = array_merge($envClean, [
             'APP_ENV' => 'local',
             'DB_CONNECTION' => 'sqlite',
             'DB_DATABASE' => $dir.'/database/database.sqlite',
             'CACHE_STORE' => 'array',
             'SESSION_DRIVER' => 'array',
+            'NODE_OPTIONS' => $nodeOptions,
         ], $env);
 
         $process = new Process($command, $dir, $mergedEnv, null, $timeout);
@@ -158,6 +167,22 @@ final class GeneratedProjectFixture
         foreach ($postCreateCmds as $cmd) {
             expect($cmd)->not->toContain('install:features')
                 ->and($cmd)->not->toContain('chisel');
+        }
+
+        $scripts = $composerJson['scripts'] ?? [];
+        expect($scripts)->not->toHaveKey('docs:generate')
+            ->and($scripts)->not->toHaveKey('docs:check')
+            ->and($scripts)->not->toHaveKey('test:installer')
+            ->and($scripts)->not->toHaveKey('test:smoke');
+
+        if (isset($scripts['test:lint']) && is_array($scripts['test:lint'])) {
+            foreach ($scripts['test:lint'] as $lintCmd) {
+                expect($lintCmd)->not->toContain('chisel:docs');
+            }
+        }
+
+        if (isset($scripts['test:coverage']) && is_string($scripts['test:coverage'])) {
+            expect($scripts['test:coverage'])->not->toContain('--exclude-group=installer');
         }
 
         $phpstanContent = (string) file_get_contents($tempDir.'/phpstan.neon');

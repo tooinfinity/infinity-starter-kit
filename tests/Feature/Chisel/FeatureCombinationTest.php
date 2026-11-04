@@ -269,7 +269,11 @@ it('handles all features enabled', function (): void {
         expect(isset($composer['require']['laravel/chisel']))->toBeFalse();
         $postCreate = $composer['scripts']['post-create-project-cmd'] ?? [];
         $installFeaturesInHook = array_filter($postCreate, fn ($cmd): bool => is_string($cmd) && str_contains($cmd, 'install:features'));
-        expect($installFeaturesInHook)->toBeEmpty();
+        expect($installFeaturesInHook)->toBeEmpty()
+            ->and(isset($composer['scripts']['docs:generate']))->toBeFalse()
+            ->and(isset($composer['scripts']['docs:check']))->toBeFalse()
+            ->and(isset($composer['scripts']['test:installer']))->toBeFalse()
+            ->and(isset($composer['scripts']['test:smoke']))->toBeFalse();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

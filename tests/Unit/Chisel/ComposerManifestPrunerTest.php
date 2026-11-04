@@ -69,7 +69,7 @@ test('composer manifest pruner returns early if composer.json does not exist', f
         ->not->toThrow(Throwable::class);
 });
 
-test('composer manifest pruner cleanPostCreate removes chisel and install:features', function (): void {
+test('composer manifest pruner cleanPostCreate removes chisel, install:features, and template-only scripts', function (): void {
     $composerJson = [
         'name' => 'test/project',
         'require' => [
@@ -84,9 +84,19 @@ test('composer manifest pruner cleanPostCreate removes chisel and install:featur
                 '@php artisan install:features --ansi',
                 123, // non-string entry to test filter
             ],
-            'test:installer' => 'pest --configuration=phpunit.installer.xml',
-            'test:smoke' => 'pest --configuration=phpunit.smoke.xml',
-            'test:lint' => 'pint --test',
+            'docs:generate' => '@php artisan chisel:docs',
+            'docs:check' => '@php artisan chisel:docs --check',
+            'test:installer' => 'pest --group=installer-e2e --compact',
+            'test:smoke' => 'pest --group=installer-smoke --compact',
+            'test:lint' => [
+                'pint --parallel --test',
+                'rector --dry-run',
+                'bun run test:lint',
+                '@php artisan chisel:docs --check',
+                456, // non-string entry
+            ],
+            'test:coverage' => 'XDEBUG_MODE="coverage" pest --parallel --coverage --exactly=100.0 --exclude-testsuite=Browser --exclude-group=installer-e2e --exclude-group=installer-smoke',
+            'test:quick' => 'pest --parallel --exclude-testsuite=Browser --exclude-group=installer-e2e --exclude-group=installer-smoke',
         ],
     ];
 
@@ -98,10 +108,18 @@ test('composer manifest pruner cleanPostCreate removes chisel and install:featur
     $decoded = json_decode((string) file_get_contents($file), true);
     expect($decoded['require'])->not->toHaveKey('laravel/chisel')
         ->and($decoded['require-dev'])->not->toHaveKey('laravel/chisel')
+        ->and($decoded['scripts']['post-create-project-cmd'])->toBe(['@php artisan key:generate --ansi'])
+        ->and($decoded['scripts'])->not->toHaveKey('docs:generate')
+        ->and($decoded['scripts'])->not->toHaveKey('docs:check')
         ->and($decoded['scripts'])->not->toHaveKey('test:installer')
         ->and($decoded['scripts'])->not->toHaveKey('test:smoke')
-        ->and($decoded['scripts'])->toHaveKey('test:lint')
-        ->and($decoded['scripts']['post-create-project-cmd'])->toBe(['@php artisan key:generate --ansi']);
+        ->and($decoded['scripts']['test:lint'])->toBe([
+            'pint --parallel --test',
+            'rector --dry-run',
+            'bun run test:lint',
+        ])
+        ->and($decoded['scripts']['test:coverage'])->toBe('XDEBUG_MODE="coverage" pest --parallel --coverage --exactly=100.0 --exclude-testsuite=Browser')
+        ->and($decoded['scripts']['test:quick'])->toBe('pest --parallel --exclude-testsuite=Browser');
 });
 
 test('composer manifest pruner cleanPostCreate handles composer.json without scripts', function (): void {
@@ -119,4 +137,23 @@ test('composer manifest pruner cleanPostCreate handles composer.json without scr
 
     $decoded = json_decode((string) file_get_contents($file), true);
     expect($decoded['require-dev'])->not->toHaveKey('laravel/chisel');
+});
+
+test('composer manifest pruner cleanPostCreate removes separate standalone exclude-group flags from test scripts', function (): void {
+    $composerJson = [
+        'name' => 'test/project',
+        'scripts' => [
+            'test:coverage' => 'pest --coverage --exclude-group=installer-e2e --exclude-group=installer-smoke --min=100',
+            'test:quick' => 'pest --parallel --exclude-group=installer-smoke',
+        ],
+    ];
+
+    $file = $this->tempDir.'/composer.json';
+    file_put_contents($file, json_encode($composerJson, JSON_PRETTY_PRINT));
+
+    ComposerManifestPruner::cleanPostCreate($this->tempDir);
+
+    $decoded = json_decode((string) file_get_contents($file), true);
+    expect($decoded['scripts']['test:coverage'])->toBe('pest --coverage --min=100')
+        ->and($decoded['scripts']['test:quick'])->toBe('pest --parallel');
 });
