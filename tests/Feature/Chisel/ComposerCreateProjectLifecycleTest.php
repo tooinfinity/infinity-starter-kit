@@ -79,12 +79,6 @@ function runComposerCreateProject(
     // Clear test-runner environment variables that would override the newly generated project's configuration
     unset($env['APP_KEY']);
 
-    $dnsOption = '--dns-result-order=ipv4first';
-    $existing = mb_trim($env['NODE_OPTIONS'] ?? '');
-    $nodeOptions = $existing !== '' && ! str_contains($existing, $dnsOption)
-        ? "{$existing} {$dnsOption}"
-        : ($existing !== '' ? $existing : $dnsOption);
-
     $mergedEnv = array_merge($env, [
         'CHISEL_ANSWERS' => json_encode($answers, JSON_THROW_ON_ERROR),
         'APP_ENV' => 'local',
@@ -93,7 +87,6 @@ function runComposerCreateProject(
         'CACHE_STORE' => 'array',
         'SESSION_DRIVER' => 'array',
         'COMPOSER_NO_INTERACTION' => '1',
-        'NODE_OPTIONS' => $nodeOptions,
     ], $extraEnv);
 
     $command = [
@@ -122,19 +115,12 @@ function runInCreatedProject(string $dir, array $command, array $env = [], int $
     $envClean = is_array($baseEnv) ? $baseEnv : [];
     unset($envClean['APP_KEY']);
 
-    $dnsOption = '--dns-result-order=ipv4first';
-    $existingClean = mb_trim($envClean['NODE_OPTIONS'] ?? '');
-    $cleanNodeOptions = $existingClean !== '' && ! str_contains($existingClean, $dnsOption)
-        ? "{$existingClean} {$dnsOption}"
-        : ($existingClean !== '' ? $existingClean : $dnsOption);
-
     $mergedEnv = array_merge($envClean, [
         'APP_ENV' => 'local',
         'DB_CONNECTION' => 'sqlite',
         'DB_DATABASE' => $dir.'/database/database.sqlite',
         'CACHE_STORE' => 'array',
         'SESSION_DRIVER' => 'array',
-        'NODE_OPTIONS' => $cleanNodeOptions,
     ], $env);
 
     $process = new Process($command, $dir, $mergedEnv, null, $timeout);
