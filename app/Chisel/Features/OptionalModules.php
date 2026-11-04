@@ -75,6 +75,7 @@ final class OptionalModules
                     'resources/js/layouts/settings/layout.tsx',
                     'resources/js/types/index.ts',
                     'tests/Unit/Enums/PermissionTest.php',
+                    'tests/Unit/ArchTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Enums/SettingKey.php',
@@ -134,6 +135,7 @@ final class OptionalModules
                     'tests/Feature/Controllers/DeleteAccountControllerTest.php',
                     'tests/Unit/Models/UserTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
+                    'tests/Unit/ArchTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/Users/CreateUser.php',
@@ -242,6 +244,7 @@ final class OptionalModules
                     'resources/js/components/app-sidebar-header.tsx',
                     'tests/Unit/Models/UserTest.php',
                     'tests/Feature/Controllers/RegisterControllerTest.php',
+                    'tests/Unit/ArchTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/UpdateUserLocale.php',
@@ -328,6 +331,7 @@ final class OptionalModules
                     'tests/Feature/Users/ChangePasswordTest.php',
                     'tests/Feature/Users/DeleteUserTest.php',
                     'tests/Unit/Actions/Users/UpdateUserPasswordTest.php',
+                    'tests/Unit/ArchTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/Notifications/DeleteNotification.php',
@@ -421,6 +425,7 @@ final class OptionalModules
                     'tests/Feature/Controllers/DeleteAccountControllerTest.php',
                     'tests/Feature/Users/ChangePasswordTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
+                    'tests/Unit/ArchTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/AuditTrails/DeleteAuditTrails.php',
@@ -485,6 +490,7 @@ final class OptionalModules
                     'resources/js/types/index.ts',
                     'resources/js/components/app-sidebar.tsx',
                     'tests/Unit/Enums/PermissionTest.php',
+                    'tests/Unit/ArchTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Enums/ReportCategory.php',

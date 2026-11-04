@@ -549,6 +549,33 @@ Continuous Integration separates database-independent invariant checks from the 
 4. **`browser`** (runs once): Executes browser end-to-end tests on the canonical test database with Playwright.
 5. **`installer-e2e`** (runs once): Validates Chisel scaffolding and project lifecycle generation.
 
+### Architecture Constraints (Pest Arch)
+
+The starter kit enforces structural and architectural boundaries through executable Pest architecture tests in `tests/Unit/ArchTest.php`:
+
+- **Controllers**:
+  - Application controllers in `app/Http/Controllers` must be `final` and `readonly`.
+  - Controllers must not be directly invoked or used by other classes in application code.
+- **Actions**:
+  - Actions in `app/Actions` must be `final`, `readonly`, and expose a `handle()` method.
+  - Actions expose `handle()` as their only public operation (with documented exception `UpdateSettings::set()` for single setting updates).
+  - Actions adhere to CRUD naming prefix conventions (`Create`, `Update`, `Delete`) with documented intentional exceptions (`RecordAuditTrail`, `MarkAllNotificationsAsRead`, `MarkNotificationAsRead`).
+  - Actions never return or depend on HTTP responses (`RedirectResponse`, `JsonResponse`, etc.).
+- **Enums**:
+  - All application enums must be defined in `app/Enums`, must be string-backed, and no enums may exist outside `app/Enums`.
+- **Installer & Chisel Boundaries**:
+  - Runtime application code (`Actions`, `Http`, `Models`, `Queries`, `Enums`, `Rules`, `Services`, `Notifications`, `Data`, `Providers`) must never depend on installer-only Chisel infrastructure (`App\Chisel`, `Laravel\Chisel`).
+  - Runtime console commands must not depend on Chisel infrastructure (only installer commands `InstallFeaturesCommand` and `GenerateFeatureDocsCommand` may use Chisel).
+- **Cross-Feature Modular Boundaries**:
+  - Optional feature modules follow strict acyclic dependency rules:
+    - `audit-trails` does not depend on `reporting` or `user-management`.
+    - `settings` does not depend on `reporting` or `user-management`.
+    - `notifications` does not depend on `reporting`, `audit-trails`, or `settings`.
+    - `localization` does not depend on other optional feature modules.
+    - `user-management` does not depend on `reporting`.
+- **Test Suite Organization**:
+  - HTTP controller and middleware tests belong strictly in `tests/Feature`, never in `tests/Unit`.
+
 ---
 
 ## 📁 Key Directory Structure
