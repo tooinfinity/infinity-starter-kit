@@ -45,6 +45,8 @@ final class ComposerManifestPruner
         unset(
             $composerData['require']['laravel/chisel'],
             $composerData['require-dev']['laravel/chisel'],
+            $composerData['scripts']['test:installer'],
+            $composerData['scripts']['test:smoke'],
         );
 
         if (isset($composerData['scripts']['post-create-project-cmd']) && is_array($composerData['scripts']['post-create-project-cmd'])) {

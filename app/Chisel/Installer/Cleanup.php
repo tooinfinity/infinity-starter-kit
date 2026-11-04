@@ -91,6 +91,9 @@ final class Cleanup
             'tests/Feature/Chisel/FeatureMatrixDocumentationTest.php',
             'tests/Unit/Chisel/FeatureMatrixGeneratorTest.php',
             'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
+            '.github/workflows/installer.yml',
+            'tests/Unit/CiWorkflowIntegrityTest.php',
+            '.ai/guidelines/app.chisel.blade.php',
         ];
     }
 

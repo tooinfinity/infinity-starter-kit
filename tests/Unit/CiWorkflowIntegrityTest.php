@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Chisel\Installer\Cleanup;
+
 test('composer manifest defines all required test commands and scripts', function (): void {
     /** @var array{scripts?: array<string, mixed>} $composer */
     $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
@@ -44,27 +46,27 @@ test('composer manifest defines all required test commands and scripts', functio
     ]);
 });
 
-test('tests workflow defines decoupled quality, dependencies, database, browser, installer, and smoke jobs', function (): void {
+test('tests workflow defines decoupled application quality, dependencies, database, and browser jobs', function (): void {
     $workflowPath = base_path('.github/workflows/tests.yml');
     expect(file_exists($workflowPath))->toBeTrue();
 
     $content = (string) file_get_contents($workflowPath);
 
-    // Verify all 6 required jobs are present
+    // Verify application jobs are present and installer jobs are decoupled into installer.yml
     expect($content)->toContain('  quality:')
         ->and($content)->toContain('  dependencies:')
         ->and($content)->toContain('  database:')
         ->and($content)->toContain('  browser:')
-        ->and($content)->toContain('  installer-e2e:')
-        ->and($content)->toContain('  installer-smoke:');
+        ->and($content)->not->toContain('  installer-e2e:')
+        ->and($content)->not->toContain('  installer-smoke:');
 
-    // Quality job runs database-independent checks and coverage
+    // Quality job runs database-independent checks and coverage without installer docs check
     expect($content)->toContain('composer test:lint')
-        ->and($content)->toContain('php artisan chisel:docs --check')
         ->and($content)->toContain('composer test:types')
         ->and($content)->toContain('composer test:type-coverage')
         ->and($content)->toContain('composer test:unit')
-        ->and($content)->toContain('composer test:coverage');
+        ->and($content)->toContain('composer test:coverage')
+        ->and($content)->not->toContain('php artisan chisel:docs');
 
     // Dependencies job acts as clean compatibility guard without cache
     $dependenciesSection = mb_strstr($content, '  dependencies:');
@@ -91,13 +93,35 @@ test('tests workflow defines decoupled quality, dependencies, database, browser,
 
     // Browser tests run browser suite
     expect($content)->toContain('composer test:browser');
+});
 
-    // Installer E2E runs installer suite
-    expect($content)->toContain('composer test:installer');
+test('installer workflow defines dedicated installer-e2e and installer-smoke jobs', function (): void {
+    $installerWorkflowPath = base_path('.github/workflows/installer.yml');
+    expect(file_exists($installerWorkflowPath))->toBeTrue();
+
+    $content = (string) file_get_contents($installerWorkflowPath);
+
+    expect($content)->toContain('name: installer')
+        ->and($content)->toContain('permissions:')
+        ->and($content)->toContain('contents: read')
+        ->and($content)->toContain('  installer-e2e:')
+        ->and($content)->toContain('  installer-smoke:');
+
+    // Installer E2E runs docs check and installer suite
+    expect($content)->toContain('php artisan chisel:docs --check')
+        ->and($content)->toContain('composer test:installer');
 
     // Installer Smoke runs smoke suite for representative profiles
     expect($content)->toContain('profile: [minimal, default, full]')
         ->and($content)->toContain('composer test:smoke');
+});
+
+test('cleanup files list registers starter kit workflows, tests, and guidelines for removal in new projects', function (): void {
+    $cleanupFiles = Cleanup::files();
+
+    expect($cleanupFiles)->toContain('.github/workflows/installer.yml')
+        ->and($cleanupFiles)->toContain('tests/Unit/CiWorkflowIntegrityTest.php')
+        ->and($cleanupFiles)->toContain('.ai/guidelines/app.chisel.blade.php');
 });
 
 test('phpunit configuration registers browser, unit, and feature testsuites', function (): void {

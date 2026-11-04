@@ -57,15 +57,26 @@ final readonly class UpdatePostStatus
 }
 ```
 
-=== .ai/app.queries rules ===
+=== .ai/app.chisel rules ===
 
-# App/Queries guidelines
+# App/Chisel feature pruning guidelines
 
-- Read-only database operations with complex constraints, sorting, or eager loading belong in `app/Queries`.
-- Name after the query intent with the `Query` suffix (e.g. `PostByReferenceQuery`, `UserByEmailQuery`).
-- Queries are invokable classes with a single `__invoke()`, `get()`, or `paginate()` method.
-- Return types must be explicit: `Builder`, `Collection`, `LengthAwarePaginator`, or `?Model`.
-- Queries must never mutate state, fire mutation events, or perform database writes.
+- Infinity Starter Kit is modular and powered by Laravel Chisel (`php artisan install:features`).
+- Users can selectively install features during setup, and unselected features are automatically pruned.
+- Features are authoritatively defined in `App\Chisel\FeatureRegistry` and mirrored in `chisel-paths.php`.
+
+## Feature Registration
+
+- Whenever a change introduces an optional feature (or modifies existing ones such as Audit Trails, Reporting, Notifications, User Management, Settings, Authorization, Localization, 2FA, Email Verification, Registration):
+  - Register all associated files, directories, routes, models, controllers, actions, and tests in `App\Chisel\FeatureRegistry`.
+  - Maintain clean boundaries so that pruning a feature does not leave orphan references, dangling imports, or broken service provider registrations.
+  - If a feature has dependencies on other features (e.g. `registration` requires `login`), declare that dependency in `FeatureRegistry`.
+
+## Dry-run and Installer Verification
+
+- Chisel supports dry-run mode: `php artisan install:features --dry-run`.
+- Dry-run mode resolves features, validates dependencies, and previews planned mutations with **zero filesystem or database side effects**.
+- Always run `composer test:installer` when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
 
 === .ai/app.http.controllers rules ===
 
@@ -194,6 +205,90 @@ final class CreateBookmarkRequest extends FormRequest
 - Models are schemas, relationships, query scopes, and lightweight predicates only. Never place workflow orchestration or multi-model mutation logic inside Models.
 - Always use the modern `protected function casts(): array` method instead of the legacy `$casts` property.
 - Keep strict N+1 lazy loading prevention enabled. Always eager-load relations needed by frontend views.
+- Control model serialization: declare what leaves the server using `#[Visible]` with an explicit allowlist or `#[Hidden]` covering sensitive columns.
+- Keep business mutations in Actions (`app/Actions`) and complex read queries in Queries (`app/Queries`).
+
+=== .ai/app.services rules ===
+
+# App/Services guidelines
+
+- Every third-party service the app reaches over the network (an AI provider, a mailer, a payment or streaming platform) sits behind a contract, so swapping vendor changes one class.
+- The contract is an interface in `app/Contracts/Services`, named after the role it plays, never the vendor: `AnalyticsProvider`, `TurnProvider`.
+- Each implementation lives in `app/Services/{Role}s/` and is named vendor + role: `app/Services/AnalyticsProviders/FathomAnalyticsProvider.php`.
+- Add the contract to service provider bindings: `PRODUCTION_SERVICES` with the real implementation, and `LOCAL_SERVICES` with a local one that needs no account, credentials or network (`Local{Role}` or `Null{Role}`).
+- Everything else depends on the contract, never on the implementation: inject it into constructors, controller methods, or form requests.
+- Classes in `app/Services` that only parse or compute (`Urls`, `Mentions`) talk to nobody and stay plain classes without an interface contract.
+
+<!-- Example service contract and implementation -->
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Contracts\Services;
+
+interface AnalyticsProvider
+{
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function track(string $event, array $data = []): void;
+}
+
+namespace App\Services\AnalyticsProviders;
+
+use App\Contracts\Services\AnalyticsProvider;
+
+final readonly class FathomAnalyticsProvider implements AnalyticsProvider
+{
+    public function track(string $event, array $data = []): void
+    {
+        // Implementation
+    }
+}
+```
+
+=== .ai/data rules ===
+
+# Data guidelines
+
+Assume the database has already been leaked. Every column, row, cache entry, log line, and file we keep is something an attacker already has. The safest data is the data we never stored.
+
+## Store as little as possible
+
+- Do not add a column, table, cache key, or file unless the feature cannot work without it. "Might be useful later", analytics, debugging, and convenience are not reasons to store anything.
+- Derive instead of storing: counts, flags, and anything computable from data we already hold are queried or computed, never persisted. Caching a computation is fine when the cache entry has a TTL and holds nothing sensitive.
+- Keep only what is shown. If a value is fetched from a third party and never displayed or acted on, drop it on the spot instead of saving it "just in case".
+- Prefer short-lived over permanent. Typing indicators, signature nonces, and sync markers live in the cache with a TTL, not in a table.
+- Every new column needs three answers in the migration's pull request: why the feature cannot work without it, who is allowed to see it, and when it is deleted. If any answer is "not sure", do not add the column.
+
+## Name timestamps after the moment
+
+- Every date or time column ends in `_at` and names the moment it records: `created_at`, `updated_at`, `verified_at`, `expires_at`. Never `_since`, `_on`, `_date`, `_time`, or a bare noun, so every timestamp reads the same way across features.
+
+## Never store secrets
+
+- Never persist tokens, secrets, passwords, private keys, OAuth access or refresh tokens, API keys, session ids, raw signatures, or anything that grants access.
+- Credentials the app needs come from the environment (`config/services.php`), never from a table, a seeder, a test fixture, or a committed file.
+- Short-lived secrets that must be held between requests go in the cache, encrypted with `Crypt::encryptString()`, with a TTL shorter than their lifetime.
+- Never log or report a secret, a request body, a message body, an email address, or a full request. Log identifiers (user id, status code) and nothing else.
+- Never put a secret in a job payload, a queued notification, a flash message, a URL, a cookie, or an Inertia prop.
+
+## Encrypt sensitive content
+
+- Use encrypted Eloquent casts (`'encrypted'`) for stored content that contains or can reasonably contain sensitive information: private messages, personal notes, non-public personal or contact details.
+- Ordinary operational metadata—timestamps, booleans, counters, foreign keys, status enums—uses normal column types and casts.
+- Encrypted content must not have an unencrypted duplicate for searching or indexing.
+
+## Expose nothing by default
+
+- Every model that reaches the frontend or API declares what leaves the server: `#[Visible([...])]` with an explicit allowlist, or `#[Hidden([...])]` covering every column that is not public. New columns are hidden until proven necessary.
+- Internal storage paths and third-party secret identifiers are never serialized. When a model needs a URL, expose a named route, not the storage path.
+- Only the user themselves sees their own private settings and hidden fields. Error and validation messages must not reveal another user's hidden state either.
+
+## Delete everything with the account
+
+- Any new table, column, or stored file that relates to a user must cascade on delete or be removed explicitly when a user account is deleted, with test coverage ensuring clean removal.
 
 === .ai/general rules ===
 
@@ -201,8 +296,100 @@ final class CreateBookmarkRequest extends FormRequest
 
 - Don't include any superfluous PHP Annotations, except ones that start with `@` for typing variables.
 - All PHP files must begin with `declare(strict_types=1);`.
-- Every time you create a new file, stage it immediately with `git add <path>`. Never create git commits directly; leave git committing to the user.
-- Do not write browser tests (`tests/Browser`, Pest browser plugin, Playwright). Cover behavior with Feature and Unit tests only.
+- Every time you create a new file, stage it immediately with `git add <path>`. Never commit; leave committing to the user.
+- Do not write browser tests (`tests/Browser`, Pest browser plugin, Playwright) unless explicitly requested. Cover behavior with Feature and Unit tests primarily.
+- Migrations only go up: never write a `down` method. To undo a migration, write a new one.
+
+## Commit attribution
+
+- Never add Amp, Claude Code, or any other AI tool as a co-author: no `Co-authored-by` trailers naming them, such as `Co-authored-by: Amp <amp@ampcode.com>` or `Co-authored-by: Claude <noreply@anthropic.com>`.
+- Never put their names anywhere in commit attribution: not as the commit author or committer, and not in trailers or footers such as `Amp-Thread-ID` or "Generated with Claude Code". Commits are attributed to the human contributors only.
+
+## Minimal code
+
+- Write the least code that does the job: no private helpers, extra cache layers, or defensive checks the feature doesn't need. If a method can be inlined or a branch removed without losing behavior, do it.
+- Prefer Laravel collections and the framework's typed accessors over hand-written array handling: `collect(...)->map(...)` instead of building arrays in loops, `$response->collect()` / `$response->fluent()` with `->integer()` / `->string()` instead of `is_array` / `is_numeric` checks and `(int)` casts.
+- For very large or repeated array shapes, define a named `@phpstan-type` alias on the class that owns the data and reuse it in PHPDoc annotations. Use `@phpstan-import-type` in other classes instead of duplicating the shape; keep small, one-off shapes inline.
+
+## Required verification
+
+- After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `bun run test:unit`.
+- Run the full test suite or relevant unit/feature suites: `composer test:unit` and `composer test:database`.
+- When modifying features affected by the feature installer, run `composer test:installer`.
+- Fix failures introduced by the changes. Never lower coverage thresholds or exclude code just to pass. Report pre-existing failures or environment blockers explicitly; do not claim a check passed when it failed or could not run.
+
+## Open source
+
+- This repository is public. Never write anything private into code, comments, rules, tests, commit messages, or pull requests: secrets, credentials, personal data, private user content, or internal production details.
+
+=== .ai/github.pull-requests rules ===
+
+# Pull request guidelines
+
+Apply these rules when an agent or developer prepares, opens, or updates a pull request.
+
+## Choose the template
+
+- Use `.github/PULL_REQUEST_TEMPLATE/without-media.md` for backend, refactoring, and text-only PRs.
+- Use `.github/PULL_REQUEST_TEMPLATE/with-media.md` for PRs involving visible frontend UI changes with screenshots or recordings.
+
+## Prepare and implement
+
+1. Confirm the task, repository guidelines, and intended base and head branches.
+2. Isolate work in a branch or worktree, keeping unrelated changes clean.
+3. Follow the repository's architecture, staging, and verification rules.
+4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and `composer test:installer` (if feature-related).
+5. For user-visible changes, follow frontend stability rules (CLS = 0) and verify across multiple viewports and themes.
+
+## Title and conventional commits
+
+- Pull request titles must strictly follow the Conventional Commits specification: `type(scope): description`.
+- Valid types include `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- Enforced automatically by `.github/workflows/lint-pr-title.yml`.
+
+## Independent review before publication
+
+1. Remove temporary debug instrumentation and test artifacts.
+2. Verify all local checks pass without warnings or regressions.
+3. Fill out the selected PR template cleanly, removing HTML comments before opening the PR.
+
+=== .ai/github.workflows rules ===
+
+# GitHub workflows guidelines
+
+Workflows in this repository only ever read the code and report whether it passes. They never write to the repository, GitHub, or production. A workflow that can write is a workflow an attacker can use through a dependency, fork, or pull request.
+
+## Read-only, always
+
+- Every workflow declares exactly this at the top level, and nothing else:
+
+<!-- Workflow permissions -->
+```yaml
+permissions:
+  contents: read
+```
+
+- No job or step raises permissions. Never `contents: write`, `pull-requests: write`, `issues: write`, `packages: write`, `actions: write`, `deployments: write`, `id-token: write`, `security-events: write`, or `permissions: write-all`. If a feature needs one of these, it does not run in GitHub Actions.
+- Workflows never push commits or tags, create releases, comment on pull requests, add labels, or deploy. Deploys happen from the hosting platform, never from a workflow.
+- The only output a workflow may produce is a build artifact uploaded with `actions/upload-artifact` and the job status itself.
+
+## No secrets
+
+- Workflows and composite actions in `.github/` never use `secrets.*`, never pass `GITHUB_TOKEN` to a step, an `env:`, or an action input, and never contain deploy keys, SSH keys, API keys, or credentials of any kind.
+- Repository secrets stay empty.
+
+## Safe triggers and inputs
+
+- Only `push`, `pull_request`, `schedule`, and `workflow_dispatch` trigger workflows. Never `pull_request_target`, `workflow_run`, `issue_comment`, or `repository_dispatch`.
+- Never interpolate user-controlled values (such as `github.event.pull_request.title`) directly into `run:`. Pass them through `env:` and read them as shell variables.
+- Jobs run on GitHub-hosted `ubuntu-latest` runners only, with a defined `timeout-minutes`.
+
+## Trusted actions only
+
+- Third-party actions are pinned to a full commit SHA with the version in a comment, and Dependabot keeps them current.
+- Use trusted composite actions (`./.github/actions/setup`, `./.github/actions/setup-php`, `./.github/actions/setup-frontend`) to avoid duplicating dependency and caching configurations.
+- `actions/checkout` runs with `persist-credentials: false`.
+- Dependencies are installed from lockfiles only (`composer install`, `bun install --frozen-lockfile`).
 
 === .ai/resources.js rules ===
 
@@ -212,55 +399,42 @@ Every UI change keeps the layout still. Nothing may flash, jump, clip or reflow 
 
 ## Loading
 
-- A skeleton occupies exactly the loaded content's box: same height, line count and wrapping at every breakpoint, including the narrow aside. It is visible in light and dark mode, popovers included.
+- A skeleton occupies exactly the loaded content's box: same height, line count and wrapping at every breakpoint, including the aside. It is visible in light and dark mode, popovers included.
 - Delay skeletons by about 300ms so fast responses show nothing. Show one only while data is genuinely missing, never while refetching data you already have.
-- Shared props that persist across pages (aside, nav counts) use `Inertia::defer(...)->once()`, so client visits don't refetch them and flash.
+- Shared props that persist across pages (nav items, user context) use `Inertia::defer(...)->once()`, so client visits don't refetch them and flash.
 - Polling and refresh buttons use partial reloads (`only: [...]`) of the page's own props. Never reload the whole page, and keep showing the old data until the new data arrives.
 
 ## Changing content
 
 - Numbers, counts and countdowns use `tabular-nums` in fixed-width slots.
-- Buttons whose label changes ("Following", "Saving…") get a `min-w`. Disabled, loading and enabled states are the same size.
-- Conditional UI (banners, "@x is reviewing", inline confirms, errors) reserves its space or overlays. An inline confirm fits in the slot of the control it replaces.
+- Buttons whose label changes ("Saving…", "Confirming…") get a `min-w`. Disabled, loading and enabled states are the same size.
+- Conditional UI (banners, inline confirms, errors) reserves its space or overlays. An inline confirm fits in the slot of the control it replaces.
 - Removed list rows collapse with animated transition, keeping scroll position and focus.
-- Right after an action, the control under the cursor must not flip to a destructive state, e.g. Follow → "Unfollow" before the pointer leaves.
+- Right after an action, the control under the cursor must not flip to an unexpected destructive state.
 
-## Overflow
+## Routing and Wayfinder
 
-- Dialogs and popovers are capped to the viewport (`dvh`) and scroll inside, with a sticky header and footer when actions would scroll away. No double scrollbars and no page scroll through the overlay. Scroll lock must not shift the page: keep `scrollbar-gutter: stable`.
-- Long usernames, URLs, reasons, queue names and messages use `min-w-0` with `truncate` or `line-clamp`, and the full text in `title`.
+- Always use Laravel Wayfinder typed route functions imported from `@/actions/` or `@/routes/`.
+- Never use hardcoded URL strings or string concatenation for backend endpoints.
+
+## Overflow & Responsive Viewports
+
+- Dialogs and popovers are capped to the viewport (`dvh`) and scroll inside, with a sticky header and footer when actions would scroll away. Scroll lock must keep `scrollbar-gutter: stable`.
+- Long usernames, URLs, and labels use `min-w-0` with `truncate` or `line-clamp`, with the full text in `title`.
 - Auto-growing textareas are `overflow-x-hidden`. Inputs use at least 16px text below `md` so iOS doesn't zoom.
-- On mobile, toasts sit above the bottom nav.
 
-## Verify before calling it done
+## Verification
 
-- Check in a browser at 1440×900, 1366×650 and 390×844, in light and dark.
-- Measure layout shift (`PerformanceObserver` with `layout-shift`) for first load, navigation, a polling cycle and every action you added. The target is 0.
+- Check in a browser at 1440×900, 1366×650 and 390×844, in both light and dark modes.
+- Measure layout shift (`PerformanceObserver` with `layout-shift`) for first load, navigation, and actions. Target is 0.
 
 === foundation rules ===
 
 # Laravel Boost Guidelines
 
-The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to ensure the best experience when building Laravel applications.
-
 ## Foundational Context
 
 This application is a Laravel application running on PHP 8.5. Always use the APIs that match the installed major version of each package — do not assume a version.
-
-- php - 8.5
-- inertiajs/inertia-laravel (INERTIA_LARAVEL) - v3
-- laravel/fortify (FORTIFY) - v1
-- laravel/framework (LARAVEL) - v13
-- laravel/prompts (PROMPTS) - v0
-- laravel/wayfinder (WAYFINDER) - v0
-- larastan/larastan (LARASTAN) - v3
-- laravel/boost (BOOST) - v2
-- laravel/mcp (MCP) - v0
-- laravel/pail (PAIL) - v1
-- laravel/pint (PINT) - v1
-- pestphp/pest (PEST) - v5
-- phpunit/phpunit (PHPUNIT) - v13
-- rector/rector (RECTOR) - v2
 
 Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
@@ -268,11 +442,7 @@ Before relying on a package's API, confirm its installed version:
 
 ## Skills Activation
 
-This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
-
-- `laravel-best-practices` — Apply this skill whenever writing, reviewing, or refactoring Laravel PHP code. This includes creating or modifying controllers, models, migrations, form requests, policies, jobs, scheduled commands, service classes, and Eloquent queries. Triggers for N+1 and query performance issues, caching strategies, authorization and security patterns, validation, error handling, queue and job configuration, route definitions, and architectural decisions.
-- `wayfinder-development` — Use this skill for Laravel Wayfinder which auto-generates typed functions for Laravel controllers and routes. ALWAYS use this skill when frontend code needs to call backend routes or controller actions. Trigger when: connecting any React/Vue/Svelte/Inertia frontend to Laravel controllers, routes, building end-to-end features with both frontend and backend, wiring up forms or links to backend endpoints, fixing route-related TypeScript errors, importing from `@/actions` or `@/routes`, or running `wayfinder:generate`. Use Wayfinder route functions instead of hardcoded URLs.
-- `fortify-development` — ACTIVATE when working on authentication in Laravel (login, registration, password reset, email verification, 2FA, profile updates).
+This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 ## Conventions
 
@@ -291,15 +461,11 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 ## Frontend Bundling
 
-- If a frontend change doesn't show in the UI or you get a "Unable to locate file in Vite manifest" error, run `bun run build` (or `npm run build`) or ask the user to run `bun run dev` or `composer run dev`.
+- If a frontend change doesn't show in the UI or you get a "Unable to locate file in Vite manifest" error, run `bun run build` or ask the user to run `bun run dev` or `composer run dev`.
 
 ## Documentation Files
 
 - You must only create documentation files if explicitly requested by the user.
-
-## Replies
-
-- Be concise in your explanations - focus on what's important rather than explaining obvious details.
 
 === boost rules ===
 
@@ -315,10 +481,10 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 ## Searching Documentation (IMPORTANT)
 
-- Always use `search-docs` before making code changes that depend on Laravel ecosystem APIs, behavior, configuration, or syntax. Skip it for copy-only edits and trivial changes.
+- Use `search-docs` before changes that depend on Laravel ecosystem APIs, behavior, configuration, or version-specific syntax. Skip it for copy-only edits and other changes where package documentation is irrelevant. Reuse sufficient results already in context instead of searching again.
 - Pass a `packages` array to scope results when you know which packages are relevant.
-- Use multiple broad, topic-based queries: `['rate limiting', 'routing rate limiting', 'routing']`.
-- Do not add package names to queries because package info is already shared.
+- Use multiple broad, topic-based queries: `['rate limiting', 'routing rate limiting', 'routing']`. Expect the most relevant results first.
+- Do not add package names to queries because package info is already shared. Use `test resource table`, not `filament 4 test resource table`.
 
 ### Search Syntax
 
@@ -327,12 +493,15 @@ This project has domain-specific skills available. You MUST activate the relevan
 3. Combine words and phrases for mixed queries: `middleware "rate limit"`.
 4. Use multiple queries for OR logic: `queries=["authentication", "middleware"]`.
 
+## Project Rules
+
+- This project contains committed, area-grouped rules in `.ai/rules` when that directory exists, including path-scoped framework guidelines under `.ai/rules/boost`. Before you enter plan mode or create/edit any file, you MUST first: open @.ai/rules/index.md (it maps file globs to rule files), read every rule file whose globs cover the path(s) in scope, and run `grep -rin 'keyword' .ai/rules` to catch what a path match alone misses. Do not write code until you have read and are following every matching rule. If `.ai/rules` does not exist, continue without it.
+
 ## Artisan
 
 - Run Artisan commands directly via the command line (e.g., `php artisan route:list`). Use `php artisan list` to discover available commands and `php artisan [command] --help` to check parameters.
 - Inspect routes with `php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
 - Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
-- To check environment variables, read the `.env` file directly.
 
 ## Tinker
 
@@ -356,14 +525,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 # Deployment
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-
-=== tests rules ===
-
-# Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Pure copy, styling, and layout-only changes do not require new or updated tests.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+- Activate the `deploying-to-cloud` skill whenever deploying to Laravel Cloud, configuring Cloud environments or resources, using the Cloud CLI, or troubleshooting Cloud deployments.
 
 === inertia-laravel/core rules ===
 
@@ -372,6 +534,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
 - Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
 - ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
+- IMPORTANT: Activate `inertia-react-development` when working with Inertia client-side patterns.
 
 # Inertia v3
 
@@ -413,22 +576,11 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
 - When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
 
-=== laravel-octane/core rules ===
-
-# Laravel Octane
-
-This application uses Laravel Octane, a long-running PHP server. The application bootstraps once and handles many requests within the same process.
-
-- Never store request-specific state in singletons or static properties, because it can leak across requests.
-- Use `config('octane.server')` to detect the active driver (`swoole`, `roadrunner`, or `frankenphp`).
-- Prefer scoped bindings (`$this->app->scoped()`) over singletons for per-request services.
-
 === wayfinder/core rules ===
 
 # Laravel Wayfinder
 
-- Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `@/actions/` (controllers) or `@/routes/` (named routes).
-- Never use hardcoded URLs or string concatenation for API or page endpoints in frontend components.
+Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `@/actions/` (controllers) or `@/routes/` (named routes).
 
 === pint/core rules ===
 
@@ -443,46 +595,34 @@ This application uses Laravel Octane, a long-running PHP server. The application
 
 - This project uses Pest. Create tests with `php artisan make:test --pest {name}`.
 - Do not include the test suite directory in `{name}`. Use `SomeFeatureTest`, not `Feature/SomeFeatureTest`.
-- Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
-- Do NOT delete tests without approval.
+- Read the `testing-best-practices` skill for guidance on coverage, naming, structure, dependency isolation, and review.
+- Do not delete tests or test files without approval. They are part of the application.
 
-## Testing Form Requests & Actions
+## Running Tests
 
-- Test Form Request authorization:
-  - Test that unauthorized attempts return 403 or 404 (when using `denyAsNotFound()`).
-  - Test validation rules with invalid inputs using `$response->assertSessionHasErrors(...)` or `$response->assertJsonValidationErrors(...)`.
-- Test actions through feature tests exercising the full HTTP boundary or directly via unit tests using factories.
+- Run the narrowest set of tests that covers the change. Pass a file path or `--filter=testName` to `php artisan test --compact`.
+- Rerun a test after each change to it.
+- Run `vendor/bin/pest` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
+- After the feature tests pass, ask the user to run the complete suite with `php artisan test --compact`.
 
 === inertia-react/core rules ===
 
 # Inertia + React
 
-- Activate `inertia-react-development` when working with Inertia React client-side patterns.
-- Always use `@inertiajs/react` components (`Link`, `useForm`, `usePage`) with Wayfinder route helpers.
+- IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
-=== chisel/core rules ===
+=== inertia-svelte/core rules ===
 
-# Chisel Feature Architecture & Engineering Conventions
+# Inertia + Svelte
 
-- Always inspect existing implementation before modifying architecture.
-- Preserve established conventions and architectural boundaries.
-- Keep Actions, controllers, and models strictly consistent with existing repository rules (Actions perform mutations with single `handle()`, controllers are CRUD-only, Form Requests handle 100% of authorization and validation).
-- Do not introduce unrelated refactors or clean up unrelated code.
-- Do not weaken static analysis or tests; never disable lint rules to make changes pass.
-- Preserve public APIs unless explicitly directed to change them.
-- Add regression tests for all bugs and architectural enhancements.
-- Chisel-removable features must leave a clean, valid generated application with zero orphaned markers (`assertNoOrphanedMarkersInSandbox`) and valid PHP syntax (`assertPhpSyntaxValid`).
-- Use the existing feature/marker/dependency infrastructure (`FeatureDefinition`, `FeatureRegistry`, `DependencyValidator`) rather than creating parallel or competing systems.
-- Always run repository-defined verification commands (`composer test:lint`, `composer test:types`, `composer test`).
+- IMPORTANT: Activate `inertia-svelte-development` when working with Inertia Svelte client-side patterns.
 
-## Registrable Resource Convention
+=== inertia-vue/core rules ===
 
-Future features integrating polymorphic or registrable entity models must follow this convention:
-- Resource types must use stable, explicit string keys (e.g., `'organization'`, `'location'`, `'user'`).
-- Arbitrary PHP model class names must never come directly from user input or request payloads.
-- Supported resources must be explicitly allow-listed/registered in a centralized configuration or registry.
-- Future features should reuse an established registry rather than creating competing ad-hoc registries.
-- Generalize the implementation only after multiple concrete consumers prove the abstraction.
+# Inertia + Vue
+
+Vue components must have a single root element.
+- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 </laravel-boost-guidelines>
 

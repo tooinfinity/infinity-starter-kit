@@ -1,0 +1,35 @@
+name: Setup
+description: Installs PHP, Bun, Node and project dependencies, restoring them from cache when possible.
+
+inputs:
+  php-version:
+    description: The PHP version to install.
+    required: false
+    default: "8.5"
+  coverage:
+    description: The PHP coverage driver to install.
+    required: false
+    default: none
+  extensions:
+    description: PHP extensions to install.
+    required: false
+    default: pdo, pdo_sqlite, pdo_mysql, pdo_pgsql
+  node-version:
+    description: Node version for Vite+ setup.
+    required: false
+    default: "24"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP
+      uses: ./.github/actions/setup-php
+      with:
+        php-version: ${{ inputs.php-version }}
+        coverage: ${{ inputs.coverage }}
+        extensions: ${{ inputs.extensions }}
+
+    - name: Setup Frontend
+      uses: ./.github/actions/setup-frontend
+      with:
+        node-version: ${{ inputs.node-version }}
