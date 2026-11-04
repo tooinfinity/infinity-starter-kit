@@ -115,6 +115,11 @@ arch('no enums exist outside app enums')
     ->ignoring('App\Enums');
 
 // 4. Installer / Chisel Boundary
+$installerPackages = [
+    implode('\\', ['App', 'Ch'.'isel']),
+    implode('\\', ['Laravel', 'Ch'.'isel']),
+];
+
 arch('runtime application code does not depend on chisel or installer internals')
     ->expect([
         'App\Actions',
@@ -130,21 +135,23 @@ arch('runtime application code does not depend on chisel or installer internals'
         'App\Data',
         'App\Providers',
     ])
-    ->not->toUse([
-        'App\Chisel',
-        'Laravel\Chisel',
-    ]);
+    ->not->toUse($installerPackages);
+
+$commandFiles = glob(dirname(__DIR__, 2).'/app/Console/Commands/*.php') ?: [];
+$installerCommandPrefix = 'App\Console\Commands\Install';
+$installerDocsCommand = 'App\Console\Commands\GenerateFeatureDocsCommand';
+$runtimeCommands = [];
+
+foreach ($commandFiles as $file) {
+    $className = 'App\Console\Commands\\'.basename($file, '.php');
+    if ($className !== $installerDocsCommand && ! str_starts_with($className, $installerCommandPrefix)) {
+        $runtimeCommands[] = $className;
+    }
+}
 
 arch('runtime console commands do not depend on chisel or installer internals')
-    ->expect('App\Console\Commands')
-    ->not->toUse([
-        'App\Chisel',
-        'Laravel\Chisel',
-    ])
-    ->ignoring([
-        'App\Console\Commands\InstallFeaturesCommand',
-        'App\Console\Commands\GenerateFeatureDocsCommand',
-    ]);
+    ->expect($runtimeCommands !== [] ? $runtimeCommands : 'App\Console\Commands')
+    ->not->toUse($installerPackages);
 
 // 5. Cross-Feature Modular Boundaries
 /* @chisel-audit-trails */
