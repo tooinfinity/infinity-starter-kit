@@ -1431,31 +1431,17 @@ test('failure at cleanup stage records failure and outputs recovery instructions
 });
 
 test('failure at cleanup stage after installer files are removed outputs manual composer instructions', function () use ($preserveEnv): void {
-    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'CHISEL_TEST_NO_INSTALLER_FILES');
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'CHISEL_TEST_NO_INSTALLER_FILES', 'LARAVEL_INSTALLER_NO_NODE');
 
     try {
         putenv('CHISEL_TEST_FAIL_STAGE=cleanup');
         $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'cleanup';
         putenv('CHISEL_TEST_NO_INSTALLER_FILES=true');
         $_ENV['CHISEL_TEST_NO_INSTALLER_FILES'] = 'true';
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
 
-        $script = Chisel::script(base_path())
-            ->questions([
-                Question::multiselect(
-                    name: 'auth_features',
-                    label: 'Auth features',
-                    options: ['registration' => 'Registration'],
-                    default: ['registration'],
-                ),
-                Question::multiselect(
-                    name: 'optional_modules',
-                    label: 'Optional modules',
-                    options: ['authorization' => 'Authorization'],
-                    default: ['authorization'],
-                ),
-            ]);
-
-        app()->instance(Script::class, $script);
+        bindMockChiselScript();
 
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],

@@ -52,7 +52,7 @@ test('performance budget queryBudgetsFor returns expected canonical query ceilin
         [
             PerformanceBudget::REQUEST_WELCOME => 1,
             PerformanceBudget::REQUEST_LOGIN => 1,
-            PerformanceBudget::REQUEST_DASHBOARD => 4,
+            PerformanceBudget::REQUEST_DASHBOARD => 5,
         ],
     ],
     'standard' => [
@@ -60,7 +60,7 @@ test('performance budget queryBudgetsFor returns expected canonical query ceilin
         [
             PerformanceBudget::REQUEST_WELCOME => 1,
             PerformanceBudget::REQUEST_LOGIN => 1,
-            PerformanceBudget::REQUEST_DASHBOARD => 4,
+            PerformanceBudget::REQUEST_DASHBOARD => 5,
         ],
     ],
     'full' => [
@@ -68,14 +68,14 @@ test('performance budget queryBudgetsFor returns expected canonical query ceilin
         [
             PerformanceBudget::REQUEST_WELCOME => 1,
             PerformanceBudget::REQUEST_LOGIN => 1,
-            PerformanceBudget::REQUEST_DASHBOARD => 4,
+            PerformanceBudget::REQUEST_DASHBOARD => 5,
         ],
     ],
 ]);
 
 test('performance budget queryBudget retrieves budget for valid request and throws for unknown request', function (): void {
     expect(PerformanceBudget::queryBudget(Profile::MINIMAL, PerformanceBudget::REQUEST_WELCOME))->toBe(0)
-        ->and(PerformanceBudget::queryBudget(Profile::FULL, PerformanceBudget::REQUEST_DASHBOARD))->toBe(4);
+        ->and(PerformanceBudget::queryBudget(Profile::FULL, PerformanceBudget::REQUEST_DASHBOARD))->toBe(5);
 
     expect(fn (): int => PerformanceBudget::queryBudget(Profile::FULL, 'GET /unknown'))
         ->toThrow(InvalidArgumentException::class, 'Unknown canonical request [GET /unknown].');
@@ -102,7 +102,7 @@ test('performance budget bundleBudget throws InvalidArgumentException for unknow
 
 test('performance budget assertWithinQueryBudget passes within threshold and throws on regression', function (): void {
     expect(fn () => PerformanceBudget::assertWithinQueryBudget(Profile::MINIMAL, PerformanceBudget::REQUEST_WELCOME, 0))->not->toThrow(RuntimeException::class);
-    expect(fn () => PerformanceBudget::assertWithinQueryBudget(Profile::FULL, PerformanceBudget::REQUEST_DASHBOARD, 4))->not->toThrow(RuntimeException::class);
+    expect(fn () => PerformanceBudget::assertWithinQueryBudget(Profile::FULL, PerformanceBudget::REQUEST_DASHBOARD, 5))->not->toThrow(RuntimeException::class);
 
     expect(fn () => PerformanceBudget::assertWithinQueryBudget(Profile::MINIMAL, PerformanceBudget::REQUEST_WELCOME, 2, ['SELECT * FROM settings', 'SELECT * FROM users']))
         ->toThrow(RuntimeException::class, 'Query count regression on [GET /] for profile [minimal]: expected at most 0 queries, got 2 queries.');
@@ -116,7 +116,7 @@ test('performance budget assertWithinQueryBudget includes SQL statements in fail
         PerformanceBudget::assertWithinQueryBudget(
             Profile::FULL,
             PerformanceBudget::REQUEST_DASHBOARD,
-            5,
+            6,
             ['SELECT 1', 'SELECT 2']
         );
         test()->fail('Expected RuntimeException was not thrown.');

@@ -28,8 +28,8 @@ Every web request in a generated application passes through the middleware stack
 | Profile | `GET /` (Guest) | `GET /login` (Inertia) | `GET /dashboard` (Auth) | Rationale & Architectural Overhead |
 | :--- | :---: | :---: | :---: | :--- |
 | **`minimal`** | **0** | **0** | **0** | Settings, RBAC, and Notifications are pruned. Zero database queries are executed for canonical requests. |
-| **`default`** (Standard) | **1** | **1** | **4** | Uncached `HandleSettings` middleware executes at most 1 query on guest endpoints. On `/dashboard`, up to 4 queries: settings (1) + Spatie permissions (1) + Spatie roles (1) + unread notifications count (1). |
-| **`full`** | **1** | **1** | **4** | Contains all optional modules. Canonical requests share the same bounded query overhead as standard. |
+| **`default`** (Standard) | **1** | **1** | **5** | Uncached `HandleSettings` middleware executes at most 1 query on guest endpoints. On `/dashboard`, up to 5 queries on an isolated request: uncached settings (1) + Spatie direct permissions (1) + Spatie roles (1) + Spatie role permissions (1) + unread notifications count (1). |
+| **`full`** | **1** | **1** | **5** | Contains all optional modules. Canonical requests share the same bounded query overhead as standard. |
 
 > [!NOTE]
 > Query counts are measured with `session.driver = 'array'` and `cache.default = 'array'` so that measurements reflect application architecture (queries in middleware, queries in models, queries in Inertia `share()`) rather than driver-level session persistence writes.

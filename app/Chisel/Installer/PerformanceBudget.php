@@ -66,7 +66,7 @@ final readonly class PerformanceBudget
      * - Includes Settings, RBAC (roles + permissions), User Management, Notifications.
      * - GET /: max 1 query (uncached settings query by HandleSettings middleware)
      * - GET /login: max 1 query (uncached settings query by HandleSettings middleware)
-     * - GET /dashboard: max 4 queries (settings + permissions + roles + unread notifications)
+     * - GET /dashboard: max 5 queries (uncached settings + user permissions + user roles + role permissions + unread notifications)
      *
      * Full profile:
      * - Includes all optional modules.
@@ -83,12 +83,12 @@ final readonly class PerformanceBudget
         Profile::STANDARD => [
             self::REQUEST_WELCOME => 1,
             self::REQUEST_LOGIN => 1,
-            self::REQUEST_DASHBOARD => 4,
+            self::REQUEST_DASHBOARD => 5,
         ],
         Profile::FULL => [
             self::REQUEST_WELCOME => 1,
             self::REQUEST_LOGIN => 1,
-            self::REQUEST_DASHBOARD => 4,
+            self::REQUEST_DASHBOARD => 5,
         ],
     ];
 
