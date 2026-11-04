@@ -84,6 +84,9 @@ test('composer manifest pruner cleanPostCreate removes chisel and install:featur
                 '@php artisan install:features --ansi',
                 123, // non-string entry to test filter
             ],
+            'test:installer' => 'pest --configuration=phpunit.installer.xml',
+            'test:smoke' => 'pest --configuration=phpunit.smoke.xml',
+            'test:lint' => 'pint --test',
         ],
     ];
 
@@ -95,6 +98,9 @@ test('composer manifest pruner cleanPostCreate removes chisel and install:featur
     $decoded = json_decode((string) file_get_contents($file), true);
     expect($decoded['require'])->not->toHaveKey('laravel/chisel')
         ->and($decoded['require-dev'])->not->toHaveKey('laravel/chisel')
+        ->and($decoded['scripts'])->not->toHaveKey('test:installer')
+        ->and($decoded['scripts'])->not->toHaveKey('test:smoke')
+        ->and($decoded['scripts'])->toHaveKey('test:lint')
         ->and($decoded['scripts']['post-create-project-cmd'])->toBe(['@php artisan key:generate --ansi']);
 });
 
