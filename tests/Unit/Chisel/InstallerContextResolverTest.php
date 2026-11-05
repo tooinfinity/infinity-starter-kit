@@ -8,6 +8,7 @@ use App\Chisel\Installer\Preset;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Console\OutputStyle;
+use Illuminate\Support\Facades\File;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Question;
 use Laravel\Chisel\Script;
@@ -317,7 +318,7 @@ test('loadAnswersFromFile loads valid JSON from absolute and relative paths', fu
             'optional_modules' => ['authorization'],
         ]);
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -339,7 +340,7 @@ test('loadAnswersFromFile throws RuntimeException when file is unreadable', func
             ->toThrow(RuntimeException::class, "Answers file [{$tempFile}] cannot be read.");
     } finally {
         chmod($tempFile, 0666);
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -366,7 +367,7 @@ test('loadAnswersFromFile throws JsonException when file contains invalid JSON',
         expect(fn (): array => InstallerContextResolver::loadAnswersFromFile($tempFile))
             ->toThrow(JsonException::class);
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -381,7 +382,7 @@ test('loadAnswersFromFile throws RuntimeException when JSON is not an object', f
         expect(fn (): array => InstallerContextResolver::loadAnswersFromFile($tempFile, isOption: false))
             ->toThrow(RuntimeException::class, 'The answers file must decode to a JSON object.');
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -406,7 +407,7 @@ test('resolve loads answers from --answers-file and marks context non-interactiv
             ->and($context->adminEmail)->toBe('admin@file.com')
             ->and($context->adminPassword)->toBe('secret123');
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -460,7 +461,7 @@ test('precedence: inline CLI answers take precedence over --answers-file, preset
             ->and($context->selectedModules)->toBe(['authorization']);
     } finally {
         $cleanEnv('CHISEL_ANSWERS');
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -489,7 +490,7 @@ test('precedence: --answers-file takes precedence over --preset and environment'
             ->and($context->selectedModules)->toBe(['authorization']);
     } finally {
         $cleanEnv('CHISEL_ANSWERS');
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -542,7 +543,7 @@ test('precedence: environment answers take precedence over environment answers-f
             ->and($context->selectedModules)->toBe(['authorization']);
     } finally {
         $cleanEnv('CHISEL_ANSWERS', 'CHISEL_ANSWERS_FILE', 'CHISEL_PRESET');
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -571,7 +572,7 @@ test('precedence: environment answers-file takes precedence over environment pre
             ->and($context->selectedModules)->toBe(['authorization']);
     } finally {
         $cleanEnv('CHISEL_ANSWERS_FILE', 'CHISEL_PRESET');
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 

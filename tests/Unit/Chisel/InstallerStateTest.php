@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\InstallerState;
+use Illuminate\Support\Facades\File;
 
 beforeEach(function (): void {
     $this->tempDir = sys_get_temp_dir().'/installer_state_test_'.bin2hex(random_bytes(6));
@@ -13,7 +14,7 @@ beforeEach(function (): void {
 afterEach(function (): void {
     if (is_dir($this->tempDir)) {
         if (file_exists($this->tempDir.'/'.InstallerState::STATE_FILE)) {
-            @unlink($this->tempDir.'/'.InstallerState::STATE_FILE);
+            File::delete($this->tempDir.'/'.InstallerState::STATE_FILE);
         }
 
         @rmdir($this->tempDir);
@@ -249,7 +250,7 @@ test('save throws RuntimeException and cleans up temp file if rename fails', fun
     $state = InstallerState::initialize($this->tempDir, $context);
 
     $stateFile = $this->tempDir.'/'.InstallerState::STATE_FILE;
-    @unlink($stateFile);
+    File::delete($stateFile);
     mkdir($stateFile);
 
     expect(fn () => $state->save($this->tempDir))

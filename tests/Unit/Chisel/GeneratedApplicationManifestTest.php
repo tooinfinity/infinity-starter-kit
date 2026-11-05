@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Chisel\Installer\GeneratedApplicationManifest;
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\Preset;
+use Illuminate\Support\Facades\File;
 
 beforeEach(function (): void {
     $this->tempDir = sys_get_temp_dir().'/manifest_test_'.bin2hex(random_bytes(6));
@@ -28,7 +29,7 @@ afterEach(function (): void {
                 if (is_dir($path)) {
                     $cleanup($path);
                 } else {
-                    @unlink($path);
+                    File::delete($path);
                 }
             }
 

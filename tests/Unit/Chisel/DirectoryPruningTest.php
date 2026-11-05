@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
+
 require_once __DIR__.'/../../../chisel.php';
 
 beforeEach(function (): void {
@@ -26,7 +28,7 @@ afterEach(function (): void {
                 if (is_dir($path)) {
                     $cleanup($path);
                 } else {
-                    @unlink($path);
+                    File::delete($path);
                 }
             }
 
@@ -122,7 +124,7 @@ test('does not prune directory that points outside project base root via symlink
         chiselPruneEmptyDirectories($this->tempDir, ['app/OutsideSymlink/empty']);
         expect(is_dir($outsideDir))->toBeTrue();
     } finally {
-        @unlink($this->tempDir.'/app/OutsideSymlink');
+        File::delete($this->tempDir.'/app/OutsideSymlink');
         @rmdir($outsideDir);
     }
 });

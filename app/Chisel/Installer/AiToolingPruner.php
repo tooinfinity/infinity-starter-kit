@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Chisel\Installer;
 
+use Illuminate\Support\Facades\File;
+
 /**
  * Prunes maintainer AI tooling and assistant guidelines when deselected during installation.
  */
@@ -49,7 +51,7 @@ final class AiToolingPruner
             $fullPath = $baseRoot.'/'.$relFile;
             if (is_file($fullPath) || is_link($fullPath)) {
                 @chmod($fullPath, 0777);
-                @unlink($fullPath);
+                File::delete($fullPath);
             }
         }
 
@@ -78,7 +80,7 @@ final class AiToolingPruner
                 self::deleteDirectory($itemPath);
             } else {
                 @chmod($itemPath, 0777);
-                @unlink($itemPath);
+                File::delete($itemPath);
             }
         }
 

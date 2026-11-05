@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Chisel\FeatureMatrixGenerator;
+use Illuminate\Support\Facades\File;
 
 test('artisan chisel:docs updates documentation file successfully', function (): void {
     $tempFile = tempnam(sys_get_temp_dir(), 'chisel_cmd_test_');
@@ -19,7 +20,7 @@ test('artisan chisel:docs updates documentation file successfully', function ():
         expect($content)->toContain('| **Authorization** | `authorization` |')
             ->and($content)->not->toContain('| Old Content |');
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -35,7 +36,7 @@ test('artisan chisel:docs --check succeeds when documentation is fresh', functio
         $this->artisan('chisel:docs', ['--check' => true, '--path' => $tempFile])
             ->assertSuccessful();
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -50,7 +51,7 @@ test('artisan chisel:docs --check fails when documentation is stale', function (
         $this->artisan('chisel:docs', ['--check' => true, '--path' => $tempFile])
             ->assertFailed();
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -69,6 +70,6 @@ test('artisan chisel:docs reports failure when markers are missing', function ()
         $this->artisan('chisel:docs', ['--path' => $tempFile])
             ->assertFailed();
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });

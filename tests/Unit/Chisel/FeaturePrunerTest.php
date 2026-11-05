@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Chisel\FeatureDefinition;
 use App\Chisel\Installer\FeaturePruner;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Laravel\Chisel\Chisel;
 
@@ -29,7 +30,7 @@ afterEach(function (): void {
                 if (is_dir($path)) {
                     $cleanup($path);
                 } else {
-                    @unlink($path);
+                    File::delete($path);
                 }
             }
 

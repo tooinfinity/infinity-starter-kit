@@ -6,6 +6,7 @@ use App\Chisel\Installer\ConfigCleaner;
 use App\Chisel\Installer\FrontendPackagePruner;
 use Illuminate\Process\Factory;
 use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Laravel\Chisel\Chisel;
 use Symfony\Component\Yaml\Yaml;
@@ -34,7 +35,7 @@ afterEach(function (): void {
                 if (is_dir($path)) {
                     $cleanup($path);
                 } else {
-                    @unlink($path);
+                    File::delete($path);
                 }
             }
 

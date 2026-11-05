@@ -11,7 +11,7 @@ test('composer manifest defines supported PHP and Laravel version constraints', 
     expect($require)->toHaveKey('php')
         ->and($require['php'])->toBe('^8.5.0')
         ->and($require)->toHaveKey('laravel/framework')
-        ->and($require['laravel/framework'])->toBe('^13.32.0');
+        ->and($require['laravel/framework'])->toBe('^13.40.0');
 });
 
 test('composer manifest defines critical framework integration packages', function (): void {

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
@@ -43,21 +44,21 @@ $preserveEnv = function (string ...$keys): Closure {
 
 beforeEach(function (): void {
     if (file_exists(base_path('.installer-state.json'))) {
-        @unlink(base_path('.installer-state.json'));
+        File::delete(base_path('.installer-state.json'));
     }
 
     if (file_exists(base_path('starter-kit-manifest.json'))) {
-        @unlink(base_path('starter-kit-manifest.json'));
+        File::delete(base_path('starter-kit-manifest.json'));
     }
 });
 
 afterEach(function (): void {
     if (file_exists(base_path('.installer-state.json'))) {
-        @unlink(base_path('.installer-state.json'));
+        File::delete(base_path('.installer-state.json'));
     }
 
     if (file_exists(base_path('starter-kit-manifest.json'))) {
-        @unlink(base_path('starter-kit-manifest.json'));
+        File::delete(base_path('starter-kit-manifest.json'));
     }
 });
 
@@ -169,7 +170,7 @@ test('command succeeds with --answers-file', function (): void {
         $this->artisan('install:features', ['--answers-file' => $tempFile])
             ->assertSuccessful();
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 
@@ -208,7 +209,7 @@ test('command fails before mutation when --answers-file contains invalid JSON', 
     } catch (JsonException) {
         // expected
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 
     expect($mutated)->toBeFalse();
@@ -663,7 +664,7 @@ test('command returns success early when chisel-paths.php does not exist', funct
             ->assertSuccessful();
     } finally {
         app()->setBasePath($origBasePath);
-        @unlink($tempDir.'/chisel.php');
+        File::delete($tempDir.'/chisel.php');
         @rmdir($tempDir);
     }
 });
@@ -772,7 +773,7 @@ return Chisel::script(__DIR__)->questions([
                 }
 
                 $p = $dir.'/'.$item;
-                is_dir($p) ? $cleanup($p) : @unlink($p);
+                is_dir($p) ? $cleanup($p) : File::delete($p);
             }
 
             @rmdir($dir);
@@ -848,7 +849,7 @@ return Chisel::script(__DIR__)->questions([
                 }
 
                 $p = $dir.'/'.$item;
-                is_dir($p) ? $cleanup($p) : @unlink($p);
+                is_dir($p) ? $cleanup($p) : File::delete($p);
             }
 
             @rmdir($dir);

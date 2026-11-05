@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
+
 require_once __DIR__.'/../../../chisel.php';
 
 use App\Chisel\Installer\AiToolingPruner;
@@ -30,7 +32,7 @@ beforeEach(function (): void {
 afterEach(function (): void {
     if (is_dir($this->tempDir)) {
         AiToolingPruner::prune($this->tempDir);
-        @unlink($this->tempDir.'/composer.json');
+        File::delete($this->tempDir.'/composer.json');
         @rmdir($this->tempDir);
     }
 });

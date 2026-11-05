@@ -8,6 +8,7 @@ use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\DependencyValidator;
 use App\Enums\Permission;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\ExpectationFailedException;
 use Symfony\Component\Process\Process;
 
@@ -743,7 +744,7 @@ test('enabled-feature contract detects accidentally pruned required artifact', f
         // Simulate accidental removal of a required exclusive file
         $targetFile = $dir.'/lang/en/localization.php';
         if (file_exists($targetFile)) {
-            unlink($targetFile);
+            File::delete($targetFile);
         }
 
         $detectedPruning = false;

@@ -6,6 +6,7 @@ namespace App\Chisel\Installer;
 
 use App\Chisel\FeatureRegistry;
 use Illuminate\Support\Env;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Request;
 use JsonException;
 use RuntimeException;
@@ -317,7 +318,7 @@ final readonly class GeneratedApplicationManifest
         }
 
         if (! @rename($tmpPath, $path)) {
-            @unlink($tmpPath);
+            File::delete($tmpPath);
             throw new RuntimeException(sprintf('Failed to atomically rename starter kit manifest from [%s] to [%s].', $tmpPath, $path));
         }
 

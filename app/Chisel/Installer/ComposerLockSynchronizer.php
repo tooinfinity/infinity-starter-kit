@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Chisel\Installer;
 
 use App\Chisel\FeatureRegistry;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -110,8 +111,8 @@ final class ComposerLockSynchronizer
         }
 
         if ($hasRealVendor) {
-            @unlink($directory.'/bootstrap/cache/packages.php');
-            @unlink($directory.'/bootstrap/cache/services.php');
+            File::delete($directory.'/bootstrap/cache/packages.php');
+            File::delete($directory.'/bootstrap/cache/services.php');
 
             if (file_exists($directory.'/artisan')) {
                 $discover = new Process([PHP_BINARY, 'artisan', 'package:discover', '--ansi'], $directory);

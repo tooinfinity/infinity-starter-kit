@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Chisel\Installer\ComposerManifestPruner;
+use Illuminate\Support\Facades\File;
 
 beforeEach(function (): void {
     $this->tempDir = sys_get_temp_dir().'/composer_manifest_test_'.bin2hex(random_bytes(6));
@@ -26,7 +27,7 @@ afterEach(function (): void {
                 if (is_dir($path)) {
                     $cleanup($path);
                 } else {
-                    @unlink($path);
+                    File::delete($path);
                 }
             }
 

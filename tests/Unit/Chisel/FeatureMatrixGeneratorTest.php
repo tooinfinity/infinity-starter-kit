@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureMatrixGenerator;
+use Illuminate\Support\Facades\File;
 
 test('generateTable creates deterministic markdown matrix with headers and formatted cells', function (): void {
     $features = [
@@ -98,7 +99,7 @@ test('updateFile and isFileFresh operate correctly on disk files', function (): 
             ->and($content)->toContain(FeatureMatrixGenerator::START_MARKER)
             ->and($content)->toContain(FeatureMatrixGenerator::END_MARKER);
     } finally {
-        @unlink($tempFile);
+        File::delete($tempFile);
     }
 });
 

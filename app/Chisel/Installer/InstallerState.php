@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Chisel\Installer;
 
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Throwable;
 
@@ -237,7 +238,7 @@ final class InstallerState
         }
 
         if (! @rename($tmpPath, $path)) {
-            @unlink($tmpPath);
+            File::delete($tmpPath);
             throw new RuntimeException(sprintf('Failed to atomically rename installer state from [%s] to [%s].', $tmpPath, $path));
         }
     }
@@ -246,7 +247,7 @@ final class InstallerState
     {
         $path = self::statePath($basePath);
         if (file_exists($path)) {
-            return @unlink($path);
+            return File::delete($path);
         }
 
         return true;
