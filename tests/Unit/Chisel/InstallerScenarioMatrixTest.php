@@ -74,18 +74,90 @@ describe('Installer Scenario Matrix Integrity', function (): void {
             'cleanup',
         ]);
 
+        // Standard completed installer lifecycle phases
+        $completedRunPhases = [
+            'preflight',
+            'prune',
+            'migrate',
+            'configure',
+            'post_scaffold',
+            'cleanup',
+        ];
+
+        // Collect failure phases exercised across failure scenarios
         $failureScenarios = InstallerScenario::byCategory('failure');
         expect($failureScenarios)->not->toBeEmpty();
 
-        $testedStages = [];
+        $failedRunPhases = [];
         foreach ($failureScenarios as $scenario) {
             if (isset($scenario->env['CHISEL_TEST_FAIL_STAGE'])) {
-                $testedStages[] = $scenario->env['CHISEL_TEST_FAIL_STAGE'];
+                $failedRunPhases[] = $scenario->env['CHISEL_TEST_FAIL_STAGE'];
             }
         }
 
-        expect($testedStages)->toContain('preflight')
-            ->and($testedStages)->toContain('post_chisel');
+        // Must include failure-only checkpoints and verification points
+        expect($failedRunPhases)->toContain('preflight', 'post_chisel', 'post_migration', 'cleanup');
+
+        // The union of completed run phases and failure run phases must cover all InstallerState::PHASES
+        $allObservedPhases = array_values(array_unique(array_merge($completedRunPhases, $failedRunPhases)));
+        sort($allObservedPhases);
+
+        $expectedPhases = InstallerState::PHASES;
+        sort($expectedPhases);
+
+        expect($allObservedPhases)->toBe($expectedPhases);
+    });
+
+    it('exercises scenario helper methods, datasets, and expectations', function (): void {
+        $allDataset = InstallerScenario::dataset();
+        $profileDataset = InstallerScenario::dataset('profile');
+
+        expect($allDataset)->not->toBeEmpty()
+            ->and($profileDataset)->not->toBeEmpty();
+
+        $envNoNode = InstallerScenario::envNoNode();
+        $minimal = InstallerScenario::minimal();
+
+        expect($envNoNode->isNodeSkipped())->toBeTrue()
+            ->and($minimal->isNodeSkipped())->toBeFalse();
+
+        // Exercise scenario with custom non-null expectations
+        $custom = new InstallerScenario(
+            id: 'custom-test',
+            name: 'Custom Test',
+            description: 'Scenario with custom explicit expectations.',
+            category: 'test',
+            authFeatures: ['login', 'logout'],
+            optionalModules: ['authorization'],
+            expectedDependencies: ['custom/pkg'],
+            expectedAbsentDependencies: ['custom/absent'],
+            expectedRetainedPaths: ['custom/retained'],
+            expectedRemovedPaths: ['custom/removed'],
+            expectedPresentTables: ['custom_tables'],
+            expectedAbsentTables: ['custom_absent'],
+            expectedPresentColumns: ['users' => ['custom_col']],
+            expectedAbsentColumns: ['users' => ['custom_absent_col']],
+        );
+
+        expect($custom->expectedDependencies())->toBe(['custom/pkg'])
+            ->and($custom->expectedAbsentDependencies())->toBe(['custom/absent'])
+            ->and($custom->expectedRetainedPaths())->toBe(['custom/retained'])
+            ->and($custom->expectedRemovedPaths())->toBe(['custom/removed'])
+            ->and($custom->expectedPresentTables())->toBe(['custom_tables'])
+            ->and($custom->expectedAbsentTables())->toBe(['custom_absent'])
+            ->and($custom->expectedPresentColumns())->toBe(['users' => ['custom_col']])
+            ->and($custom->expectedAbsentColumns())->toBe(['users' => ['custom_absent_col']]);
+
+        // Exercise computation with an unregistered feature to trigger the catch block in expectedDependencies
+        $unregistered = new InstallerScenario(
+            id: 'unregistered-test',
+            name: 'Unregistered Feature Test',
+            description: 'Trigger catch block in expectedDependencies.',
+            category: 'test',
+            authFeatures: ['non-existent-feature-key'],
+            optionalModules: [],
+        );
+        expect($unregistered->expectedDependencies())->toBe([]);
     });
 
     it('validates dependency constraints for all features with prerequisites', function (): void {

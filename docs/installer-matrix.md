@@ -100,6 +100,8 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 | `failure-preflight` | Failure at Preflight | Failure | `login`, `logout` | `authorization` | `CHISEL_TEST_FAIL_STAGE=preflight` | Failure (Exit 1), zero filesystem mutations | Feature / Unit |
 | `failure-dependency-validation` | Missing Dependency Failure | Failure | `login`, `logout` | `reporting` only | Missing prerequisite modules | Failure (Exit 1), rejected with clear message | Unit / Feature |
 | `failure-post-chisel-resume` | Post-Chisel Recovery | Failure | `login`, `logout` | `authorization` | Deterministic fail + retry | Failure on run 1, clean recovery on run 2 | E2E / Feature |
+| `failure-post-migration` | Post-Migration Failure | Failure | `login`, `logout` | `authorization` | `CHISEL_TEST_FAIL_STAGE=post_migration` | Failure (Exit 1), state saved post-migration | Feature / Unit |
+| `failure-cleanup` | Cleanup Phase Failure | Failure | `login`, `logout` | `authorization` | `CHISEL_TEST_FAIL_STAGE=cleanup` | Failure (Exit 1), error recorded in cleanup | Feature / Unit |
 | `failure-conflicting-retry` | Conflicting Retry Rejection | Failure | `login`, `logout` | `authorization`, `settings` | Retrying with altered answers | Failure (Exit 1), conflict details printed | Feature / Unit |
 | `env-no-node` | No Node / Bun Mode | Environment | `login`, `logout` | `authorization`, `user-management`, `audit-trails`, `reporting` | `LARAVEL_INSTALLER_NO_NODE=true` | Success (Exit 0), skips node steps, manifests ok | E2E / Feature |
 | `env-deferred-hooks` | Deferred Hooks Mode | Environment | `login`, `logout` | `authorization` | `LARAVEL_INSTALLER_DEFER_HOOKS=true` | Success (Exit 0), graceful exit | Feature / Integration |
@@ -181,8 +183,10 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 ### 10. Failure and Recovery Paths
 - Preflight failure: Tested in `failure-preflight`.
 - Dependency validation failure: Tested in `failure-dependency-validation`.
-- Post-chisel failure & recovery: Checkpoint saved without secrets; resume succeeds and cleans up state.
-- Conflicting retry: Conflicting answers on resume are rejected with detailed diff.
+- Post-chisel failure & recovery: Checkpoint saved without secrets; resume succeeds and cleans up state (tested in `failure-post-chisel-resume` in `GeneratedProjectLifecycleTest`).
+- Post-migration failure: Checkpoint saved after database migrations; tested in `failure-post-migration`.
+- Cleanup phase failure: Error recorded during final cleanup; tested in `failure-cleanup`.
+- Conflicting retry: Conflicting answers on resume are rejected with detailed diff (tested in `failure-conflicting-retry`).
 
 ### 11. Environment Modes
 - Normal mode: Full compilation and linting.

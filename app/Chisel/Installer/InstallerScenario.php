@@ -516,6 +516,34 @@ final readonly class InstallerScenario
         );
     }
 
+    public static function failurePostMigration(): self
+    {
+        return new self(
+            id: 'failure-post-migration',
+            name: 'Post-Migration Failure',
+            description: 'Deterministic failure injection immediately following database migration.',
+            category: 'failure',
+            authFeatures: ['login', 'logout'],
+            optionalModules: ['authorization'],
+            env: ['CHISEL_TEST_FAIL_STAGE' => 'post_migration'],
+            expectedExitCode: 1,
+        );
+    }
+
+    public static function failureCleanup(): self
+    {
+        return new self(
+            id: 'failure-cleanup',
+            name: 'Cleanup Phase Failure',
+            description: 'Deterministic failure injection during final installer cleanup.',
+            category: 'failure',
+            authFeatures: ['login', 'logout'],
+            optionalModules: ['authorization'],
+            env: ['CHISEL_TEST_FAIL_STAGE' => 'cleanup'],
+            expectedExitCode: 1,
+        );
+    }
+
     public static function failureConflictingRetry(): self
     {
         return new self(
@@ -620,6 +648,8 @@ final readonly class InstallerScenario
             'failure-preflight' => self::failurePreflight(),
             'failure-dependency-validation' => self::failureDependencyValidation(),
             'failure-post-chisel-resume' => self::failurePostChiselResume(),
+            'failure-post-migration' => self::failurePostMigration(),
+            'failure-cleanup' => self::failureCleanup(),
             'failure-conflicting-retry' => self::failureConflictingRetry(),
 
             // Env

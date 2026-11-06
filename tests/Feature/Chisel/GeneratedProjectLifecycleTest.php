@@ -56,22 +56,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 PHP_BINARY,
                 'artisan',
                 'install:features',
-                '--answers='.json_encode([
-                    'auth_features' => [
-                        'login',
-                        'logout',
-                        'email-verification',
-                        'two-factor',
-                    ],
-                    'optional_modules' => [
-                        'user-management',
-                        'authorization',
-                        'audit-trails',
-                        'notifications',
-                        'reporting',
-                        'localization',
-                    ],
-                ], JSON_THROW_ON_ERROR),
+                '--answers='.json_encode(InstallerScenario::full()->answers(), JSON_THROW_ON_ERROR),
                 '--admin-name=Integration Admin',
                 '--admin-email=integration-admin@example.com',
                 '--admin-password='.$secretPassword,
@@ -131,6 +116,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
                 .'echo json_encode(['
                 .('    "audit_trails" => '.Schema::class.'::hasTable("audit_trails"),')
+                .('    "settings" => '.Schema::class.'::hasTable("settings"),')
                 .('    "two_factor_secret" => '.Schema::class.'::hasColumn("users", "two_factor_secret"),')
                 .('    "locale" => '.Schema::class.'::hasColumn("users", "locale"),')
                 .']);',
@@ -139,6 +125,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             $schemaData = json_decode($verifySchemaProcess->getOutput(), true);
             expect($schemaData)->toBeArray()
                 ->and($schemaData['audit_trails'])->toBeTrue()
+                ->and($schemaData['settings'])->toBeTrue()
                 ->and($schemaData['two_factor_secret'])->toBeTrue()
                 ->and($schemaData['locale'])->toBeTrue();
 
@@ -555,6 +542,28 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 ->and($retryOutput)->not->toContain($secretPassword);
 
             assertGeneratedProjectCleanOfInstallerArtifacts($tempDir, authorizationEnabled: true);
+
+            // Verify administrator exists, has Super Admin role, and stored password hash verifies against $secretPassword
+            $verifyAdminProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                sprintf(
+                    'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                    .('$user = '.User::class.'::where("email", %s)->first(); ')
+                    .('$hasRole = $user ? $user->hasRole('.App\Enums\Role::class.'::SuperAdmin->value) : false; ')
+                    .('$passOk = $user ? '.Hash::class.'::check(%s, $user->password) : false; ')
+                    .'echo json_encode(["user" => (bool) $user, "hasRole" => $hasRole, "passOk" => $passOk]);',
+                    var_export($scenario->admin['email'], true),
+                    var_export($secretPassword, true)
+                ),
+            ]);
+
+            expect($verifyAdminProcess->getExitCode())->toBe(0, $verifyAdminProcess->getErrorOutput());
+            $adminData = json_decode($verifyAdminProcess->getOutput(), true);
+            expect($adminData)->toBeArray()
+                ->and($adminData['user'])->toBeTrue()
+                ->and($adminData['hasRole'])->toBeTrue()
+                ->and($adminData['passOk'])->toBeTrue();
         } finally {
             removeRealGeneratedProjectFixture($tempDir);
         }
