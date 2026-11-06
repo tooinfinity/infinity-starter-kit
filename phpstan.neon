@@ -20,5 +20,3 @@ parameters:
                 - database/migrations/*_create_permission_tables.php
 
     level: max
-
-    tmpDir: /tmp/phpstan

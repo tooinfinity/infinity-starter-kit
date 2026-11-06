@@ -135,6 +135,7 @@ function runInCreatedProject(string $dir, array $command, array $env = [], int $
         'CACHE_STORE' => 'array',
         'SESSION_DRIVER' => 'array',
         'NODE_OPTIONS' => $cleanNodeOptions,
+        'TMPDIR' => $dir.'/storage/framework/testing',
     ], $env);
 
     $process = new Process($command, $dir, $mergedEnv, null, $timeout);

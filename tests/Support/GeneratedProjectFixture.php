@@ -123,6 +123,7 @@ final class GeneratedProjectFixture
             'CACHE_STORE' => 'array',
             'SESSION_DRIVER' => 'array',
             'NODE_OPTIONS' => $nodeOptions,
+            'TMPDIR' => $dir.'/storage/framework/testing',
         ], $env);
 
         $process = new Process($command, $dir, $mergedEnv, null, $timeout);
