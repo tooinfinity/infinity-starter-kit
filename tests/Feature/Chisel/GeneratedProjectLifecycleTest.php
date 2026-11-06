@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Chisel\Installer\InstallerScenario;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Hash;
@@ -46,7 +47,7 @@ if (! function_exists('assertGeneratedProjectCleanOfInstallerArtifacts')) {
 }
 
 describe('Real Generated Project E2E Lifecycle', function (): void {
-    it('completes full installation with authorization, admin setup, composer/bun verification, and secret protection', function (): void {
+    it('completes full installation (scenario: full) with authorization, admin setup, composer/bun verification, and secret protection', function (): void {
         $tempDir = createRealGeneratedProjectFixture();
         $secretPassword = 'SuperSecretAdminPass!98765';
 
@@ -55,22 +56,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 PHP_BINARY,
                 'artisan',
                 'install:features',
-                '--answers='.json_encode([
-                    'auth_features' => [
-                        'login',
-                        'logout',
-                        'email-verification',
-                        'two-factor',
-                    ],
-                    'optional_modules' => [
-                        'user-management',
-                        'authorization',
-                        'audit-trails',
-                        'notifications',
-                        'reporting',
-                        'localization',
-                    ],
-                ], JSON_THROW_ON_ERROR),
+                '--answers='.json_encode(InstallerScenario::full()->answers(), JSON_THROW_ON_ERROR),
                 '--admin-name=Integration Admin',
                 '--admin-email=integration-admin@example.com',
                 '--admin-password='.$secretPassword,
@@ -130,6 +116,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
                 .'echo json_encode(['
                 .('    "audit_trails" => '.Schema::class.'::hasTable("audit_trails"),')
+                .('    "settings" => '.Schema::class.'::hasTable("settings"),')
                 .('    "two_factor_secret" => '.Schema::class.'::hasColumn("users", "two_factor_secret"),')
                 .('    "locale" => '.Schema::class.'::hasColumn("users", "locale"),')
                 .']);',
@@ -138,6 +125,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             $schemaData = json_decode($verifySchemaProcess->getOutput(), true);
             expect($schemaData)->toBeArray()
                 ->and($schemaData['audit_trails'])->toBeTrue()
+                ->and($schemaData['settings'])->toBeTrue()
                 ->and($schemaData['two_factor_secret'])->toBeTrue()
                 ->and($schemaData['locale'])->toBeTrue();
 
@@ -166,7 +154,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
         }
     });
 
-    it('completes minimal installation (core auth only) with real package pruning, lockfile consistency, build, lint, PHPStan, and Pest', function (): void {
+    it('completes minimal installation (scenario: minimal) with real package pruning, lockfile consistency, build, lint, PHPStan, and Pest', function (): void {
         $tempDir = createRealGeneratedProjectFixture();
 
         try {
@@ -296,7 +284,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
         }
     });
 
-    it('completes dependency-chain installation (reporting + dependencies) in LARAVEL_INSTALLER_NO_NODE=true mode and remains installable later', function (): void {
+    it('completes dependency-chain installation (scenario: dependency-heavy / env-no-node) in LARAVEL_INSTALLER_NO_NODE=true mode and remains installable later', function (): void {
         $tempDir = createRealGeneratedProjectFixture();
 
         try {
@@ -402,7 +390,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
         }
     });
 
-    it('generates a schema that matches the selected features even if migrated before installation when --fresh is specified', function (): void {
+    it('generates a schema that matches selected features (scenario: db-early-migration-fresh) even if migrated before installation when --fresh is specified', function (): void {
         $tempDir = createRealGeneratedProjectFixture();
 
         // Simulate an early migration before install:features runs (the bug condition reported in #33)
@@ -448,6 +436,134 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 ->and($schemaData['locale'])->toBeFalse()
                 ->and($schemaData['roles'])->toBeTrue()
                 ->and($schemaData['users'])->toBeTrue();
+        } finally {
+            removeRealGeneratedProjectFixture($tempDir);
+        }
+    });
+
+    it('completes E2E lifecycle for scenario [admin-no-credentials] leaving zero users and Super Admin role', function (): void {
+        $scenario = InstallerScenario::adminNoCredentials();
+        $tempDir = createRealGeneratedProjectFixture();
+
+        try {
+            $installProcess = runInGeneratedProject(
+                $tempDir,
+                [
+                    PHP_BINARY,
+                    'artisan',
+                    'install:features',
+                    '--answers='.json_encode($scenario->answers(), JSON_THROW_ON_ERROR),
+                    '--no-interaction',
+                ],
+                ['LARAVEL_INSTALLER_NO_NODE' => 'true']
+            );
+
+            expect($installProcess->getExitCode())->toBe(0, $installProcess->getOutput()."\n".$installProcess->getErrorOutput());
+
+            assertGeneratedProjectCleanOfInstallerArtifacts($tempDir, authorizationEnabled: true);
+
+            $verifyAuthProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                .('$role = '.Role::class.'::where("name", '.App\Enums\Role::class.'::SuperAdmin->value)->first(); ')
+                .('$permCount = '.Permission::class.'::count(); ')
+                .('$userCount = '.User::class.'::count(); ')
+                .'echo json_encode(["role" => (bool) $role, "permCount" => $permCount, "userCount" => $userCount]);',
+            ]);
+
+            expect($verifyAuthProcess->getExitCode())->toBe(0, $verifyAuthProcess->getErrorOutput());
+            $authData = json_decode($verifyAuthProcess->getOutput(), true);
+            expect($authData)->toBeArray()
+                ->and($authData['role'])->toBeTrue()
+                ->and($authData['permCount'])->toBeGreaterThan(0)
+                ->and($authData['userCount'])->toBe(0);
+        } finally {
+            removeRealGeneratedProjectFixture($tempDir);
+        }
+    });
+
+    it('completes E2E lifecycle for scenario [failure-post-chisel-resume] with secret protection and recovery', function (): void {
+        $scenario = InstallerScenario::failurePostChiselResume();
+        $tempDir = createRealGeneratedProjectFixture();
+        $secretPassword = $scenario->admin['password'] ?? 'RecoverySecretPassword987!';
+
+        try {
+            // First run fails after pruning at post_chisel
+            $failProcess = runInGeneratedProject(
+                $tempDir,
+                [
+                    PHP_BINARY,
+                    'artisan',
+                    'install:features',
+                    '--answers='.json_encode($scenario->answers(), JSON_THROW_ON_ERROR),
+                    '--admin-name='.$scenario->admin['name'],
+                    '--admin-email='.$scenario->admin['email'],
+                    '--admin-password='.$secretPassword,
+                    '--no-interaction',
+                ],
+                ['CHISEL_TEST_FAIL_STAGE' => 'post_chisel', 'LARAVEL_INSTALLER_NO_NODE' => 'true']
+            );
+
+            expect($failProcess->getExitCode())->not->toBe(0);
+
+            $statePath = $tempDir.'/.installer-state.json';
+            expect(file_exists($statePath))->toBeTrue();
+
+            $stateContent = (string) file_get_contents($statePath);
+            expect($stateContent)->not->toContain($secretPassword);
+
+            $stateData = json_decode($stateContent, true);
+            expect($stateData['status'])->toBe('failed')
+                ->and($stateData['failed_phase'])->toBe('post_chisel')
+                ->and($stateData['completed_phases'])->toContain('preflight', 'prune');
+
+            // Re-run to recover from failure checkpoint
+            $retryProcess = runInGeneratedProject(
+                $tempDir,
+                [
+                    PHP_BINARY,
+                    'artisan',
+                    'install:features',
+                    '--answers='.json_encode($scenario->answers(), JSON_THROW_ON_ERROR),
+                    '--admin-name='.$scenario->admin['name'],
+                    '--admin-email='.$scenario->admin['email'],
+                    '--admin-password='.$secretPassword,
+                    '--no-interaction',
+                ],
+                ['LARAVEL_INSTALLER_NO_NODE' => 'true']
+            );
+
+            expect($retryProcess->getExitCode())->toBe(0, $retryProcess->getOutput()."\n".$retryProcess->getErrorOutput());
+
+            $retryOutput = $retryProcess->getOutput().$retryProcess->getErrorOutput();
+            expect($retryOutput)->toContain('Resuming previous installation from phase [post_chisel]')
+                ->and($retryOutput)->toContain('Feature pruning already completed (skipped on retry)')
+                ->and($retryOutput)->not->toContain($secretPassword);
+
+            assertGeneratedProjectCleanOfInstallerArtifacts($tempDir, authorizationEnabled: true);
+
+            // Verify administrator exists, has Super Admin role, and stored password hash verifies against $secretPassword
+            $verifyAdminProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                '-r',
+                sprintf(
+                    'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make('.Kernel::class.'::class)->bootstrap(); '
+                    .('$user = '.User::class.'::where("email", %s)->first(); ')
+                    .('$hasRole = $user ? $user->hasRole('.App\Enums\Role::class.'::SuperAdmin->value) : false; ')
+                    .('$passOk = $user ? '.Hash::class.'::check(%s, $user->password) : false; ')
+                    .'echo json_encode(["user" => (bool) $user, "hasRole" => $hasRole, "passOk" => $passOk]);',
+                    var_export($scenario->admin['email'], true),
+                    var_export($secretPassword, true)
+                ),
+            ]);
+
+            expect($verifyAdminProcess->getExitCode())->toBe(0, $verifyAdminProcess->getErrorOutput());
+            $adminData = json_decode($verifyAdminProcess->getOutput(), true);
+            expect($adminData)->toBeArray()
+                ->and($adminData['user'])->toBeTrue()
+                ->and($adminData['hasRole'])->toBeTrue()
+                ->and($adminData['passOk'])->toBeTrue();
         } finally {
             removeRealGeneratedProjectFixture($tempDir);
         }

@@ -16,6 +16,22 @@ final class InstallerState
     public const string STATE_FILE = '.installer-state.json';
 
     /**
+     * Authoritative ordered list of installer execution phases.
+     *
+     * @var list<string>
+     */
+    public const array PHASES = [
+        'preflight',
+        'prune',
+        'post_chisel',
+        'migrate',
+        'post_migration',
+        'configure',
+        'post_scaffold',
+        'cleanup',
+    ];
+
+    /**
      * @param  array{auth_features: list<string>, optional_modules: list<string>, ai_guidelines?: list<string>}  $answers
      * @param  list<string>  $completedPhases
      * @param  array<string, mixed>  $metadata
