@@ -9,8 +9,8 @@ type AuthorizationHelpers = {
 
 export function useAuthorization(): AuthorizationHelpers {
     const { auth } = usePage().props;
-    const permissions = auth.permissions ?? [];
-    const roles = auth.roles ?? [];
+    const permissions = auth?.permissions ?? [];
+    const roles = auth?.roles ?? [];
 
     return {
         can: (permission: string): boolean => permissions.includes(permission),

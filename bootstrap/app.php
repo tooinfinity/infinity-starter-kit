@@ -20,6 +20,9 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Middleware\TrustProxies as FrameworkTrustProxies;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -50,5 +53,27 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request): Response {
+            $status = $response->getStatusCode();
+
+            if (! in_array($status, [403, 404, 419, 500, 503], true)) {
+                return $response;
+            }
+
+            if (! $request->hasHeader('X-Inertia') && $request->expectsJson()) {
+                return $response;
+            }
+
+            if (! $request->hasHeader('X-Inertia') && ! $request->acceptsHtml()) {
+                return $response;
+            }
+
+            if ($status === 500 && config('app.debug')) {
+                return $response;
+            }
+
+            return Inertia::render('errors/show', ['status' => $status])
+                ->toResponse($request)
+                ->setStatusCode($status);
+        });
     })->create();
