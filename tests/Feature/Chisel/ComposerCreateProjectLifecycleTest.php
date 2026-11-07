@@ -207,6 +207,7 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir, bool $
 
     if (! $authorizationEnabled) {
         $removedPaths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+        $removedPaths[] = 'app/Console/Commands/CreateAdminCommand.php';
     }
 
     foreach ($removedPaths as $path) {
@@ -217,6 +218,8 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir, bool $
     if ($authorizationEnabled) {
         expect(file_exists($targetDir.'/app/Console/Commands/SetupAuthorizationCommand.php'))
             ->toBeTrue('Expected SetupAuthorizationCommand.php to remain in generated project when authorization is enabled.');
+        expect(file_exists($targetDir.'/app/Console/Commands/CreateAdminCommand.php'))
+            ->toBeTrue('Expected CreateAdminCommand.php to remain in generated project when authorization is enabled.');
     }
 
     $composerJson = json_decode((string) file_get_contents($targetDir.'/composer.json'), true);
@@ -253,6 +256,7 @@ function assertCreatedProjectCleanOfInstallerArtifacts(string $targetDir, bool $
 
     if (! $authorizationEnabled) {
         $forbiddenTokens[] = 'SetupAuthorizationCommand';
+        $forbiddenTokens[] = 'CreateAdminCommand';
     }
 
     $scanDirs = ['app', 'bootstrap', 'config', 'database', 'lang', 'resources', 'routes', 'tests'];
@@ -380,6 +384,7 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             $artisanListProcess = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'list']);
             expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
                 ->and($artisanListProcess->getOutput())->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->toContain('authorization:create-admin')
                 ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
 
             $rerunAuthSetup = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'authorization:setup']);
@@ -491,6 +496,7 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             $artisanListProcess = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'list']);
             expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
                 ->and($artisanListProcess->getOutput())->not->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('authorization:create-admin')
                 ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
 
             $userCountProcess = runInCreatedProject($targetDir, [
@@ -583,6 +589,7 @@ describe('Composer Create-Project Lifecycle E2E Test', function (): void {
             $artisanListProcess = runInCreatedProject($targetDir, [PHP_BINARY, 'artisan', 'list']);
             expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
                 ->and($artisanListProcess->getOutput())->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->toContain('authorization:create-admin')
                 ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
 
             $authData = json_decode($verifyAuthProcess->getOutput(), true);

@@ -97,6 +97,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             $artisanListProcess = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'list']);
             expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
                 ->and($artisanListProcess->getOutput())->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->toContain('authorization:create-admin')
                 ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
 
             $rerunAuthSetup = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'authorization:setup']);
@@ -216,6 +217,7 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             $artisanListProcess = runInGeneratedProject($tempDir, [PHP_BINARY, 'artisan', 'list']);
             expect($artisanListProcess->getExitCode())->toBe(0, $artisanListProcess->getErrorOutput())
                 ->and($artisanListProcess->getOutput())->not->toContain('authorization:setup')
+                ->and($artisanListProcess->getOutput())->not->toContain('authorization:create-admin')
                 ->and($artisanListProcess->getOutput())->not->toContain('admin:setup');
 
             $userCountProcess = runInGeneratedProject($tempDir, [

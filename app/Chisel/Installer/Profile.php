@@ -224,6 +224,7 @@ final readonly class Profile
             $paths[] = 'app/Enums/Permission.php';
             $paths[] = 'app/Enums/Role.php';
             $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
         }
 
         if ($this->hasSettings()) {
@@ -281,6 +282,7 @@ final readonly class Profile
         if (! $this->hasAuthorization()) {
             $paths[] = 'config/permission.php';
             $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
             $paths[] = 'resources/js/hooks/use-authorization.ts';
         }
 

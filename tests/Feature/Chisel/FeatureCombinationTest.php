@@ -261,6 +261,7 @@ it('handles all features enabled', function (): void {
             ->and(file_exists($dir.'/chisel-paths.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Console/Commands/InstallFeaturesCommand.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Console/Commands/SetupAuthorizationCommand.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Console/Commands/CreateAdminCommand.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Console/Commands/SetupAdminUserCommand.php'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Feature/Chisel'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Unit/Chisel'))->toBeFalse();
@@ -315,6 +316,7 @@ it('handles all optional modules disabled and all auth features disabled', funct
             ->and(file_exists($dir.'/chisel-paths.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Console/Commands/InstallFeaturesCommand.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Console/Commands/SetupAuthorizationCommand.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Console/Commands/CreateAdminCommand.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Console/Commands/SetupAdminUserCommand.php'))->toBeFalse();
 
         // Verify composer.json cleanup
@@ -349,6 +351,7 @@ it('handles authorization alone', function (): void {
             ->and(file_exists($dir.'/app/Enums/Role.php'))->toBeTrue()
             ->and(file_exists($dir.'/config/permission.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Console/Commands/SetupAuthorizationCommand.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Console/Commands/CreateAdminCommand.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Console/Commands/SetupAdminUserCommand.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Models/Setting.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeFalse();
