@@ -1,14 +1,41 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { ComponentType } from 'react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { toast } from 'sonner';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import '../css/app.css';
 
 const defaultAppName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+router.on('httpException', (event) => {
+    const response = event.detail.response;
+    const isInertia = Boolean(
+        response.headers &&
+        ('x-inertia' in response.headers || 'X-Inertia' in response.headers),
+    );
+
+    if (response.status === 419 && !isInertia) {
+        event.preventDefault();
+        toast.error(
+            'Your session has expired. Please refresh the page or sign in again.',
+            {
+                action: {
+                    label: 'Refresh',
+                    onClick: () => window.location.reload(),
+                },
+            },
+        );
+    }
+});
+
+router.on('networkError', () => {
+    toast.error('Network error. Please check your connection and try again.');
+});
 
 void createInertiaApp({
     title: (title, page) => {
@@ -26,10 +53,12 @@ void createInertiaApp({
 
         root.render(
             <StrictMode>
-                <TooltipProvider delayDuration={0}>
-                    <App {...props} />
-                    <Toaster />
-                </TooltipProvider>
+                <ErrorBoundary>
+                    <TooltipProvider delayDuration={0}>
+                        <App {...props} />
+                        <Toaster />
+                    </TooltipProvider>
+                </ErrorBoundary>
             </StrictMode>,
         );
     },

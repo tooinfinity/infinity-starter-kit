@@ -3,6 +3,7 @@ import createServer from '@inertiajs/react/server';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { ComponentType } from 'react';
 import ReactDOMServer from 'react-dom/server';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -20,10 +21,12 @@ createServer((page) =>
             ),
         setup: ({ App, props }) => {
             return (
-                <TooltipProvider delayDuration={0}>
-                    <App {...props} />
-                    <Toaster />
-                </TooltipProvider>
+                <ErrorBoundary>
+                    <TooltipProvider delayDuration={0}>
+                        <App {...props} />
+                        <Toaster />
+                    </TooltipProvider>
+                </ErrorBoundary>
             );
         },
     }),

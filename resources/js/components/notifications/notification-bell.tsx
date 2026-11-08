@@ -12,7 +12,12 @@ import { useTranslation } from '@/hooks/use-translation';
 export function NotificationBell() {
     const { __, transChoice } = useTranslation();
     const [open, setOpen] = useState(false);
-    const { notifications } = usePage().props;
+    const { auth, notifications } = usePage().props;
+
+    if (!auth?.user) {
+        return null;
+    }
+
     const unreadCount = notifications?.unreadCount ?? 0;
 
     const handleOpenChange = (isOpen: boolean) => {
