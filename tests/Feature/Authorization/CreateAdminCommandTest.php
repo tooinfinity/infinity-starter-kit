@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Fortify\Features;
 use Spatie\Permission\Models\Role as RoleModel;
 
 beforeEach(function (): void {
@@ -30,9 +31,12 @@ test('create admin command creates a new admin user interactively', function ():
 
     expect($user)->not->toBeNull()
         ->and($user->name)->toBe('Admin User')
-        ->and($user->hasVerifiedEmail())->toBeTrue()
         ->and(Hash::check('password1234', $user->password))->toBeTrue()
         ->and($user->hasRole(Role::SuperAdmin->value))->toBeTrue();
+
+    if (Features::enabled(Features::emailVerification())) {
+        expect($user->hasVerifiedEmail())->toBeTrue();
+    }
 });
 
 test('create admin command creates a new admin user non-interactively via stdin', function (): void {
@@ -53,9 +57,12 @@ test('create admin command creates a new admin user non-interactively via stdin'
 
     expect($user)->not->toBeNull()
         ->and($user->name)->toBe('Stdin Admin')
-        ->and($user->hasVerifiedEmail())->toBeTrue()
         ->and(Hash::check('secure-pass-1234', $user->password))->toBeTrue()
         ->and($user->hasRole(Role::SuperAdmin->value))->toBeTrue();
+
+    if (Features::enabled(Features::emailVerification())) {
+        expect($user->hasVerifiedEmail())->toBeTrue();
+    }
 });
 
 test('create admin command defaults to Administrator when name is omitted non-interactively', function (): void {
@@ -248,4 +255,13 @@ test('first login of the created admin via authorization:create-admin reaches da
 
     $this->assertAuthenticated();
     $this->get(route('dashboard'))->assertOk();
+});
+
+test('create admin command rejects invalid email address', function (): void {
+    $this->artisan('authorization:create-admin', [
+        '--email' => 'invalid-email-address',
+        '--no-interaction' => true,
+    ])
+        ->expectsOutputToContain('A valid email address is required.')
+        ->assertFailed();
 });

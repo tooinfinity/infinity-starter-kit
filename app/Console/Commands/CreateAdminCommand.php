@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Features;
@@ -31,11 +32,19 @@ final class CreateAdminCommand extends Command
      */
     private static mixed $inputStream = null;
 
+    /**
+     * Set the input stream used to read passwords from standard input.
+     *
+     * @param  resource|null  $stream
+     */
     public static function setInputStream(mixed $stream): void
     {
         self::$inputStream = is_resource($stream) ? $stream : null;
     }
 
+    /**
+     * Execute the console command.
+     */
     public function handle(): int
     {
         $this->components->info('Provisioning Super Admin user...');
@@ -147,17 +156,19 @@ final class CreateAdminCommand extends Command
 
         RoleModel::findOrCreate(Role::SuperAdmin->value);
 
-        $user = User::query()->create([
-            'name' => $name,
-            'email' => $email,
-            'password' => $inputPassword,
-        ]);
+        DB::transaction(function () use ($name, $email, $inputPassword): void {
+            $user = User::query()->create([
+                'name' => $name,
+                'email' => $email,
+                'password' => $inputPassword,
+            ]);
 
-        if (Features::enabled(Features::emailVerification())) {
-            $user->markEmailAsVerified();
-        }
+            if (Features::enabled(Features::emailVerification())) {
+                $user->markEmailAsVerified();
+            }
 
-        $user->assignRole(Role::SuperAdmin->value);
+            $user->assignRole(Role::SuperAdmin->value);
+        });
 
         $this->components->twoColumnDetail('Admin user created', $email);
         $this->components->info('Super Admin created successfully.');
@@ -165,20 +176,15 @@ final class CreateAdminCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Read the administrator password from the configured STDIN stream.
+     */
     private function readPasswordFromStdin(): ?string
     {
         $stream = self::$inputStream ?? ($this->input instanceof Input ? $this->input->getStream() : null) ?? STDIN;
 
-        if (! is_resource($stream)) {
-            return null;
-        }
-
         $line = fgets($stream);
 
-        if ($line === false) {
-            return null;
-        }
-
-        return mb_rtrim($line, "\r\n");
+        return $line !== false ? mb_rtrim($line, "\r\n") : null;
     }
 }
