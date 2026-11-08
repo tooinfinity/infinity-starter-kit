@@ -53,10 +53,20 @@ final class CreateSessionRequest extends FormRequest
     public function throttleKey(): string
     {
         return $this->string('email')
+            ->trim()
             ->lower()
             ->append('|'.$this->ip())
             ->transliterate()
             ->value();
+    }
+
+    public function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge([
+                'email' => $this->string('email')->trim()->lower()->value(),
+            ]);
+        }
     }
 
     /**

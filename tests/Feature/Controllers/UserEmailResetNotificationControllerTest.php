@@ -75,3 +75,26 @@ it('redirects authenticated users away from forgot password', function (): void 
 
     $response->assertRedirectToRoute('dashboard');
 });
+
+it('sends password reset notification with mixed-case and whitespace-padded email', function (string $emailInput): void {
+    Notification::fake();
+
+    $user = User::factory()->create([
+        'email' => 'john@example.com',
+    ]);
+
+    $response = $this->fromRoute('password.request')
+        ->post(route('password.email'), [
+            'email' => $emailInput,
+        ]);
+
+    $response->assertRedirectToRoute('password.request')
+        ->assertSessionHas('status', 'A reset link will be sent if the account exists.');
+
+    Notification::assertSentTo($user, ResetPassword::class);
+})->with([
+    'mixed case' => 'John@Example.com',
+    'uppercase' => 'JOHN@EXAMPLE.COM',
+    'surrounding whitespace' => '   john@example.com   ',
+    'mixed case with whitespace' => '  John@Example.COM  ',
+]);

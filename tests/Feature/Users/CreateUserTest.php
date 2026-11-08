@@ -188,3 +188,27 @@ it('allows super admin to assign any role when creating user', function (): void
     expect($created)->not->toBeNull()
         ->and($created->hasRole('ops'))->toBeTrue();
 });
+
+it('normalizes mixed-case and whitespace-padded email when creating user', function (string $emailInput): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersCreate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $response = $this->actingAs($admin)
+        ->post(route('users.store'), [
+            'name' => 'Store Test User',
+            'email' => $emailInput,
+            'password' => 'password123',
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    $created = User::query()->where('email', 'store.test@example.com')->first();
+    expect($created)->not->toBeNull()
+        ->and($created->email)->toBe('store.test@example.com');
+})->with([
+    'mixed case' => 'Store.Test@Example.com',
+    'uppercase' => 'STORE.TEST@EXAMPLE.COM',
+    'whitespace' => '   store.test@example.com   ',
+    'mixed case with whitespace' => '  Store.Test@Example.COM  ',
+]);

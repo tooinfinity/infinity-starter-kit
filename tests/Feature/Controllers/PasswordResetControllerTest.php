@@ -131,3 +131,33 @@ it('redirects authenticated users away from reset password', function (): void {
 
     $response->assertRedirectToRoute('dashboard');
 });
+
+it('may reset password with mixed-case and whitespace-padded email', function (string $emailInput): void {
+    Event::fake([PasswordReset::class]);
+
+    $user = User::factory()->create([
+        'email' => 'john@example.com',
+    ]);
+
+    $token = Password::createToken($user);
+
+    $response = $this->fromRoute('password.reset', ['token' => $token])
+        ->post(route('password.store'), [
+            'email' => $emailInput,
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+            'token' => $token,
+        ]);
+
+    $response->assertRedirectToRoute('login')
+        ->assertSessionHas('status');
+
+    expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
+
+    Event::assertDispatched(PasswordReset::class);
+})->with([
+    'mixed case' => 'John@Example.com',
+    'uppercase' => 'JOHN@EXAMPLE.COM',
+    'surrounding whitespace' => '   john@example.com   ',
+    'mixed case with whitespace' => '  John@Example.COM  ',
+]);

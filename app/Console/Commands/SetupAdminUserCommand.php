@@ -10,6 +10,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Features;
 
@@ -59,13 +60,15 @@ final class SetupAdminUserCommand extends Command
                     validate: ['name' => ['required', 'string', 'max:255']],
                 ));
 
-        $email = $hasEmail
+        $rawEmail = $hasEmail
             ? mb_trim((string) $optionEmail)
             : text(
                 label: 'Email',
                 required: true,
                 validate: ['email' => ['required', 'email', 'max:255']],
             );
+
+        $email = Str::lower($rawEmail);
 
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             $this->components->error('A valid email address is required to create an administrator user.');

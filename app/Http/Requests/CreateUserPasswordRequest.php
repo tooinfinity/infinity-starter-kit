@@ -20,4 +20,13 @@ final class CreateUserPasswordRequest extends FormRequest
             'password' => ['required', 'confirmed', Password::defaults()],
         ];
     }
+
+    public function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge([
+                'email' => $this->string('email')->trim()->lower()->value(),
+            ]);
+        }
+    }
 }
