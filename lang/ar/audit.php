@@ -13,7 +13,16 @@ return [
         'user_deactivated' => 'تم تعطيل المستخدم',
         'user_deleted' => 'تم حذف المستخدم',
         'user_password_changed' => 'تم تغيير كلمة المرور',
+        'user_role_changed' => 'تم تغيير الدور',
         'settings_updated' => 'تم تحديث الإعدادات',
+        'auth_login' => 'تسجيل الدخول',
+        'auth_login_failed' => 'فشل تسجيل الدخول',
+        'auth_lockout' => 'قفل الحساب',
+        'auth_logout' => 'تسجيل الخروج',
+        'auth_password_reset' => 'إعادة تعيين كلمة المرور',
+        'auth_two_factor_enabled' => 'تم تفعيل المصادقة الثنائية',
+        'auth_two_factor_disabled' => 'تم تعطيل المصادقة الثنائية',
+        'auth_recovery_codes_used' => 'تم استخدام رمز الاسترداد',
     ],
 
     'filters' => [

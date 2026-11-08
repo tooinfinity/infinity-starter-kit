@@ -13,7 +13,16 @@ return [
         'user_deactivated' => 'User Deactivated',
         'user_deleted' => 'User Deleted',
         'user_password_changed' => 'Password Changed',
+        'user_role_changed' => 'Role Changed',
         'settings_updated' => 'Settings Updated',
+        'auth_login' => 'Login Successful',
+        'auth_login_failed' => 'Login Failed',
+        'auth_lockout' => 'Account Lockout',
+        'auth_logout' => 'Logout',
+        'auth_password_reset' => 'Password Reset',
+        'auth_two_factor_enabled' => 'Two-Factor Authentication Enabled',
+        'auth_two_factor_disabled' => 'Two-Factor Authentication Disabled',
+        'auth_recovery_codes_used' => 'Recovery Code Used',
     ],
 
     'filters' => [

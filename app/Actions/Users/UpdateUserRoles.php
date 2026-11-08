@@ -56,7 +56,7 @@ final readonly class UpdateUserRoles
                 $newValues = $this->userAuditData->snapshot($user, $roles);
 
                 $this->auditTrail->handle(
-                    event: AuditEvent::UserUpdated,
+                    event: AuditEvent::UserRoleChanged,
                     auditable: $user,
                     oldValues: $oldValues,
                     newValues: $newValues,

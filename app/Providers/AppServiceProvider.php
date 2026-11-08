@@ -7,7 +7,13 @@ namespace App\Providers;
 /* @chisel-roles-permissions */
 use App\Enums\Role;
 /* @end-chisel-roles-permissions */
+/* @chisel-audit-trails */
+use App\Listeners\AuditTrails\AuditAuthenticationEvents;
+/* @end-chisel-audit-trails */
 use App\Models\User;
+/* @chisel-audit-trails */
+use Illuminate\Support\Facades\Event;
+/* @end-chisel-audit-trails */
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -38,5 +44,9 @@ final class AppServiceProvider extends ServiceProvider
             return null;
         });
         /* @end-chisel-roles-permissions */
+
+        /* @chisel-audit-trails */
+        Event::subscribe(AuditAuthenticationEvents::class);
+        /* @end-chisel-audit-trails */
     }
 }

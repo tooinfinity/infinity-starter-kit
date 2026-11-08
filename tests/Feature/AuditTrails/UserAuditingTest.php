@@ -216,7 +216,7 @@ test('DeleteUser self-service action records user.deleted audit trail (OBS-001)'
         ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
 });
 
-test('UpdateUserRoles records user.updated audit trail with roles and tags', function (): void {
+test('UpdateUserRoles records user.role_changed audit trail with roles and tags', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
@@ -230,7 +230,7 @@ test('UpdateUserRoles records user.updated audit trail with roles and tags', fun
     $action->handle($targetUser, ['manager']);
 
     $audit = AuditTrail::query()
-        ->where('event', AuditEvent::UserUpdated)
+        ->where('event', AuditEvent::UserRoleChanged)
         ->where('auditable_id', $targetUser->id)
         ->latest('id')
         ->first();
