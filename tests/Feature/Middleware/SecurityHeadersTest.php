@@ -5,11 +5,13 @@ declare(strict_types=1);
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 afterEach(function (): void {
     TrustProxies::flushState();
+    Vite::useHotFile(public_path('/hot'));
 });
 
 it('sends baseline security headers', function (): void {
@@ -67,11 +69,15 @@ it('sends content security policy header with vite nonce', function (): void {
 
     expect($csp)->toContain("default-src 'self'")
         ->and($csp)->toContain("script-src 'self' 'nonce-")
-        ->and($csp)->toContain("'unsafe-eval'")
+        ->and($csp)->not->toContain("'unsafe-eval'")
         ->and($csp)->toContain("style-src 'self' 'unsafe-inline'")
         ->and($csp)->toContain("img-src 'self' data: blob:")
         ->and($csp)->toContain("font-src 'self' data:")
-        ->and($csp)->toContain("connect-src 'self' ws: wss: http: https:")
+        ->and($csp)->toContain("connect-src 'self';")
+        ->and($csp)->not->toContain('ws:')
+        ->and($csp)->not->toContain('wss:')
+        ->and($csp)->not->toContain('http:')
+        ->and($csp)->not->toContain('https:')
         ->and($csp)->toContain("object-src 'none'")
         ->and($csp)->toContain("frame-ancestors 'none'")
         ->and($csp)->toContain("base-uri 'self'")
@@ -86,6 +92,101 @@ it('formats content security policy strictly in production', function (): void {
 
     expect($csp)->not->toContain("'unsafe-eval'")
         ->and($csp)->toContain("connect-src 'self';");
+});
+
+it('formats content security policy strictly in staging without vite hot file', function (): void {
+    app()->detectEnvironment(fn (): string => 'staging');
+
+    $response = $this->get(route('home'));
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->not->toContain("'unsafe-eval'")
+        ->and($csp)->toContain("connect-src 'self';")
+        ->and($csp)->not->toContain('ws:')
+        ->and($csp)->not->toContain('wss:')
+        ->and($csp)->not->toContain('http:')
+        ->and($csp)->not->toContain('https:');
+});
+
+it('relaxes content security policy for local development when vite is running hot', function (): void {
+    $tempHotFile = tempnam(sys_get_temp_dir(), 'hot_test');
+    expect($tempHotFile)->toBeString();
+    file_put_contents($tempHotFile, 'http://localhost:5173');
+    Vite::useHotFile($tempHotFile);
+
+    try {
+        $response = $this->get(route('home'));
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+
+        expect($csp)->toContain("'unsafe-eval'")
+            ->and($csp)->toContain("connect-src 'self' http://localhost:5173 ws://localhost:5173;")
+            ->and($csp)->not->toContain("connect-src 'self' ws: wss: http: https:");
+    } finally {
+        if (file_exists($tempHotFile)) {
+            File::delete($tempHotFile);
+        }
+    }
+});
+
+it('supports https dev server when vite is running hot', function (): void {
+    $tempHotFile = tempnam(sys_get_temp_dir(), 'hot_test');
+    expect($tempHotFile)->toBeString();
+    file_put_contents($tempHotFile, 'https://localhost:5173');
+    Vite::useHotFile($tempHotFile);
+
+    try {
+        $response = $this->get(route('home'));
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+
+        expect($csp)->toContain("'unsafe-eval'")
+            ->and($csp)->toContain("connect-src 'self' https://localhost:5173 wss://localhost:5173;");
+    } finally {
+        if (file_exists($tempHotFile)) {
+            File::delete($tempHotFile);
+        }
+    }
+});
+
+it('restricts dev server scheme when vite is running hot', function (): void {
+    $tempHotFile = tempnam(sys_get_temp_dir(), 'hot_test');
+    expect($tempHotFile)->toBeString();
+    file_put_contents($tempHotFile, 'custom://localhost:5173');
+    Vite::useHotFile($tempHotFile);
+
+    try {
+        $response = $this->get(route('home'));
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+
+        expect($csp)->toContain("'unsafe-eval'")
+            ->and($csp)->toContain("connect-src 'self' http://localhost:5173 ws://localhost:5173;")
+            ->and($csp)->not->toContain('custom:');
+    } finally {
+        if (file_exists($tempHotFile)) {
+            File::delete($tempHotFile);
+        }
+    }
+});
+
+it('does not relax content security policy in production even if vite hot file exists', function (): void {
+    app()->detectEnvironment(fn (): string => 'production');
+
+    $tempHotFile = tempnam(sys_get_temp_dir(), 'hot_test');
+    expect($tempHotFile)->toBeString();
+    file_put_contents($tempHotFile, 'http://localhost:5173');
+    Vite::useHotFile($tempHotFile);
+
+    try {
+        $response = $this->get(route('home'), ['X-Forwarded-Proto' => 'https']);
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+
+        expect($csp)->not->toContain("'unsafe-eval'")
+            ->and($csp)->toContain("connect-src 'self';")
+            ->and($csp)->not->toContain('localhost:5173');
+    } finally {
+        if (file_exists($tempHotFile)) {
+            File::delete($tempHotFile);
+        }
+    }
 });
 
 it('provides a fresh nonce during rendering that matches the content security policy', function (): void {
