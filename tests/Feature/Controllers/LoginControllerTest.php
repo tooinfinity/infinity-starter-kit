@@ -198,3 +198,59 @@ it('dispatches lockout event when rate limit is reached', function (): void {
 
     Event::assertDispatched(Lockout::class);
 });
+
+it('may authenticate with mixed-case and whitespace-padded email', function (string $emailInput): void {
+    $user = User::factory()/* @chisel-two-factor */ ->withoutTwoFactor()/* @end-chisel-two-factor */ ->create([
+        'email' => 'john@example.com',
+        'password' => Hash::make('password'),
+    ]);
+
+    $response = $this->fromRoute('login')
+        ->post(route('login.store'), [
+            'email' => $emailInput,
+            'password' => 'password',
+        ]);
+
+    $response->assertRedirectToRoute('dashboard');
+    $this->assertAuthenticatedAs($user);
+})->with([
+    'mixed case' => 'John@Example.com',
+    'uppercase' => 'JOHN@EXAMPLE.COM',
+    'leading and trailing whitespace' => '   john@example.com   ',
+    'mixed case with whitespace' => '  John@Example.COM  ',
+]);
+
+it('shares throttle bucket regardless of email case or whitespace', function (): void {
+    User::factory()->create([
+        'email' => 'john@example.com',
+        'password' => Hash::make('password'),
+    ]);
+
+    $emails = [
+        'john@example.com',
+        'John@Example.com',
+        '  john@example.com  ',
+        'JOHN@EXAMPLE.COM',
+        '  John@Example.com  ',
+    ];
+
+    foreach ($emails as $email) {
+        $this->fromRoute('login')
+            ->post(route('login.store'), [
+                'email' => $email,
+                'password' => 'wrong-password',
+            ]);
+    }
+
+    $response = $this->fromRoute('login')
+        ->post(route('login.store'), [
+            'email' => 'john@example.com',
+            'password' => 'wrong-password',
+        ]);
+
+    $response->assertRedirectToRoute('login')
+        ->assertSessionHasErrors('email');
+
+    $errors = session('errors');
+    expect($errors->get('email')[0])->toContain('Too many login attempts');
+});

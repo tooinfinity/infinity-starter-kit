@@ -372,3 +372,29 @@ it('resets email verification and sends notification when email changes during a
     Notification::assertSentTo($target, VerifyEmail::class);
 });
 /* @end-chisel-email-verification */
+
+it('normalizes mixed-case and whitespace-padded email when updating user', function (string $emailInput): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersUpdate->value));
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+
+    $target = User::factory()->create([
+        'name' => 'Update Target User',
+        'email' => 'old.target@example.com',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->put(route('users.update', $target), [
+            'name' => 'Update Target User',
+            'email' => $emailInput,
+        ]);
+
+    $response->assertRedirectToRoute('users.index');
+
+    expect($target->refresh()->email)->toBe('updated.target@example.com');
+})->with([
+    'mixed case' => 'Updated.Target@Example.com',
+    'uppercase' => 'UPDATED.TARGET@EXAMPLE.COM',
+    'whitespace' => '   updated.target@example.com   ',
+    'mixed case with whitespace' => '  Updated.Target@Example.COM  ',
+]);

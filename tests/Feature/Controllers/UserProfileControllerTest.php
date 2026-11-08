@@ -154,3 +154,26 @@ it('allows keeping same email', function (): void {
     $response->assertRedirectToRoute('user-profile.edit')
         ->assertSessionDoesntHaveErrors();
 });
+
+it('normalizes mixed-case and whitespace-padded email on profile update', function (string $emailInput): void {
+    $user = User::factory()->create([
+        'name' => 'Profile User',
+        'email' => 'old@example.com',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->fromRoute('user-profile.edit')
+        ->patch(route('user-profile.update'), [
+            'name' => 'Profile User',
+            'email' => $emailInput,
+        ]);
+
+    $response->assertRedirectToRoute('user-profile.edit');
+
+    expect($user->refresh()->email)->toBe('updated@example.com');
+})->with([
+    'mixed case' => 'Updated@Example.com',
+    'uppercase' => 'UPDATED@EXAMPLE.COM',
+    'whitespace' => '   updated@example.com   ',
+    'mixed case with whitespace' => '  Updated@Example.COM  ',
+]);

@@ -260,3 +260,16 @@ test('first login of the created admin goes straight to dashboard', function ():
     $this->assertAuthenticated();
     $this->get(route('dashboard'))->assertOk();
 });
+
+test('admin setup normalizes mixed-case and whitespace-padded email', function (): void {
+    $this->artisan('admin:setup', [
+        '--name' => 'Case Admin',
+        '--email' => '  Case.Admin@Example.COM  ',
+        '--password' => 'secure-pass-1234',
+        '--no-interaction' => true,
+    ])->assertSuccessful();
+
+    $user = User::query()->where('email', 'case.admin@example.com')->first();
+    expect($user)->not->toBeNull()
+        ->and($user->email)->toBe('case.admin@example.com');
+});

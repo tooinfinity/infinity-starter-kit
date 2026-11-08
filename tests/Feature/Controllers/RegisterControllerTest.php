@@ -196,3 +196,26 @@ it('redirects authenticated users away from registration', function (): void {
 
     $response->assertRedirectToRoute('dashboard');
 });
+
+it('normalizes mixed-case and whitespace-padded email on registration', function (string $emailInput): void {
+    Event::fake([Registered::class]);
+
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Case Test User',
+            'email' => $emailInput,
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertRedirectToRoute('dashboard');
+
+    $user = User::query()->where('email', 'case.user@example.com')->first();
+    expect($user)->not->toBeNull()
+        ->and($user->email)->toBe('case.user@example.com');
+})->with([
+    'mixed case' => 'Case.User@Example.com',
+    'uppercase' => 'CASE.USER@EXAMPLE.COM',
+    'whitespace' => '   case.user@example.com   ',
+    'mixed case with whitespace' => '  Case.User@Example.COM  ',
+]);

@@ -62,4 +62,13 @@ final class StoreUserRequest extends FormRequest
             roles: ($canManageRoles && array_key_exists('roles', $validated)) ? $validated['roles'] : [],
         );
     }
+
+    public function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge([
+                'email' => $this->string('email')->trim()->lower()->value(),
+            ]);
+        }
+    }
 }
