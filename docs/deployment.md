@@ -30,6 +30,9 @@ php artisan key:generate
     ```
 - **`NOTIFICATION_RETENTION_DAYS=30`**: The number of days read notifications are retained before automatic pruning (set `<= 0` to disable pruning).
 - **`NOTIFICATION_UNREAD_RETENTION_DAYS`**: (Optional) Number of days unread notifications are retained before pruning. Unset or null by default (unread notifications never expire).
+- **`RATE_LIMIT_REGISTER=5`**: (Optional) Maximum number of registration attempts allowed per minute per IP address (`register.store`). Defaults to `5`. Configured in `config/fortify.php` (`fortify.rate_limits.register`).
+- **`RATE_LIMIT_FORGOT_PASSWORD=5`**: (Optional) Maximum number of password reset email requests allowed per minute per IP and per email address (`password.email`). Defaults to `5`. Configured in `config/fortify.php` (`fortify.rate_limits.forgot_password`).
+- **`RATE_LIMIT_RESET_PASSWORD=5`**: (Optional) Maximum number of password reset submission attempts allowed per minute per IP address (`password.store`). Defaults to `5`. Configured in `config/fortify.php` (`fortify.rate_limits.reset_password`).
 
 ---
 

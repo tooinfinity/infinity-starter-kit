@@ -49,5 +49,20 @@ final class FortifyServiceProvider extends ServiceProvider
         /* @chisel-two-factor */
         RateLimiter::for('two-factor', fn (Request $request) => Limit::perMinute(5)->by($request->session()->get('login.id')));
         /* @end-chisel-two-factor */
+        /* @chisel-registration */
+        RateLimiter::for('register', fn (Request $request): Limit => Limit::perMinute(config()->integer('fortify.rate_limits.register', 5))->by($request->ip()));
+        /* @end-chisel-registration */
+        /* @chisel-password-reset */
+        RateLimiter::for('forgot-password', /** @return array<int, Limit> */ function (Request $request): array {
+            $email = $request->string('email')->trim()->lower()->value();
+            $limit = config()->integer('fortify.rate_limits.forgot_password', 5);
+
+            return [
+                Limit::perMinute($limit)->by($request->ip()),
+                Limit::perMinute($limit)->by($email !== '' ? $email : $request->ip()),
+            ];
+        });
+        RateLimiter::for('reset-password', fn (Request $request): Limit => Limit::perMinute(config()->integer('fortify.rate_limits.reset_password', 5))->by($request->ip()));
+        /* @end-chisel-password-reset */
     }
 }

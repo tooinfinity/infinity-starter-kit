@@ -123,6 +123,33 @@ return [
         /* @chisel-two-factor */
         'two-factor' => 'two-factor',
         /* @end-chisel-two-factor */
+        /* @chisel-registration */
+        'register' => 'register',
+        /* @end-chisel-registration */
+        /* @chisel-password-reset */
+        'forgot-password' => 'forgot-password',
+        'reset-password' => 'reset-password',
+        /* @end-chisel-password-reset */
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limits
+    |--------------------------------------------------------------------------
+    |
+    | Configure the maximum number of requests per minute for authentication
+    | actions including registration, password resets, and email notifications.
+    |
+    */
+
+    'rate_limits' => [
+        /* @chisel-registration */
+        'register' => (int) env('RATE_LIMIT_REGISTER', 5),
+        /* @end-chisel-registration */
+        /* @chisel-password-reset */
+        'forgot_password' => (int) env('RATE_LIMIT_FORGOT_PASSWORD', 5),
+        'reset_password' => (int) env('RATE_LIMIT_RESET_PASSWORD', 5),
+        /* @end-chisel-password-reset */
     ],
 
     /*

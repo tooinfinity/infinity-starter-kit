@@ -98,3 +98,63 @@ it('sends password reset notification with mixed-case and whitespace-padded emai
     'surrounding whitespace' => '   john@example.com   ',
     'mixed case with whitespace' => '  John@Example.COM  ',
 ]);
+
+it('throttles password reset link requests by ip after too many requests', function (): void {
+    Notification::fake();
+
+    for ($i = 0; $i < 5; $i++) {
+        $this->fromRoute('password.request')
+            ->post(route('password.email'), [
+                'email' => "user{$i}@example.com",
+            ])
+            ->assertRedirectToRoute('password.request');
+    }
+
+    $response = $this->fromRoute('password.request')
+        ->post(route('password.email'), [
+            'email' => 'another@example.com',
+        ]);
+
+    $response->assertTooManyRequests();
+});
+
+it('throttles password reset link requests by email after too many requests across different ips', function (): void {
+    Notification::fake();
+
+    for ($i = 0; $i < 5; $i++) {
+        $this->withServerVariables(['REMOTE_ADDR' => "192.168.1.{$i}"])
+            ->fromRoute('password.request')
+            ->post(route('password.email'), [
+                'email' => 'targeted@example.com',
+            ])
+            ->assertRedirectToRoute('password.request');
+    }
+
+    $response = $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.99'])
+        ->fromRoute('password.request')
+        ->post(route('password.email'), [
+            'email' => 'targeted@example.com',
+        ]);
+
+    $response->assertTooManyRequests();
+});
+
+it('respects configurable password reset link rate limit', function (): void {
+    config()->set('fortify.rate_limits.forgot_password', 2);
+    Notification::fake();
+
+    for ($i = 0; $i < 2; $i++) {
+        $this->fromRoute('password.request')
+            ->post(route('password.email'), [
+                'email' => "user{$i}@example.com",
+            ])
+            ->assertRedirectToRoute('password.request');
+    }
+
+    $response = $this->fromRoute('password.request')
+        ->post(route('password.email'), [
+            'email' => 'another@example.com',
+        ]);
+
+    $response->assertTooManyRequests();
+});
