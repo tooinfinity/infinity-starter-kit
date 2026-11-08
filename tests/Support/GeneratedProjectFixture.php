@@ -148,6 +148,7 @@ final class GeneratedProjectFixture
 
         if (! $authorizationEnabled) {
             $removedPaths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+            $removedPaths[] = 'app/Console/Commands/CreateAdminCommand.php';
         }
 
         foreach ($removedPaths as $path) {
@@ -158,6 +159,8 @@ final class GeneratedProjectFixture
         if ($authorizationEnabled) {
             expect(file_exists($tempDir.'/app/Console/Commands/SetupAuthorizationCommand.php'))
                 ->toBeTrue('Expected SetupAuthorizationCommand.php to remain in generated project when authorization is enabled.');
+            expect(file_exists($tempDir.'/app/Console/Commands/CreateAdminCommand.php'))
+                ->toBeTrue('Expected CreateAdminCommand.php to remain in generated project when authorization is enabled.');
         }
 
         $composerJson = json_decode((string) file_get_contents($tempDir.'/composer.json'), true);
@@ -208,6 +211,7 @@ final class GeneratedProjectFixture
 
         if (! $authorizationEnabled) {
             $forbiddenTokens[] = 'SetupAuthorizationCommand';
+            $forbiddenTokens[] = 'CreateAdminCommand';
         }
 
         $scanDirs = ['app', 'bootstrap', 'config', 'database', 'lang', 'resources', 'routes', 'tests'];

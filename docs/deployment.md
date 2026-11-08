@@ -170,33 +170,39 @@ The `authorization:setup` command is idempotent. It creates any missing permissi
 
 ### 2. Create or Assign the First Super Admin
 
-Because installer-only commands (such as `admin:setup`) are stripped during project generation to maintain a minimal runtime attack surface, bootstrap your first production administrator using Laravel Tinker.
+Use the persistent runtime command `php artisan authorization:create-admin` to provision your initial administrator or promote an existing user. Unlike installer-only commands, `authorization:create-admin` remains available in production and does not depend on development packages (such as `laravel/tinker`).
 
-#### Option A: Create a New Administrator Account
+To protect credentials, passwords are **never** accepted as command-line arguments (`--password`). In addition, the command refuses by default if a Super Admin already exists in the database, maintaining a minimal runtime attack surface unless `--force` is explicitly provided.
 
-If user registration is disabled in production, or if you want to provision the first administrator directly from the command line:
+#### Option A: Interactive Administrator Creation
 
-```bash
-php artisan tinker --execute '$user = App\Models\User::create(["name" => "Administrator", "email" => "admin@your-domain.com", "password" => "your-secure-password", "email_verified_at" => now()]); $user->assignRole("super-admin");'
-```
-
-> **Note:** The `User` model automatically hashes the `password` attribute via its `'hashed'` cast. Setting `'email_verified_at' => now()` ensures the account is verified immediately when email verification is enabled.
-
-#### Option B: Promote an Existing User by Email
-
-If the administrator has already registered an account via the web application:
+Run the command interactively to be prompted for email, name, and password with hidden input and confirmation:
 
 ```bash
-php artisan tinker --execute 'App\Models\User::where("email", "admin@your-domain.com")->firstOrFail()->assignRole("super-admin");'
+php artisan authorization:create-admin
 ```
 
-Alternatively, open an interactive Tinker session:
+#### Option B: Non-Interactive Provisioning via STDIN (CI/CD & Automation)
+
+For scripted deployments, provide `--name` and `--email`, and pipe the password securely via STDIN:
 
 ```bash
-php artisan tinker
+echo "your-secure-password" | php artisan authorization:create-admin --name="Administrator" --email="admin@your-domain.com" --no-interaction
 ```
 
-```php
-$user = App\Models\User::where('email', 'admin@your-domain.com')->firstOrFail();
-$user->assignRole('super-admin');
+> **Note:** The password is validated against `Password::defaults()`. When email verification is enabled, the administrator's email is automatically marked as verified upon creation.
+
+#### Option C: Promote an Existing User by Email
+
+If the user account already exists in the database:
+
+```bash
+php artisan authorization:create-admin --email="admin@your-domain.com"
 ```
+
+No password is required when promoting an existing user. If a Super Admin already exists and you wish to promote an additional user, include `--force`:
+
+```bash
+php artisan authorization:create-admin --email="second-admin@your-domain.com" --force
+```
+

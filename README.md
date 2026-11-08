@@ -101,16 +101,22 @@ php artisan authorization:setup   # Synchronizes permissions + Super Admin role
 
 > **Note:** Always run `php artisan authorization:setup` before assigning the `super-admin` role so that the role and permissions exist in the database.
 
-To create the initial Super Admin via Tinker:
+To create the initial Super Admin interactively (with hidden password prompts and confirmation):
 
 ```bash
-php artisan tinker --execute '$user = App\Models\User::create(["name" => "Administrator", "email" => "admin@example.com", "password" => "secure-password", "email_verified_at" => now()]); $user->assignRole("super-admin");'
+php artisan authorization:create-admin
 ```
 
-Or to promote an existing registered user by email:
+Or pass `--email` and `--name`, piping the password via STDIN for non-interactive deployment automation:
 
 ```bash
-php artisan tinker --execute 'App\Models\User::where("email", "admin@example.com")->firstOrFail()->assignRole("super-admin");'
+echo "your-secure-password" | php artisan authorization:create-admin --name="Administrator" --email="admin@example.com" --no-interaction
+```
+
+To promote an existing registered user to Super Admin:
+
+```bash
+php artisan authorization:create-admin --email="admin@example.com"
 ```
 
 ### 4. Start Development
@@ -160,7 +166,7 @@ useAuthorization() hook / <Can> component ── UI helpers
 
 - **No Policies** — All authorization uses `Gate::before()` for super-admin bypass, Spatie permission checks, and Form Request `authorize()` methods.
 - **PHP Enums** — `App\Enums\Permission` and `App\Enums\Role` are the single source of truth for permission/role identifiers. No magic strings.
-- **Dedicated Setup Command** — `authorization:setup` synchronizes permissions and roles from PHP enums to the database. Administrator setup is handled during installation (or via Tinker).
+- **Dedicated Setup Commands** — `authorization:setup` synchronizes permissions and roles from PHP enums to the database. Initial Super Admin provisioning is handled during installation or via the runtime `authorization:create-admin` command.
 - **Frontend UI Helpers** — `useAuthorization()` hook and `<Can>` component read shared Inertia props. These are UI helpers only; server-side authorization is the actual security boundary.
 
 #### Permission Enum
@@ -430,7 +436,7 @@ Upon finishing execution, Chisel automatically cleans up the repository:
 3. Re-generates Wayfinder typed routes and actions (`php artisan wayfinder:generate --with-form --no-interaction`).
 4. Deletes `chisel.php`, `chisel-paths.php`, `app/Console/Commands/InstallFeaturesCommand.php`, `app/Console/Commands/SetupAdminUserCommand.php`, and Chisel installer tests.
 
-> **Note:** `InstallFeaturesCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files. `SetupAuthorizationCommand` is a persistent runtime command that remains available in the generated application when Authorization is enabled.
+> **Note:** `InstallFeaturesCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files. `SetupAuthorizationCommand` and `CreateAdminCommand` are persistent runtime commands that remain available in the generated application when Authorization is enabled.
 
 #### Generated Application Manifest (`starter-kit-manifest.json`)
 
@@ -597,6 +603,7 @@ The starter kit enforces structural and architectural boundaries through executa
 ├── app/
 │   ├── Actions/                  # Reusable business logic actions
 │   ├── Console/Commands/         # Artisan commands
+│   │   ├── CreateAdminCommand.php        # 🛡️ Super Admin user creation & promotion
 │   │   ├── GenerateFeatureDocsCommand.php # ⚙️ Installer-only (removed after install)
 │   │   ├── InstallFeaturesCommand.php    # ⚙️ Installer-only (removed after install)
 │   │   ├── SetupAuthorizationCommand.php # 🛡️ Authorization runtime synchronization
