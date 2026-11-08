@@ -167,6 +167,27 @@ it('restricts dev server scheme when vite is running hot', function (): void {
     }
 });
 
+it('omits dev server origins when vite hot file contains a path with no host', function (): void {
+    $tempHotFile = tempnam(sys_get_temp_dir(), 'hot_test');
+    expect($tempHotFile)->toBeString();
+    file_put_contents($tempHotFile, '/relative/build/path');
+    Vite::useHotFile($tempHotFile);
+
+    try {
+        $response = new SecurityHeaders()->handle(Request::create('/'), fn (): Response => response('OK'));
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+
+        expect($csp)->toContain("'unsafe-eval'")
+            ->and($csp)->toContain("connect-src 'self';")
+            ->and($csp)->not->toContain('http://')
+            ->and($csp)->not->toContain('ws://');
+    } finally {
+        if (file_exists($tempHotFile)) {
+            File::delete($tempHotFile);
+        }
+    }
+});
+
 it('does not relax content security policy in production even if vite hot file exists', function (): void {
     app()->detectEnvironment(fn (): string => 'production');
 
