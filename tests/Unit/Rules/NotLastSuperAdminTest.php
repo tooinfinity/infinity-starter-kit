@@ -249,3 +249,36 @@ test('NotLastSuperAdmin validateRequest adds error when only one active super ad
     SuperAdminRestrictionOperation::Deactivate,
     SuperAdminRestrictionOperation::RemoveRole,
 ]);
+
+test('NotLastSuperAdmin translates error messages in French and Arabic', function (string $locale, string $deactivateMsg, string $deleteMsg, string $removeRoleMsg): void {
+    app()->setLocale($locale);
+
+    $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $deactivateRule = new NotLastSuperAdmin($user, SuperAdminRestrictionOperation::Deactivate);
+    $deactivateMsgActual = null;
+    $deactivateRule->validate('user', $user, function (string $message) use (&$deactivateMsgActual): void {
+        $deactivateMsgActual = $message;
+    });
+    expect($deactivateMsgActual)->toBe($deactivateMsg);
+
+    $deleteRule = new NotLastSuperAdmin($user, SuperAdminRestrictionOperation::Delete);
+    $deleteMsgActual = null;
+    $deleteRule->validate('user', $user, function (string $message) use (&$deleteMsgActual): void {
+        $deleteMsgActual = $message;
+    });
+    expect($deleteMsgActual)->toBe($deleteMsg);
+
+    $removeRule = new NotLastSuperAdmin($user, SuperAdminRestrictionOperation::RemoveRole);
+    $removeMsgActual = null;
+    $removeRule->validate('roles', ['editor'], function (string $message) use (&$removeMsgActual): void {
+        $removeMsgActual = $message;
+    });
+    expect($removeMsgActual)->toBe($removeRoleMsg);
+})->with([
+    ['en', 'Cannot deactivate the last Super Admin.', 'Cannot delete the last Super Admin.', 'Cannot remove the Super Admin role from the last Super Admin.'],
+    ['fr', 'Impossible de désactiver le dernier super administrateur.', 'Impossible de supprimer le dernier super administrateur.', 'Impossible de retirer le rôle de super administrateur au dernier super administrateur.'],
+    ['ar', 'لا يمكن إلغاء تفعيل آخر مسؤول متميز.', 'لا يمكن حذف آخر مسؤول متميز.', 'لا يمكن إزالة دور المسؤول المتميز عن آخر مسؤول متميز.'],
+]);
