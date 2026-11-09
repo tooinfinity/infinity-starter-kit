@@ -141,6 +141,15 @@ test('treats _ in the search box as a literal character', function (): void {
     expect($ids->all())->toBe([$literal->id]);
 });
 
+test('treats backslash in the search box as a literal character', function (): void {
+    AuditTrail::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
+    $literal = AuditTrail::factory()->create(['auditable_id' => '\\literal\\target']);
+
+    $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '\\'])->items())->pluck('id');
+
+    expect($ids->all())->toBe([$literal->id]);
+});
+
 test('search matches deleted user via actor_name and actor_email', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Queries\Users;
 
 use App\Models\User;
+use App\Services\LikePattern;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Spatie\Permission\Traits\HasRoles;
@@ -26,9 +27,11 @@ final readonly class UserListingQuery
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
-            $query->where(function (Builder $q) use ($search): void {
-                $q->where('name', 'like', sprintf('%%%s%%', $search))
-                    ->orWhere('email', 'like', sprintf('%%%s%%', $search));
+            $pattern = LikePattern::contains($search);
+
+            $query->where(function (Builder $q) use ($pattern): void {
+                LikePattern::where($q, 'name', $pattern);
+                LikePattern::orWhere($q, 'email', $pattern);
             });
         }
 

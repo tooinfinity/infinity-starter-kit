@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\Permission;
 use App\Models\User;
+use App\Queries\Users\UserListingQuery;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
 it('renders user listing page for authorized user', function (): void {
@@ -78,4 +79,24 @@ it('filters users by active status', function (): void {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('users.data', fn ($data): bool => count($data) === 2));
+});
+
+test('user listing query treats %, _, and \ as literal characters', function (): void {
+    User::query()->delete();
+
+    $u1 = User::factory()->create(['name' => 'john_doe', 'email' => 'j_doe@example.com']);
+    $u2 = User::factory()->create(['name' => 'johnxdoe', 'email' => 'jxdoe@example.com']);
+    $u3 = User::factory()->create(['name' => 'user%special', 'email' => 'pct@example.com']);
+    $u4 = User::factory()->create(['name' => 'user\\escape', 'email' => 'bs@example.com']);
+
+    $query = resolve(UserListingQuery::class);
+
+    $underscoreIds = collect($query->handle(['search' => '_'])->items())->pluck('id');
+    expect($underscoreIds->all())->toBe([$u1->id]);
+
+    $percentIds = collect($query->handle(['search' => '%'])->items())->pluck('id');
+    expect($percentIds->all())->toBe([$u3->id]);
+
+    $backslashIds = collect($query->handle(['search' => '\\'])->items())->pluck('id');
+    expect($backslashIds->all())->toBe([$u4->id]);
 });
