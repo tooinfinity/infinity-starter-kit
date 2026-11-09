@@ -433,6 +433,7 @@ final class OptionalModules
                 exclusiveFiles: [
                     'app/Actions/AuditTrails/DeleteAuditTrails.php',
                     'app/Actions/AuditTrails/RecordAuditTrail.php',
+                    'app/Actions/AuditTrails/UpdateUserAuditTrails.php',
                     'app/Console/Commands/PruneAuditTrailsCommand.php',
                     'app/Enums/AuditEvent.php',
                     'app/Http/Controllers/AuditTrails/AuditTrailController.php',
@@ -457,6 +458,7 @@ final class OptionalModules
                     'tests/Feature/AuditTrails/PruneAuditTrailsTest.php',
                     'tests/Unit/Actions/AuditTrails/DeleteAuditTrailsTest.php',
                     'tests/Unit/Actions/AuditTrails/RecordAuditTrailTest.php',
+                    'tests/Unit/Actions/AuditTrails/UpdateUserAuditTrailsTest.php',
                     'tests/Unit/Enums/AuditEventTest.php',
                     'tests/Unit/Listeners/AuditTrails/AuditAuthenticationEventsTest.php',
                     'tests/Unit/Models/AuditTrailTest.php',

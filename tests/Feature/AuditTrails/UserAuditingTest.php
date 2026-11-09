@@ -109,7 +109,7 @@ test('UpdateUserStatus (deactivate) records user.deactivated audit trail', funct
         ->and($audit->new_values['is_active'])->toBeFalse();
 });
 
-test('DeleteUser records user.deleted audit trail', function (): void {
+test('DeleteUser records user.deleted audit trail and anonymizes target PII', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
@@ -126,9 +126,36 @@ test('DeleteUser records user.deleted audit trail', function (): void {
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
+        ->and($audit->actor_name)->toBe($actor->name)
         ->and($audit->auditable_id)->toBe($targetId)
-        ->and($audit->old_values['name'])->toBe('To Be Deleted')
-        ->and($audit->old_values['email'])->toBe('delete_me@example.com');
+        ->and($audit->old_values)->not->toHaveKey('name')
+        ->and($audit->old_values)->not->toHaveKey('email')
+        ->and($audit->old_values['is_active'])->toBeTrue()
+        ->and($audit->tags)->toContain('anonymized');
+});
+
+test('DeleteUser retains target name and email when anonymization is disabled', function (): void {
+    config()->set('audit.anonymize_on_delete', false);
+
+    $actor = User::factory()->create();
+    $this->actingAs($actor);
+
+    $targetUser = User::factory()->create([
+        'name' => 'To Be Retained',
+        'email' => 'retain_me@example.com',
+    ]);
+    $targetId = $targetUser->id;
+
+    $action = resolve(AdminDeleteUser::class);
+    $action->handle($targetUser, $actor);
+
+    $audit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->user_id)->toBe($actor->id)
+        ->and($audit->auditable_id)->toBe($targetId)
+        ->and($audit->old_values['name'])->toBe('To Be Retained')
+        ->and($audit->old_values['email'])->toBe('retain_me@example.com');
 });
 
 test('UpdateUserPassword records user.password_changed audit trail with redacted password', function (): void {
@@ -193,7 +220,7 @@ test('UpdateUserPassword self-service action records user.password_changed audit
         ->and(json_encode($audit->new_values))->not->toContain('new_secret_pass_123');
 });
 
-test('DeleteUser self-service action records user.deleted audit trail (OBS-001)', function (): void {
+test('DeleteUser self-service action records user.deleted audit trail and anonymizes actor PII (OBS-001)', function (): void {
     $user = User::factory()->create([
         'name' => 'Self Deleted',
         'email' => 'self_deleted@example.com',
@@ -212,8 +239,41 @@ test('DeleteUser self-service action records user.deleted audit trail (OBS-001)'
     expect($audit)->not->toBeNull()
         ->and($audit->auditable_id)->toBe($userId)
         ->and($audit->user_id)->toBeNull()
-        ->and($audit->old_values['name'])->toBe('Self Deleted')
-        ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
+        ->and($audit->actor_name)->toBeNull()
+        ->and($audit->actor_email)->toBeNull()
+        ->and($audit->ip_address)->toBeNull()
+        ->and($audit->user_agent)->toBeNull()
+        ->and($audit->tags)->toContain('anonymized')
+        ->and($audit->old_values)->not->toHaveKey('name')
+        ->and($audit->old_values)->not->toHaveKey('email')
+        ->and($audit->old_values['is_active'])->toBeTrue();
+});
+
+test('DeleteUser self-service action retains name and email when anonymization is disabled', function (): void {
+    config()->set('audit.anonymize_on_delete', false);
+
+    $user = User::factory()->create([
+        'name' => 'Self Retained',
+        'email' => 'self_retained@example.com',
+    ]);
+    $userId = $user->id;
+    $this->actingAs($user);
+
+    $action = resolve(DeleteUser::class);
+    $action->handle($user);
+
+    $audit = AuditTrail::query()
+        ->where('event', AuditEvent::UserDeleted)
+        ->where('auditable_id', $userId)
+        ->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->auditable_id)->toBe($userId)
+        ->and($audit->user_id)->toBeNull()
+        ->and($audit->actor_name)->toBe('Self Retained')
+        ->and($audit->actor_email)->toBe('self_retained@example.com')
+        ->and($audit->old_values['name'])->toBe('Self Retained')
+        ->and($audit->old_values['email'])->toBe('self_retained@example.com');
 });
 
 test('UpdateUserRoles records user.role_changed audit trail with roles and tags', function (): void {

@@ -6,6 +6,7 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+use App\Actions\AuditTrails\UpdateUserAuditTrails;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\SuperAdminRestrictionOperation;
@@ -22,6 +23,7 @@ final readonly class DeleteUser
     public function __construct(
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        private UpdateUserAuditTrails $updateUserAuditTrails = new UpdateUserAuditTrails,
         private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
@@ -44,6 +46,8 @@ final readonly class DeleteUser
                 oldValues: $this->userAuditData->snapshot($user),
                 tags: ['users'],
             );
+
+            $this->updateUserAuditTrails->handle($user);
             /* @end-chisel-audit-trails */
 
             /* @chisel-notifications */

@@ -47,6 +47,7 @@ return [
         'active' => 'Actif',
         'inactive' => 'Inactif',
         'system' => 'Système',
+        'anonymized_user' => 'Utilisateur anonymisé',
         'export_csv' => 'Exporter en CSV',
         'reset' => 'Réinitialiser',
         'filter' => 'Filtrer',

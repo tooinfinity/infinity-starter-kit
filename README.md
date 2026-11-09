@@ -296,7 +296,7 @@ The Infinity Starter Kit features a deterministic, declarative feature configura
   3. **User Management** (`user-management`): Administrative user directory, creation/edit modals, role assignment, user activation/deactivation.
   4. **Localization** (`localization`): Trilingual support (EN, FR, AR), RTL layout switching, `Locale` enum, `LanguageSelector` component, and `@erag/lang-sync-inertia`.
   5. **Notifications** (`notifications`): Database and email notification center, user preference toggles, notification dropdown and bell.
-  6. **Audit Trails** (`audit-trails`): Searchable activity log tracking user actions, IP addresses, user agents, and timestamps.
+  6. **Audit Trails** (`audit-trails`): Searchable activity log tracking user actions, IP addresses, user agents, and timestamps, with automated retention pruning and transactional PII anonymization on account deletion.
   7. **Reporting & Analytics** (`reporting`): Read-only dashboards, SVG trend charts, date filtering, and streaming CSV exports.
 
 ---

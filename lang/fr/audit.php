@@ -41,6 +41,8 @@ return [
         'date' => 'Date',
         'actions' => 'Actions',
         'system' => 'Système',
+        'anonymized' => 'Anonymisé',
+        'anonymized_user' => 'Utilisateur anonymisé',
         'view_details' => 'Voir les détails',
         'empty' => 'Aucune piste d\'audit trouvée.',
     ],

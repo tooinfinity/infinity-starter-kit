@@ -457,6 +457,33 @@ export default function AuditTrailsIndex({
                                                             )}
                                                         </div>
                                                     </div>
+                                                ) : audit.tags?.includes(
+                                                      'anonymized',
+                                                  ) ? (
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Avatar className="size-7 shrink-0">
+                                                            <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
+                                                                ?
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <p className="font-medium text-foreground italic">
+                                                                    {__(
+                                                                        'Anonymized user',
+                                                                    )}
+                                                                </p>
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
+                                                                >
+                                                                    {__(
+                                                                        'Anonymized',
+                                                                    )}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <Badge
                                                         variant="secondary"
