@@ -13,4 +13,17 @@ return [
     |
     */
     'retention_days' => (int) env('AUDIT_RETENTION_DAYS', 365),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Anonymize On User Deletion
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, personal identifying information (PII) including actor
+    | names, actor emails, IP addresses, user agents, and user snapshot data
+    | in audit records associated with deleted users will be anonymized
+    | automatically when their account is deleted.
+    |
+    */
+    'anonymize_on_delete' => (bool) env('AUDIT_ANONYMIZE_ON_DELETE', true),
 ];

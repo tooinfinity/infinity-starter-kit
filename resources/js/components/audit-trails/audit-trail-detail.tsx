@@ -101,6 +101,18 @@ export function AuditTrailDetail({ audit, open, onOpenChange }: Props) {
                                             </p>
                                         )}
                                     </div>
+                                ) : audit.tags?.includes('anonymized') ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-muted-foreground italic">
+                                            {__('Anonymized user')}
+                                        </span>
+                                        <Badge
+                                            variant="outline"
+                                            className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
+                                        >
+                                            {__('Anonymized')}
+                                        </Badge>
+                                    </div>
                                 ) : (
                                     <span className="text-muted-foreground italic">
                                         {__('System')}

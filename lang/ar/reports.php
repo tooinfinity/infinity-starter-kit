@@ -47,6 +47,7 @@ return [
         'active' => 'نشط',
         'inactive' => 'غير نشط',
         'system' => 'النظام',
+        'anonymized_user' => 'مستخدم مجهول الهوية',
         'export_csv' => 'تصدير كملف CSV',
         'reset' => 'إعادة تعيين',
         'filter' => 'تصفية',

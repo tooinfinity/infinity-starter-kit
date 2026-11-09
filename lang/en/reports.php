@@ -47,6 +47,7 @@ return [
         'active' => 'Active',
         'inactive' => 'Inactive',
         'system' => 'System',
+        'anonymized_user' => 'Anonymized user',
         'export_csv' => 'Export CSV',
         'reset' => 'Reset Filters',
         'filter' => 'Filter',

@@ -32,6 +32,8 @@ return [
         'date' => 'Date',
         'actions' => 'Actions',
         'system' => 'System',
+        'anonymized' => 'Anonymized',
+        'anonymized_user' => 'Anonymized user',
         'view_details' => 'View Details',
         'empty' => 'No audit trails found.',
     ],

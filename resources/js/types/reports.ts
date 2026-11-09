@@ -79,6 +79,9 @@ export type ReportAuditItem = {
         name: string;
         email: string;
     } | null;
+    actor_name?: string | null;
+    actor_email?: string | null;
+    tags?: string[] | null;
     auditable_type: string | null;
     auditable_id: string | null;
     ip_address: string | null;

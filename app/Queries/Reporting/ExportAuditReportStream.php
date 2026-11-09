@@ -49,7 +49,10 @@ final readonly class ExportAuditReportStream
 
             foreach ($query->lazy(500) as $audit) {
                 /** @var AuditTrail $audit */
-                $actorName = $audit->user->name ?? $audit->actor_name ?? __('reports.common.system');
+                $isAnonymized = ! $audit->user && ! $audit->actor_name && in_array('anonymized', (array) $audit->tags, true);
+                $fallbackActor = $isAnonymized ? __('reports.common.anonymized_user') : __('reports.common.system');
+
+                $actorName = $audit->user->name ?? $audit->actor_name ?? $fallbackActor;
                 $actorEmail = $audit->user->email ?? $audit->actor_email ?? '';
 
                 fputcsv($handle, [

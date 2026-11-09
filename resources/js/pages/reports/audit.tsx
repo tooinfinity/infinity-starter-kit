@@ -345,6 +345,39 @@ export default function AuditReportPage({
                                                         {item.user.email}
                                                     </div>
                                                 </div>
+                                            ) : item.actor_name ? (
+                                                <div>
+                                                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                                                        <span>
+                                                            {item.actor_name}
+                                                        </span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
+                                                        >
+                                                            {__('Deleted')}
+                                                        </Badge>
+                                                    </div>
+                                                    {item.actor_email && (
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {item.actor_email}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : item.tags?.includes(
+                                                  'anonymized',
+                                              ) ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs text-muted-foreground italic">
+                                                        {__('Anonymized user')}
+                                                    </span>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="px-1 py-0 text-[10px] font-normal text-muted-foreground"
+                                                    >
+                                                        {__('Anonymized')}
+                                                    </Badge>
+                                                </div>
                                             ) : (
                                                 <span className="text-xs text-muted-foreground italic">
                                                     {__('System')}

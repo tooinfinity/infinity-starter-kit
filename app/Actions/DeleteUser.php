@@ -6,8 +6,7 @@ namespace App\Actions;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
-/* @end-chisel-audit-trails */
-/* @chisel-audit-trails */
+use App\Actions\AuditTrails\UpdateUserAuditTrails;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 /* @chisel-user-management */
@@ -28,6 +27,7 @@ final readonly class DeleteUser
     /* @chisel-audit-trails */
     public function __construct(
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
+        private UpdateUserAuditTrails $updateUserAuditTrails = new UpdateUserAuditTrails,
     ) {}
 
     /* @end-chisel-audit-trails */
@@ -54,6 +54,8 @@ final readonly class DeleteUser
                 user: $user,
                 tags: ['users'],
             );
+
+            $this->updateUserAuditTrails->handle($user);
             /* @end-chisel-audit-trails */
 
             /* @chisel-notifications */
