@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\User;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,8 @@ final class CreateSessionRequest extends FormRequest
 
         if (! $user || ! Auth::getProvider()->validateCredentials($user, $this->only('password'))/* @chisel-user-management */ || ! $user->is_active/* @end-chisel-user-management */) {
             RateLimiter::hit($this->throttleKey());
+
+            event(new Failed('web', $user instanceof User ? $user : null, ['email' => $this->input('email')]));
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),

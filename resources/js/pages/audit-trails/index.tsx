@@ -107,6 +107,8 @@ export default function AuditTrailsIndex({
         switch (eventName) {
             case 'user.created':
             case 'user.activated':
+            case 'auth.login':
+            case 'auth.two_factor_enabled':
                 return (
                     <Badge
                         variant="outline"
@@ -117,6 +119,9 @@ export default function AuditTrailsIndex({
                 );
             case 'user.deleted':
             case 'user.deactivated':
+            case 'auth.login_failed':
+            case 'auth.lockout':
+            case 'auth.two_factor_disabled':
                 return (
                     <Badge
                         variant="outline"
@@ -127,6 +132,9 @@ export default function AuditTrailsIndex({
                 );
             case 'user.updated':
             case 'user.password_changed':
+            case 'user.role_changed':
+            case 'auth.password_reset':
+            case 'auth.recovery_codes_used':
                 return (
                     <Badge
                         variant="outline"
@@ -136,6 +144,7 @@ export default function AuditTrailsIndex({
                     </Badge>
                 );
             case 'settings.updated':
+            case 'auth.logout':
                 return (
                     <Badge
                         variant="outline"

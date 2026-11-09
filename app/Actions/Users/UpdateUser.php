@@ -63,7 +63,7 @@ final readonly class UpdateUser
             /* @end-chisel-email-verification */
 
             if ($data->roles !== null) {
-                $this->updateUserRoles->handle($user, $data->roles, recordAuditTrail: false);
+                $this->updateUserRoles->handle($user, $data->roles);
             }
 
             /* @chisel-audit-trails */

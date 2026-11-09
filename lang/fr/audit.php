@@ -13,7 +13,16 @@ return [
         'user_deactivated' => 'Utilisateur désactivé',
         'user_deleted' => 'Utilisateur supprimé',
         'user_password_changed' => 'Mot de passe modifié',
+        'user_role_changed' => 'Rôle modifié',
         'settings_updated' => 'Paramètres modifiés',
+        'auth_login' => 'Connexion réussie',
+        'auth_login_failed' => 'Échec de connexion',
+        'auth_lockout' => 'Verrouillage du compte',
+        'auth_logout' => 'Déconnexion',
+        'auth_password_reset' => 'Réinitialisation du mot de passe',
+        'auth_two_factor_enabled' => 'Authentification à deux facteurs activée',
+        'auth_two_factor_disabled' => 'Authentification à deux facteurs désactivée',
+        'auth_recovery_codes_used' => 'Code de récupération utilisé',
     ],
 
     'filters' => [

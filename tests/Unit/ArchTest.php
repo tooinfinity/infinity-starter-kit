@@ -6,7 +6,10 @@ use Symfony\Component\Finder\Finder;
 
 arch()->preset()->php();
 arch()->preset()->strict();
-arch()->preset()->laravel();
+arch()->preset()->laravel()/* @chisel-audit-trails */
+    ->ignoring([
+        'App\Listeners\AuditTrails\AuditAuthenticationEvents',
+    ])/* @end-chisel-audit-trails */;
 arch()->preset()->security()->ignoring([
     'assert',
 ]);
@@ -134,6 +137,9 @@ arch('runtime application code does not depend on chisel or installer internals'
         /* @end-chisel-notifications */
         'App\Data',
         'App\Providers',
+        /* @chisel-audit-trails */
+        'App\Listeners',
+        /* @end-chisel-audit-trails */
     ])
     ->not->toUse($installerPackages);
 
@@ -160,6 +166,7 @@ arch('audit-trails does not depend on reporting or user management')
         'App\Actions\AuditTrails',
         'App\Http\Controllers\AuditTrails',
         'App\Http\Requests\AuditTrails',
+        'App\Listeners\AuditTrails',
         'App\Queries\AuditTrails',
         'App\Models\AuditTrail',
         'App\Enums\AuditEvent',

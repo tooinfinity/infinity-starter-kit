@@ -55,13 +55,20 @@ final readonly class UpdateUserRoles
             if ($recordAuditTrail) {
                 $newValues = $this->userAuditData->snapshot($user, $roles);
 
-                $this->auditTrail->handle(
-                    event: AuditEvent::UserUpdated,
-                    auditable: $user,
-                    oldValues: $oldValues,
-                    newValues: $newValues,
-                    tags: ['users', 'roles'],
-                );
+                $oldRoles = $oldValues['roles'];
+                $newRoles = $newValues['roles'];
+                sort($oldRoles);
+                sort($newRoles);
+
+                if ($oldRoles !== $newRoles) {
+                    $this->auditTrail->handle(
+                        event: AuditEvent::UserRoleChanged,
+                        auditable: $user,
+                        oldValues: $oldValues,
+                        newValues: $newValues,
+                        tags: ['users', 'roles'],
+                    );
+                }
             }
 
             /* @end-chisel-audit-trails */

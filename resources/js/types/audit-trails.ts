@@ -5,7 +5,16 @@ export type AuditEventName =
     | 'user.deactivated'
     | 'user.deleted'
     | 'user.password_changed'
-    | 'settings.updated';
+    | 'user.role_changed'
+    | 'settings.updated'
+    | 'auth.login'
+    | 'auth.login_failed'
+    | 'auth.lockout'
+    | 'auth.logout'
+    | 'auth.password_reset'
+    | 'auth.two_factor_enabled'
+    | 'auth.two_factor_disabled'
+    | 'auth.recovery_codes_used';
 
 export type AuditUser = {
     id: string;

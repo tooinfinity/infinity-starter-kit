@@ -216,7 +216,7 @@ test('DeleteUser self-service action records user.deleted audit trail (OBS-001)'
         ->and($audit->old_values['email'])->toBe('self_deleted@example.com');
 });
 
-test('UpdateUserRoles records user.updated audit trail with roles and tags', function (): void {
+test('UpdateUserRoles records user.role_changed audit trail with roles and tags', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);
 
@@ -230,7 +230,7 @@ test('UpdateUserRoles records user.updated audit trail with roles and tags', fun
     $action->handle($targetUser, ['manager']);
 
     $audit = AuditTrail::query()
-        ->where('event', AuditEvent::UserUpdated)
+        ->where('event', AuditEvent::UserRoleChanged)
         ->where('auditable_id', $targetUser->id)
         ->latest('id')
         ->first();
@@ -241,4 +241,73 @@ test('UpdateUserRoles records user.updated audit trail with roles and tags', fun
         ->and($audit->tags)->toBe(['users', 'roles'])
         ->and($audit->old_values['roles'])->toBe(['editor'])
         ->and($audit->new_values['roles'])->toBe(['manager']);
+});
+
+test('UpdateUserRoles does not record user.role_changed audit trail when roles do not change', function (): void {
+    $actor = User::factory()->create();
+    $this->actingAs($actor);
+
+    RoleModel::findOrCreate('editor');
+
+    $targetUser = User::factory()->create();
+    $targetUser->assignRole('editor');
+
+    $action = resolve(UpdateUserRoles::class);
+    $action->handle($targetUser, ['editor']);
+
+    expect(AuditTrail::query()->where('event', AuditEvent::UserRoleChanged)->count())->toBe(0);
+});
+
+test('UpdateUser records both user.updated and user.role_changed when roles change', function (): void {
+    $actor = User::factory()->create();
+    $this->actingAs($actor);
+
+    RoleModel::findOrCreate('editor');
+    RoleModel::findOrCreate('manager');
+
+    $targetUser = User::factory()->create(['name' => 'Initial Name', 'email' => 'initial@example.com']);
+    $targetUser->assignRole('editor');
+
+    $action = resolve(AdminUpdateUser::class);
+    $data = new UpdateUserData(
+        name: 'New Name',
+        email: 'new@example.com',
+        roles: ['manager'],
+    );
+    $action->handle($targetUser, $data);
+
+    $roleAudit = AuditTrail::query()->where('event', AuditEvent::UserRoleChanged)->first();
+    $userAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+
+    expect($roleAudit)->not->toBeNull()
+        ->and($roleAudit->old_values['roles'])->toBe(['editor'])
+        ->and($roleAudit->new_values['roles'])->toBe(['manager'])
+        ->and($userAudit)->not->toBeNull()
+        ->and($userAudit->old_values['name'])->toBe('Initial Name')
+        ->and($userAudit->new_values['name'])->toBe('New Name');
+});
+
+test('UpdateUser records only user.updated when roles do not change', function (): void {
+    $actor = User::factory()->create();
+    $this->actingAs($actor);
+
+    RoleModel::findOrCreate('editor');
+
+    $targetUser = User::factory()->create(['name' => 'Initial Name', 'email' => 'initial@example.com']);
+    $targetUser->assignRole('editor');
+
+    $action = resolve(AdminUpdateUser::class);
+    $data = new UpdateUserData(
+        name: 'New Name',
+        email: 'new@example.com',
+        roles: ['editor'],
+    );
+    $action->handle($targetUser, $data);
+
+    expect(AuditTrail::query()->where('event', AuditEvent::UserRoleChanged)->count())->toBe(0);
+
+    $userAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+    expect($userAudit)->not->toBeNull()
+        ->and($userAudit->old_values['name'])->toBe('Initial Name')
+        ->and($userAudit->new_values['name'])->toBe('New Name');
 });
