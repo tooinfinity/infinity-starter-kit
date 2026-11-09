@@ -43,6 +43,7 @@ The application includes `App\Http\Middleware\SecurityHeaders`, configured via `
 - **`Permissions-Policy: camera=(), microphone=(), geolocation=()`**: Restricts access to sensitive browser capabilities.
 - **`Strict-Transport-Security` (HSTS)**: Automatically emitted in production environments on HTTPS requests (`max-age=31536000; includeSubDomains`).
 - **`Content-Security-Policy`**: Enforces strict origin restrictions and binds inline/external scripts using a cryptographically random per-request nonce (`Vite::useCspNonce()`).
+  - **Development Relaxations**: Relaxations (`'unsafe-eval'` in `script-src` and the active Vite dev server HTTP/WebSocket origins in `connect-src`) apply **only** in non-production environments when the Vite development server is actively running (`Vite::isRunningHot()`, i.e. when `public/hot` exists). Production (`APP_ENV=production`), staging, preview, CI, and local builds without the Vite dev server enforce strict CSP without `'unsafe-eval'` or dev server connect origins.
   - Configure CSP via `config/security.php` or environment variables:
     - `SECURITY_CSP_ENABLED=true` (or `false` to disable CSP)
     - `SECURITY_CSP_REPORT_ONLY=true` (for CSP report-only mode)

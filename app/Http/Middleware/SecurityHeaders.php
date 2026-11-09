@@ -51,14 +51,26 @@ final readonly class SecurityHeaders
                 return $name.' '.implode(' ', $sources);
             };
 
+            $isHot = ! app()->isProduction() && Vite::isRunningHot();
+
             $scriptSources = ["'self'", "'nonce-{$nonce}'"];
-            if (! app()->isProduction()) {
+            if ($isHot) {
                 $scriptSources[] = "'unsafe-eval'";
             }
 
             $connectSources = ["'self'"];
-            if (! app()->isProduction()) {
-                $connectSources = array_merge($connectSources, ['ws:', 'wss:', 'http:', 'https:']);
+            if ($isHot) {
+                $devServerUrl = mb_trim((string) Vite::devServerUrl());
+                if ($devServerUrl !== '') {
+                    $parts = parse_url($devServerUrl);
+                    $host = is_array($parts) && isset($parts['host']) ? (string) $parts['host'] : '';
+                    if ($host !== '' && $isSafeToken($host)) {
+                        $scheme = isset($parts['scheme']) && $parts['scheme'] === 'https' ? 'https' : 'http';
+                        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+                        $connectSources[] = $scheme.'://'.$host.$port;
+                        $connectSources[] = ($scheme === 'https' ? 'wss' : 'ws').'://'.$host.$port;
+                    }
+                }
             }
 
             $csp = [
