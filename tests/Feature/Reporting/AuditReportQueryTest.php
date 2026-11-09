@@ -151,6 +151,48 @@ test('audit report query filters by event, user_id and search', function (): voi
     expect($actorResult['paginated']->total())->toBe(1);
 });
 
+test('audit report query treats literal wildcard and backslash characters in search', function (): void {
+    AuditTrail::query()->delete();
+
+    $today = Date::now();
+
+    $a1 = AuditTrail::factory()->create([
+        'auditable_id' => '_target-123',
+        'ip_address' => '10.0.0.1',
+        'created_at' => $today,
+    ]);
+    AuditTrail::factory()->create([
+        'auditable_id' => 'targetx123',
+        'ip_address' => '10.0.0.2',
+        'created_at' => $today,
+    ]);
+    $a3 = AuditTrail::factory()->create([
+        'auditable_id' => '%target-123',
+        'ip_address' => '10.0.0.3',
+        'created_at' => $today,
+    ]);
+    $a4 = AuditTrail::factory()->create([
+        'auditable_id' => '\\target-123',
+        'ip_address' => '10.0.0.4',
+        'created_at' => $today,
+    ]);
+
+    $query = new AuditReportQuery;
+    $dateFilters = [
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+    ];
+
+    $underscoreResult = $query->handle(array_merge($dateFilters, ['search' => '_']));
+    expect($underscoreResult['paginated']->pluck('id')->all())->toBe([$a1->id]);
+
+    $percentResult = $query->handle(array_merge($dateFilters, ['search' => '%']));
+    expect($percentResult['paginated']->pluck('id')->all())->toBe([$a3->id]);
+
+    $backslashResult = $query->handle(array_merge($dateFilters, ['search' => '\\']));
+    expect($backslashResult['paginated']->pluck('id')->all())->toBe([$a4->id]);
+});
+
 it('buckets report days in the configured display timezone', function (): void {
     config(['app.display_timezone' => 'Africa/Algiers']); // UTC+1
 

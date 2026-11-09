@@ -10,6 +10,7 @@ use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
+use App\Services\LikePattern;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -199,20 +200,19 @@ final readonly class AuditReportQuery
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
-            $escaped = addcslashes($search, '%_\\');
-            $prefix = $escaped.'%';
-            $contains = '%'.$escaped.'%';
+            $prefix = LikePattern::startsWith($search);
+            $contains = LikePattern::contains($search);
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
-                $q->whereRaw('ip_address LIKE ? ESCAPE ?', [$prefix, '\\'])
-                    ->orWhereRaw('auditable_id LIKE ? ESCAPE ?', [$prefix, '\\'])
-                    ->orWhereRaw('auditable_type LIKE ? ESCAPE ?', [$prefix, '\\'])
-                    ->orWhereRaw('actor_name LIKE ? ESCAPE ?', [$contains, '\\'])
-                    ->orWhereRaw('actor_email LIKE ? ESCAPE ?', [$contains, '\\'])
-                    ->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
-                        $userQuery->whereRaw('name LIKE ? ESCAPE ?', [$contains, '\\'])
-                            ->orWhereRaw('email LIKE ? ESCAPE ?', [$contains, '\\']);
-                    });
+                LikePattern::where($q, 'ip_address', $prefix);
+                LikePattern::orWhere($q, 'auditable_id', $prefix);
+                LikePattern::orWhere($q, 'auditable_type', $prefix);
+                LikePattern::orWhere($q, 'actor_name', $contains);
+                LikePattern::orWhere($q, 'actor_email', $contains);
+                $q->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
+                    LikePattern::where($userQuery, 'name', $contains);
+                    LikePattern::orWhere($userQuery, 'email', $contains);
+                });
             });
         }
 

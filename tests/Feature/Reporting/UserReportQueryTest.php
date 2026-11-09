@@ -278,3 +278,45 @@ it('correctly attributes events for whole-hour timezones like Europe/Paris', fun
     expect($seriesTotal)->toBe(2)
         ->and($seriesTotal)->toBe($summaryNewUsers);
 });
+
+test('user report query treats %, _, and \ as literal characters', function (): void {
+    User::query()->delete();
+
+    $today = Date::now();
+
+    $u1 = User::factory()->create([
+        'name' => 'john_doe',
+        'email' => 'j_doe@example.com',
+        'created_at' => $today,
+    ]);
+    $u2 = User::factory()->create([
+        'name' => 'johnxdoe',
+        'email' => 'jxdoe@example.com',
+        'created_at' => $today,
+    ]);
+    $u3 = User::factory()->create([
+        'name' => 'user%special',
+        'email' => 'pct@example.com',
+        'created_at' => $today,
+    ]);
+    $u4 = User::factory()->create([
+        'name' => 'user\\escape',
+        'email' => 'bs@example.com',
+        'created_at' => $today,
+    ]);
+
+    $query = new UserReportQuery;
+    $dateFilters = [
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+    ];
+
+    $underscoreResult = $query->handle(array_merge($dateFilters, ['search' => '_']));
+    expect($underscoreResult['paginated']->pluck('id')->all())->toBe([$u1->id]);
+
+    $percentResult = $query->handle(array_merge($dateFilters, ['search' => '%']));
+    expect($percentResult['paginated']->pluck('id')->all())->toBe([$u3->id]);
+
+    $backslashResult = $query->handle(array_merge($dateFilters, ['search' => '\\']));
+    expect($backslashResult['paginated']->pluck('id')->all())->toBe([$u4->id]);
+});
