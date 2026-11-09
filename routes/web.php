@@ -156,6 +156,7 @@ Route::middleware('guest')->group(function (): void {
     Route::get('register', [RegisterController::class, 'create'])
         ->name('register');
     Route::post('register', [RegisterController::class, 'store'])
+        ->middleware('throttle:register')
         ->name('register.store');
     /* @end-chisel-registration */
 
@@ -164,12 +165,14 @@ Route::middleware('guest')->group(function (): void {
     Route::get('reset-password/{token}', [UserPasswordController::class, 'create'])
         ->name('password.reset');
     Route::post('reset-password', [UserPasswordController::class, 'store'])
+        ->middleware('throttle:reset-password')
         ->name('password.store');
 
     // User Email Reset Notification...
     Route::get('forgot-password', [UserEmailResetNotificationController::class, 'create'])
         ->name('password.request');
     Route::post('forgot-password', [UserEmailResetNotificationController::class, 'store'])
+        ->middleware('throttle:forgot-password')
         ->name('password.email');
     /* @end-chisel-password-reset */
 

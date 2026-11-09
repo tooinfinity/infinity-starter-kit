@@ -219,3 +219,51 @@ it('normalizes mixed-case and whitespace-padded email on registration', function
     'whitespace' => '   case.user@example.com   ',
     'mixed case with whitespace' => '  Case.User@Example.COM  ',
 ]);
+
+it('throttles registration attempts after too many requests', function (): void {
+    for ($i = 0; $i < 5; $i++) {
+        $this->fromRoute('register')
+            ->post(route('register.store'), [
+                'name' => "User {$i}",
+                'email' => 'invalid-email',
+                'password' => 'password1234',
+                'password_confirmation' => 'password1234',
+            ])
+            ->assertSessionHasErrors('email');
+    }
+
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Throttled User',
+            'email' => 'throttled@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertTooManyRequests();
+});
+
+it('respects configurable registration rate limit', function (): void {
+    config()->set('fortify.rate_limits.register', 2);
+
+    for ($i = 0; $i < 2; $i++) {
+        $this->fromRoute('register')
+            ->post(route('register.store'), [
+                'name' => "User {$i}",
+                'email' => 'invalid-email',
+                'password' => 'password1234',
+                'password_confirmation' => 'password1234',
+            ])
+            ->assertSessionHasErrors('email');
+    }
+
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Throttled User',
+            'email' => 'throttled@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertTooManyRequests();
+});

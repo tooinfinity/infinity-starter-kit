@@ -136,6 +136,7 @@ final class AuthFeatures
                 markerFiles: [
                     'config/fortify.php',
                     'routes/web.php',
+                    'app/Providers/FortifyServiceProvider.php',
                     'app/Http/Controllers/UserPasswordController.php',
                     'resources/js/pages/session/create.tsx',
                 ],

@@ -161,3 +161,51 @@ it('may reset password with mixed-case and whitespace-padded email', function (s
     'surrounding whitespace' => '   john@example.com   ',
     'mixed case with whitespace' => '  John@Example.COM  ',
 ]);
+
+it('throttles reset password attempts after too many requests', function (): void {
+    for ($i = 0; $i < 5; $i++) {
+        $this->fromRoute('password.reset', ['token' => 'test-token'])
+            ->post(route('password.store'), [
+                'email' => 'test@example.com',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+                'token' => 'invalid-token',
+            ])
+            ->assertRedirect(route('password.reset', ['token' => 'test-token']));
+    }
+
+    $response = $this->fromRoute('password.reset', ['token' => 'test-token'])
+        ->post(route('password.store'), [
+            'email' => 'test@example.com',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+            'token' => 'invalid-token',
+        ]);
+
+    $response->assertTooManyRequests();
+});
+
+it('respects configurable reset password rate limit', function (): void {
+    config()->set('fortify.rate_limits.reset_password', 2);
+
+    for ($i = 0; $i < 2; $i++) {
+        $this->fromRoute('password.reset', ['token' => 'test-token'])
+            ->post(route('password.store'), [
+                'email' => 'test@example.com',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+                'token' => 'invalid-token',
+            ])
+            ->assertRedirect(route('password.reset', ['token' => 'test-token']));
+    }
+
+    $response = $this->fromRoute('password.reset', ['token' => 'test-token'])
+        ->post(route('password.store'), [
+            'email' => 'test@example.com',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+            'token' => 'invalid-token',
+        ]);
+
+    $response->assertTooManyRequests();
+});
