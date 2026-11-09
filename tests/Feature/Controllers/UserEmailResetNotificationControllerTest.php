@@ -158,3 +158,16 @@ it('respects configurable password reset link rate limit', function (): void {
 
     $response->assertTooManyRequests();
 });
+
+it('counts invalid password reset link requests once per limiter', function (?string $email): void {
+    for ($i = 0; $i < 5; $i++) {
+        $this->fromRoute('password.request')
+            ->post(route('password.email'), ['email' => $email])
+            ->assertRedirectToRoute('password.request')
+            ->assertSessionHasErrors('email');
+    }
+
+    $this->fromRoute('password.request')
+        ->post(route('password.email'), ['email' => $email])
+        ->assertTooManyRequests();
+})->with([null, '', '127.0.0.1']);

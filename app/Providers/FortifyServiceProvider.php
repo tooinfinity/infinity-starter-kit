@@ -58,8 +58,8 @@ final class FortifyServiceProvider extends ServiceProvider
             $limit = config()->integer('fortify.rate_limits.forgot_password', 5);
 
             return [
-                Limit::perMinute($limit)->by($request->ip()),
-                Limit::perMinute($limit)->by($email !== '' ? $email : $request->ip()),
+                Limit::perMinute($limit)->by('ip:'.$request->ip()),
+                Limit::perMinute($limit)->by('email:'.($email !== '' ? $email : $request->ip())),
             ];
         });
         RateLimiter::for('reset-password', fn (Request $request): Limit => Limit::perMinute(config()->integer('fortify.rate_limits.reset_password', 5))->by($request->ip()));
