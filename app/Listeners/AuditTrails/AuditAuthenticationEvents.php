@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
@@ -19,6 +20,7 @@ use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
 use Laravel\Fortify\Features;
+use Throwable;
 
 final readonly class AuditAuthenticationEvents
 {
@@ -30,7 +32,7 @@ final readonly class AuditAuthenticationEvents
     {
         $user = $event->user instanceof User ? $event->user : null;
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthLogin,
             auditable: $user,
             newValues: ['guard' => $event->guard],
@@ -60,7 +62,7 @@ final readonly class AuditAuthenticationEvents
             }
         }
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthLoginFailed,
             auditable: $user,
             newValues: $newValues,
@@ -74,12 +76,13 @@ final readonly class AuditAuthenticationEvents
         $email = $event->request->string('email')->trim()->lower()->value();
         $user = $email !== '' ? User::query()->where('email', $email)->first() : null;
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthLockout,
             auditable: $user,
             newValues: ['throttled' => true],
             user: $user,
             tags: ['auth', 'lockout'],
+            url: $event->request->url(),
         );
     }
 
@@ -87,7 +90,7 @@ final readonly class AuditAuthenticationEvents
     {
         $user = $event->user instanceof User ? $event->user : null;
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthLogout,
             auditable: $user,
             newValues: ['guard' => $event->guard],
@@ -100,7 +103,7 @@ final readonly class AuditAuthenticationEvents
     {
         $user = $event->user instanceof User ? $event->user : null;
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthPasswordReset,
             auditable: $user,
             user: $user,
@@ -114,7 +117,7 @@ final readonly class AuditAuthenticationEvents
             return;
         }
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthTwoFactorEnabled,
             auditable: $event->user,
             user: $event->user,
@@ -124,7 +127,7 @@ final readonly class AuditAuthenticationEvents
 
     public function onTwoFactorConfirmed(TwoFactorAuthenticationConfirmed $event): void
     {
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthTwoFactorEnabled,
             auditable: $event->user,
             user: $event->user,
@@ -134,7 +137,7 @@ final readonly class AuditAuthenticationEvents
 
     public function onTwoFactorDisabled(TwoFactorAuthenticationDisabled $event): void
     {
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthTwoFactorDisabled,
             auditable: $event->user,
             user: $event->user,
@@ -146,7 +149,7 @@ final readonly class AuditAuthenticationEvents
     {
         $user = $event->user instanceof User ? $event->user : null;
 
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthRecoveryCodesUsed,
             auditable: $user,
             user: $user,
@@ -156,7 +159,7 @@ final readonly class AuditAuthenticationEvents
 
     public function onTwoFactorAuthenticationFailed(TwoFactorAuthenticationFailed $event): void
     {
-        $this->recordAuditTrail->handle(
+        $this->record(
             event: AuditEvent::AuthLoginFailed,
             auditable: $event->user,
             newValues: ['guard' => 'web', 'two_factor' => true],
@@ -199,5 +202,36 @@ final readonly class AuditAuthenticationEvents
         }
 
         return $events;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $oldValues
+     * @param  array<string, mixed>|null  $newValues
+     * @param  list<string>|null  $tags
+     */
+    private function record(
+        AuditEvent $event,
+        ?Model $auditable = null,
+        ?array $oldValues = null,
+        ?array $newValues = null,
+        ?User $user = null,
+        ?array $tags = null,
+        ?string $url = null,
+    ): void {
+        try {
+            $resolvedUrl = $url ?? (app()->bound('request') ? request()->url() : null);
+
+            $this->recordAuditTrail->handle(
+                event: $event,
+                auditable: $auditable,
+                oldValues: $oldValues,
+                newValues: $newValues,
+                user: $user,
+                tags: $tags,
+                url: $resolvedUrl,
+            );
+        } catch (Throwable $throwable) {
+            report($throwable);
+        }
     }
 }

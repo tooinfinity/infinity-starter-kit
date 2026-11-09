@@ -46,6 +46,7 @@ final readonly class RecordAuditTrail
         ?array $tags = null,
         ?string $auditableType = null,
         ?string $auditableId = null,
+        ?string $url = null,
     ): AuditTrail {
         $request = $this->request ?? (app()->bound('request') ? request() : null);
         $actor = $user ?? (auth()->user() instanceof User ? auth()->user() : null);
@@ -67,7 +68,7 @@ final readonly class RecordAuditTrail
             'auditable_id' => $id,
             'old_values' => $redactedOld,
             'new_values' => $redactedNew,
-            'url' => $request?->fullUrl(),
+            'url' => $url ?? $request?->fullUrl(),
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
             'tags' => $tags,

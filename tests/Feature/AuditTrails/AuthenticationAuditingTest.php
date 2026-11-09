@@ -10,8 +10,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
-use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
 use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
+use PragmaRX\Google2FA\Google2FA;
 
 test('successful login records auth.login audit trail with IP and user agent', function (): void {
     $user = User::factory()->create([
@@ -183,9 +183,23 @@ test('password reset via emailed link records auth.password_reset without sensit
 });
 
 test('two-factor confirmation records auth.two_factor_enabled', function (): void {
-    $user = User::factory()->create();
+    $engine = new Google2FA;
+    $secret = $engine->generateSecretKey();
+    $validCode = $engine->getCurrentOtp($secret);
 
-    event(new TwoFactorAuthenticationConfirmed($user));
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt($secret),
+        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+        'two_factor_confirmed_at' => null,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->session(['auth.password_confirmed_at' => time()])
+        ->post(route('two-factor.confirm'), [
+            'code' => $validCode,
+        ]);
+
+    $response->assertSessionHasNoErrors();
 
     expect(AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->count())->toBe(1);
 

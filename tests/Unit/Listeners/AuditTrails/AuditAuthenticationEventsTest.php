@@ -14,6 +14,7 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
@@ -21,6 +22,7 @@ use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
 use Laravel\Fortify\Features;
+use RuntimeException;
 
 it('subscribes to expected authentication events', function (): void {
     $listener = new AuditAuthenticationEvents;
@@ -279,4 +281,37 @@ it('records auth.login_failed on TwoFactorAuthenticationFailed', function (): vo
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
         ->and($audit->tags)->toBe(['auth', 'login', 'two-factor']);
+});
+
+it('omits query strings from URLs recorded for authentication events', function (): void {
+    $request = Request::create('/login?signature=secret123&redirect=/dashboard', 'POST', ['email' => 'known@example.com']);
+    app()->instance('request', $request);
+
+    $event = new Failed('web', null, ['email' => 'known@example.com']);
+
+    $listener = resolve(AuditAuthenticationEvents::class);
+    $listener->onFailed($event);
+
+    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->url)->toBe('http://localhost/login')
+        ->and($audit->url)->not->toContain('signature')
+        ->and($audit->url)->not->toContain('secret123');
+});
+
+it('catches and reports audit write exceptions without interrupting authentication', function (): void {
+    Exceptions::fake();
+
+    AuditTrail::creating(fn (): never => throw new RuntimeException('Audit DB down'));
+
+    try {
+        $listener = resolve(AuditAuthenticationEvents::class);
+        $user = User::factory()->create();
+        $listener->onLogin(new Login('web', $user, false));
+
+        Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'Audit DB down');
+    } finally {
+        AuditTrail::flushEventListeners();
+    }
 });
