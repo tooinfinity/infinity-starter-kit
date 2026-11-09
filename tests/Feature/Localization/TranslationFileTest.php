@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Locale;
+use Symfony\Component\Finder\Finder;
 
 $translationCallPattern = '/\b(?:__|transChoice|trans_choice|trans)\s*\(\s*(?:\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)")/';
 $untranslatedJsxPattern = '/>\s*([A-Z][A-Za-z0-9\s,\.\?!:\-\/&;\'’]{2,})\s*</u';
@@ -207,6 +208,34 @@ test('no raw capitalized text nodes exist in JSX outside components/ui', functio
     }
 
     expect($untranslated)->toBeEmpty('Found raw untranslated text in JSX: '.json_encode($untranslated, JSON_PRETTY_PRINT));
+});
+
+test('no custom validation rule calls fail with an untranslated string literal', function (): void {
+    $rulesDir = app_path('Rules');
+    if (! is_dir($rulesDir)) {
+        return;
+    }
+
+    $files = new Finder()
+        ->files()
+        ->in($rulesDir)
+        ->name('*.php');
+
+    $untranslated = [];
+    $rawLiteralPattern = '/\$fail\s*\(\s*(?:\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)")\s*\)(?!\s*->\s*translate\b)/';
+
+    foreach ($files as $file) {
+        $content = $file->getContents();
+        if (preg_match_all($rawLiteralPattern, $content, $matches, PREG_SET_ORDER)) {
+            $relPath = str_replace(base_path().'/', '', $file->getPathname());
+            foreach ($matches as $match) {
+                $literal = $match[1] !== '' ? $match[1] : $match[2];
+                $untranslated[$relPath][] = $literal;
+            }
+        }
+    }
+
+    expect($untranslated)->toBeEmpty('Found custom validation rules calling $fail() with untranslated string literals: '.json_encode($untranslated, JSON_PRETTY_PRINT));
 });
 
 /**

@@ -3,15 +3,27 @@
 declare(strict_types=1);
 
 use App\Rules\ValidEmail;
+use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Translation\PotentiallyTranslatedString;
+
+/**
+ * @return Closure(string): PotentiallyTranslatedString
+ */
+function failClosure(bool &$failed): Closure
+{
+    return function (string $message) use (&$failed): PotentiallyTranslatedString {
+        $failed = true;
+
+        return new PotentiallyTranslatedString($message, resolve(Translator::class));
+    };
+}
 
 it('works with valid email', function (string $email): void {
     $rule = new ValidEmail;
 
     $failed = false;
 
-    $rule->validate('email', $email, function () use (&$failed): void {
-        $failed = true;
-    });
+    $rule->validate('email', $email, failClosure($failed));
 
     expect($failed)->toBeFalse();
 })->with([
@@ -71,9 +83,7 @@ it('fails with invalid email', function (string $email): void {
 
     $failed = false;
 
-    $rule->validate('email', $email, function () use (&$failed): void {
-        $failed = true;
-    });
+    $rule->validate('email', $email, failClosure($failed));
 
     expect($failed)->toBeTrue();
 })->with([
@@ -128,9 +138,7 @@ it('fails with non-string values', function (mixed $value): void {
 
     $failed = false;
 
-    $rule->validate('email', $value, function () use (&$failed): void {
-        $failed = true;
-    });
+    $rule->validate('email', $value, failClosure($failed));
 
     expect($failed)->toBeTrue();
 })->with([
@@ -138,4 +146,16 @@ it('fails with non-string values', function (mixed $value): void {
     [12345],
     [['user@example.com']],
     [(object) ['email' => 'user@example.com']],
+]);
+
+it('renders translated validation error message in active locale', function (string $locale, string $expectedMessage): void {
+    app()->setLocale($locale);
+
+    $validator = validator(['email' => 'invalid'], ['email' => [new ValidEmail]]);
+
+    expect($validator->errors()->first('email'))->toBe($expectedMessage);
+})->with([
+    ['en', 'The email field must be a valid email address.'],
+    ['fr', 'Le champ email doit être une adresse email valide.'],
+    ['ar', 'يجب أن يكون حقل email بريداً إلكترونياً صالحاً.'],
 ]);

@@ -20,7 +20,7 @@ final readonly class ValidEmail implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || in_array(preg_match(self::REGEX, $value), [0, false], true)) {
-            $fail('The :attribute must be a valid email address.');
+            $fail('validation.email')->translate();
         }
     }
 }

@@ -52,13 +52,13 @@ final readonly class CanAssignRoles implements ValidationRule
         $submittedHasSuperAdmin = in_array(Role::SuperAdmin->value, $submittedRoles, true);
 
         if ($submittedHasSuperAdmin && ! $targetHasSuperAdmin) {
-            $fail('Only Super Admins can assign the Super Admin role.');
+            $fail(__('Only Super Admins can assign the Super Admin role.'));
 
             return;
         }
 
         if (! $submittedHasSuperAdmin && $targetHasSuperAdmin) {
-            $fail('Only Super Admins can remove the Super Admin role.');
+            $fail(__('Only Super Admins can remove the Super Admin role.'));
 
             return;
         }
@@ -80,7 +80,7 @@ final readonly class CanAssignRoles implements ValidationRule
             $missing = $role->permissions->pluck('name')->diff($actorPermissions);
 
             if ($missing->isNotEmpty()) {
-                $fail('You cannot assign a role with permissions you do not have.');
+                $fail(__('You cannot assign a role with permissions you do not have.'));
 
                 return;
             }
