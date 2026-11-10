@@ -362,3 +362,24 @@ test('write throws RuntimeException if atomic rename fails', function (): void {
     expect(fn (): string => GeneratedApplicationManifest::write($this->tempDir, $context))
         ->toThrow(RuntimeException::class, 'Failed to atomically rename starter kit manifest');
 });
+
+test('example generates a valid canonical manifest for documentation and tooling', function (): void {
+    $example = GeneratedApplicationManifest::example();
+
+    expect($example->schemaVersion)->toBe(GeneratedApplicationManifest::SCHEMA_VERSION)
+        ->and($example->preset)->toBe(Preset::STANDARD)
+        ->and($example->starterKit['name'])->toBe('tooinfinity/infinity-starter-kit')
+        ->and($example->starterKit['version'])->toBe('1.0.0')
+        ->and($example->starterKit['source_revision'])->toBe('1c253c2000000000000000000000000000000000')
+        ->and($example->features['explicit']['auth_features'])->toBe(['email-verification', 'login', 'logout', 'password-reset', 'password-update', 'registration'])
+        ->and($example->features['explicit']['optional_modules'])->toBe(['authorization', 'notifications', 'settings', 'user-management'])
+        ->and($example->features['unselected'])->toBe(['audit-trails', 'localization', 'reporting', 'two-factor'])
+        ->and($example->generatedAt)->toBe('2026-11-02T22:00:00Z');
+
+    $array = $example->toArray();
+    expect($array['schema_version'])->toBe(1)
+        ->and($array)->toHaveKeys(['schema_version', 'starter_kit', 'preset', 'features', 'auth_capabilities', 'generated_at']);
+
+    $json = $example->toJson();
+    expect(json_validate($json))->toBeTrue();
+});

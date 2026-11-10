@@ -450,26 +450,92 @@ This manifest serves as a machine-readable record for debugging, support request
 - **Deterministic & Reproducible:** Supports reproducible builds via standard environment variables (`SOURCE_DATE_EPOCH`, `CHISEL_MANIFEST_TIMESTAMP`, or `CHISEL_DETERMINISTIC_MANIFEST`).
 - **Zero Runtime Dependencies:** Plain JSON that can be inspected with standard tools (`jq`, `json_decode()`) without needing any installer classes.
 
+**Schema Version Semantics:**
+- `schema_version` denotes the version of the manifest data contract (currently `1`).
+- The `schema_version` is bumped only upon **breaking changes** to the manifest schema (such as renaming, removing, or restructuring mandatory top-level or nested keys).
+- Additive, backward-compatible enhancements (e.g. adding optional metadata properties) do not bump `schema_version`.
+- Tooling consuming `starter-kit-manifest.json` should assert that `schema_version === 1` before evaluating schema-dependent fields.
+
 **Structure Overview:**
+<!-- @chisel-manifest-example -->
 ```json
 {
-  "schema_version": 1,
-  "generated_at": "2026-11-02T22:00:00+00:00",
-  "source_revision": "1c253c2...",
-  "preset": "standard",
-  "features": {
-    "enabled": ["authorization", "teams", "api", "health-checks"],
-    "pruned": ["billing", "notifications"]
-  },
-  "guidelines": {
-    "enabled": ["ai", "actions", "queries", "rules", "wayfinder"]
-  },
-  "options": {
-    "dry_run": false,
-    "no_node": false
-  }
+    "schema_version": 1,
+    "starter_kit": {
+        "name": "tooinfinity/infinity-starter-kit",
+        "version": "1.0.0",
+        "source_revision": "1c253c2000000000000000000000000000000000"
+    },
+    "preset": "standard",
+    "features": {
+        "explicit": {
+            "auth_features": [
+                "email-verification",
+                "login",
+                "logout",
+                "password-reset",
+                "password-update",
+                "registration"
+            ],
+            "optional_modules": [
+                "authorization",
+                "notifications",
+                "settings",
+                "user-management"
+            ]
+        },
+        "dependency_derived": [
+            "authorization",
+            "login"
+        ],
+        "all_selected": [
+            "authorization",
+            "email-verification",
+            "login",
+            "logout",
+            "notifications",
+            "password-reset",
+            "password-update",
+            "registration",
+            "settings",
+            "user-management"
+        ],
+        "unselected": [
+            "audit-trails",
+            "localization",
+            "reporting",
+            "two-factor"
+        ]
+    },
+    "auth_capabilities": [
+        "email-verification",
+        "login",
+        "logout",
+        "password-reset",
+        "password-update",
+        "registration"
+    ],
+    "generated_at": "2026-11-02T22:00:00Z"
 }
 ```
+<!-- @end-chisel-manifest-example -->
+
+**Field Reference:**
+- `schema_version`: (integer) The version of the manifest schema.
+- `starter_kit`: Source repository provenance metadata:
+  - `name`: Starter kit package name (`tooinfinity/infinity-starter-kit`).
+  - `version`: Release tag or version string if available, or `null`.
+  - `source_revision`: Full Git commit SHA from which the project was scaffolded.
+- `preset`: (string or null) The installation preset chosen (`standard`, `minimal`, `full`), or `null` if a custom combination was configured.
+- `features`: Full breakdown of feature selection and dependency resolution:
+  - `explicit.auth_features`: Authentication features directly selected during setup (`email-verification`, `login`, `logout`, `password-reset`, `password-update`, `registration`, `two-factor`).
+  - `explicit.optional_modules`: Optional modules directly selected during setup (`audit-trails`, `authorization`, `localization`, `notifications`, `reporting`, `settings`, `user-management`).
+  - `explicit.ai_guidelines`: Optional AI guideline profiles if selected.
+  - `dependency_derived`: Features included automatically because another selected feature requires them (e.g. `authorization` depends on `login`).
+  - `all_selected`: Complete sorted list of all active features in the generated application.
+  - `unselected`: Pruned features that were removed from the generated application.
+- `auth_capabilities`: Canonical list of effective authentication capabilities enabled in the application.
+- `generated_at`: ISO 8601 UTC timestamp of manifest generation.
 
 ---
 

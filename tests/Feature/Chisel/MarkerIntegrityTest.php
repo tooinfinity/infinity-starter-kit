@@ -12,7 +12,7 @@ test('all chisel markers in repository are well-formed and properly paired', fun
     $allTags = [];
 
     foreach ($files as $file) {
-        if (! file_exists(base_path($file)) || is_dir(base_path($file)) || $file === 'chisel.php' || $file === 'README.md' || $file === 'app/Chisel/FeatureMatrixGenerator.php') {
+        if (! file_exists(base_path($file)) || is_dir(base_path($file)) || $file === 'chisel.php' || $file === 'README.md' || $file === 'app/Chisel/FeatureMatrixGenerator.php' || $file === 'app/Chisel/ManifestExampleGenerator.php') {
             continue;
         }
 
@@ -79,14 +79,14 @@ test('all marker tags have corresponding handlers in chisel.php', function (): v
 
     $tagsInRepo = [];
     foreach ($files as $file) {
-        if (! file_exists(base_path($file)) || is_dir(base_path($file)) || $file === 'chisel.php' || $file === 'README.md' || $file === 'app/Chisel/FeatureMatrixGenerator.php') {
+        if (! file_exists(base_path($file)) || is_dir(base_path($file)) || $file === 'chisel.php' || $file === 'README.md' || $file === 'app/Chisel/FeatureMatrixGenerator.php' || $file === 'app/Chisel/ManifestExampleGenerator.php') {
             continue;
         }
 
         $content = (string) file_get_contents(base_path($file));
         preg_match_all('/@chisel-([a-zA-Z0-9_-]+)/', $content, $matches);
         foreach ($matches[1] as $tag) {
-            if ($tag === 'feature-matrix') {
+            if ($tag === 'feature-matrix' || $tag === 'manifest-example') {
                 continue;
             }
 
