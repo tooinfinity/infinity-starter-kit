@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Chisel\Installer\Cleanup;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
+
+require_once __DIR__.'/../../../chisel.php';
 
 beforeEach(function (): void {
     $this->tempDir = sys_get_temp_dir().'/cleanup_test_'.bin2hex(random_bytes(6));
@@ -105,4 +108,41 @@ test('cleanup clean rethrows ComposerLockSynchronizer failure with recovery guid
 
     expect(fn () => Cleanup::clean($this->tempDir, $paths))
         ->toThrow(RuntimeException::class, 'Installer files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.');
+});
+
+test('cleanup updateAiGuidelines returns early when required boost artifacts or directories are absent', function (): void {
+    // Missing all
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+
+    // Missing guidelines dir
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+
+    // Missing artisan
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+
+    // Missing vendor/laravel/boost
+    touch($this->tempDir.'/artisan');
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+});
+
+test('cleanup updateAiGuidelines executes boost:update when all prerequisites exist', function (): void {
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    touch($this->tempDir.'/artisan');
+    mkdir($this->tempDir.'/vendor/laravel/boost', 0777, true);
+
+    Process::fake([
+        '*' => Process::result(output: 'Boost updated'),
+    ]);
+
+    Cleanup::updateAiGuidelines($this->tempDir);
+
+    Process::assertRan(function ($process): bool {
+        $cmd = is_array($process->command) ? implode(' ', $process->command) : (string) $process->command;
+
+        return str_contains($cmd, 'boost:update')
+            && str_contains($cmd, '--ignore-skills');
+    });
 });

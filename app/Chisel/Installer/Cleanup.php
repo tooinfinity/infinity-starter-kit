@@ -154,10 +154,21 @@ final class Cleanup
 
         DirectoryPruner::prune($directory, $paths['chisel']['empty_dirs'] ?? self::directories());
 
+        self::updateAiGuidelines($directory);
+
         try {
             ComposerLockSynchronizer::sync($directory, $paths);
         } catch (RuntimeException $runtimeException) {
             throw new RuntimeException($runtimeException->getMessage()."\nInstaller files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.", $runtimeException->getCode(), previous: $runtimeException);
         }
+    }
+
+    public static function updateAiGuidelines(string $directory): void
+    {
+        if (! file_exists($directory.'/boost.json') || ! is_dir($directory.'/.ai/guidelines') || ! file_exists($directory.'/artisan') || ! is_dir($directory.'/vendor/laravel/boost')) {
+            return;
+        }
+
+        chiselRun([PHP_BINARY, 'artisan', 'boost:update', '--no-interaction', '--no-discover', '--ignore-skills'], 'Update AI Guidelines', $directory, ['APP_ENV' => 'local']);
     }
 }
