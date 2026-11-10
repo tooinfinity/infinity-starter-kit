@@ -170,6 +170,7 @@ arch('audit-trails does not depend on reporting or user management')
         'App\Queries\AuditTrails',
         'App\Models\AuditTrail',
         'App\Enums\AuditEvent',
+        'App\Data\AuditTrails',
     ])
     ->not->toUse([
         'App\Http\Controllers\Reporting',
@@ -285,7 +286,6 @@ arch('user management does not depend on reporting')
         'App\Http\Requests\Users',
         'App\Queries\Users',
         'App\Data\Users',
-        'App\Services\UserAuditData',
         'App\Rules\CanAssignRoles',
         'App\Rules\NotLastSuperAdmin',
         'App\Enums\SuperAdminRestrictionOperation',

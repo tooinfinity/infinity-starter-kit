@@ -7,14 +7,12 @@ namespace App\Actions\Users;
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Actions\AuditTrails\UpdateUserAuditTrails;
+use App\Data\AuditTrails\UserAuditData;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use App\Rules\NotLastSuperAdmin;
-/* @chisel-audit-trails */
-use App\Services\UserAuditData;
-/* @end-chisel-audit-trails */
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -24,7 +22,6 @@ final readonly class DeleteUser
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
         private UpdateUserAuditTrails $updateUserAuditTrails = new UpdateUserAuditTrails,
-        private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
 
@@ -43,7 +40,7 @@ final readonly class DeleteUser
             $this->auditTrail->handle(
                 event: AuditEvent::UserDeleted,
                 auditable: $user,
-                oldValues: $this->userAuditData->snapshot($user),
+                oldValues: UserAuditData::fromModel($user)->toArray(),
                 tags: ['users'],
             );
 

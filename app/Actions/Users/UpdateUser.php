@@ -6,6 +6,7 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+use App\Data\AuditTrails\UserAuditData;
 /* @end-chisel-audit-trails */
 use App\Data\Users\UpdateUserData;
 /* @chisel-audit-trails */
@@ -15,9 +16,6 @@ use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use App\Rules\NotLastSuperAdmin;
-/* @chisel-audit-trails */
-use App\Services\UserAuditData;
-/* @end-chisel-audit-trails */
 use Illuminate\Support\Facades\DB;
 
 final readonly class UpdateUser
@@ -26,7 +24,6 @@ final readonly class UpdateUser
         private UpdateUserRoles $updateUserRoles = new UpdateUserRoles,
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
-        private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
 
@@ -38,7 +35,7 @@ final readonly class UpdateUser
             }
 
             /* @chisel-audit-trails */
-            $oldValues = $this->userAuditData->snapshot($user);
+            $oldValues = UserAuditData::fromModel($user)->toArray();
             /* @end-chisel-audit-trails */
 
             /* @chisel-email-verification */
@@ -71,7 +68,7 @@ final readonly class UpdateUser
                 event: AuditEvent::UserUpdated,
                 auditable: $user,
                 oldValues: $oldValues,
-                newValues: $this->userAuditData->snapshot($user, $data->roles),
+                newValues: UserAuditData::fromModel($user, $data->roles)->toArray(),
                 tags: ['users'],
             );
             /* @end-chisel-audit-trails */
