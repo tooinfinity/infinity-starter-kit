@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
@@ -33,6 +33,7 @@ export default function TwoFactor({
         recoveryCodesList,
         fetchRecoveryCodes,
         errors,
+        requiresPasswordConfirmation,
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
@@ -82,6 +83,12 @@ export default function TwoFactor({
                                     recoveryCodesList={recoveryCodesList}
                                     fetchRecoveryCodes={fetchRecoveryCodes}
                                     errors={errors}
+                                    requiresPasswordConfirmation={
+                                        requiresPasswordConfirmation
+                                    }
+                                    onConfirmPassword={() =>
+                                        router.visit(show.url())
+                                    }
                                 />
                             </div>
                         ) : (
@@ -127,6 +134,9 @@ export default function TwoFactor({
                             isOpen={showSetupModal}
                             onClose={() => setShowSetupModal(false)}
                             requiresConfirmation={requiresConfirmation}
+                            requiresPasswordConfirmation={
+                                requiresPasswordConfirmation
+                            }
                             twoFactorEnabled={twoFactorEnabled}
                             qrCodeSvg={qrCodeSvg}
                             manualSetupKey={manualSetupKey}

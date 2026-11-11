@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { Form, router } from '@inertiajs/react';
 import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AlertError from '@/components/alert-error';
@@ -11,23 +11,36 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { useTranslation } from '@/hooks/use-translation';
-import { regenerateRecoveryCodes } from '@/routes/two-factor';
+import { regenerateRecoveryCodes, show } from '@/routes/two-factor';
 
 type Props = {
     recoveryCodesList: string[];
     fetchRecoveryCodes: () => Promise<void>;
     errors: string[];
+    requiresPasswordConfirmation?: boolean;
+    onConfirmPassword?: () => void;
 };
 
 export default function TwoFactorRecoveryCodes({
     recoveryCodesList,
     fetchRecoveryCodes,
     errors,
+    requiresPasswordConfirmation = false,
+    onConfirmPassword,
 }: Props) {
     const { __ } = useTranslation();
     const [codesAreVisible, setCodesAreVisible] = useState<boolean>(false);
     const codesSectionRef = useRef<HTMLDivElement | null>(null);
     const canRegenerateCodes = recoveryCodesList.length > 0 && codesAreVisible;
+
+    const handleConfirmPassword = useCallback(() => {
+        if (onConfirmPassword) {
+            onConfirmPassword();
+            return;
+        }
+
+        router.visit(show.url());
+    }, [onConfirmPassword]);
 
     const toggleCodesVisibility = useCallback(async () => {
         if (!codesAreVisible && !recoveryCodesList.length) {
@@ -110,7 +123,19 @@ export default function TwoFactorRecoveryCodes({
                 >
                     <div className="mt-3 space-y-3">
                         {errors?.length ? (
-                            <AlertError errors={errors} />
+                            <div className="space-y-3">
+                                <AlertError errors={errors} />
+                                {requiresPasswordConfirmation && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleConfirmPassword}
+                                    >
+                                        {__('Confirm password')}
+                                    </Button>
+                                )}
+                            </div>
                         ) : (
                             <>
                                 <div
