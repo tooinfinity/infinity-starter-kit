@@ -211,6 +211,45 @@ final readonly class GeneratedApplicationManifest
         );
     }
 
+    /**
+     * Generate a canonical, non-secret example manifest for documentation and tooling.
+     */
+    public static function example(): self
+    {
+        $answers = Preset::answersFor(Preset::STANDARD);
+
+        $context = new InstallerContext(
+            providedAnswers: $answers,
+            answers: $answers,
+            paths: [],
+            selectedModules: $answers['optional_modules'],
+            selectedAuthFeatures: $answers['auth_features'],
+            hasAuthorization: true,
+            adminName: 'Admin',
+            adminEmail: 'admin@example.com',
+            adminPassword: null,
+            isNonInteractive: true,
+            skipNode: true,
+            isMockedScript: true,
+            preset: Preset::STANDARD,
+        );
+
+        $manifest = self::fromContext($context, base_path());
+
+        return new self(
+            schemaVersion: $manifest->schemaVersion,
+            starterKit: [
+                'name' => 'tooinfinity/infinity-starter-kit',
+                'version' => '1.0.0',
+                'source_revision' => '1c253c2000000000000000000000000000000000',
+            ],
+            preset: $manifest->preset,
+            features: $manifest->features,
+            authCapabilities: $manifest->authCapabilities,
+            generatedAt: '2026-11-02T22:00:00Z',
+        );
+    }
+
     public static function resolveSourceRevision(string $basePath): ?string
     {
         $envRevision = Env::get('STARTER_KIT_REVISION', Request::server('STARTER_KIT_REVISION') ?? getenv('STARTER_KIT_REVISION'));
