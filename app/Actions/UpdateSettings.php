@@ -27,17 +27,54 @@ final readonly class UpdateSettings
      */
     public function handle(array $settings): void
     {
-        DB::transaction(function () use ($settings): void {
+        if ($settings === []) {
+            return;
+        }
+
+        $changed = DB::transaction(function () use ($settings): bool {
+            $existingSettings = Setting::query()
+                ->whereIn('key', array_keys($settings))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy(fn (Setting $setting): string => $setting->key->value);
+
+            $shouldInvalidateCache = false;
+
             foreach ($settings as $key => $value) {
+                $existing = $existingSettings->get($key);
+
+                if ($existing !== null && $existing->value === $value) {
+                    continue;
+                }
+
                 /* @chisel-audit-trails */
-                $existingSetting = Setting::query()->where('key', $key)->first();
-                $oldValue = $existingSetting?->value;
+                $oldValue = $existing?->value;
                 /* @end-chisel-audit-trails */
 
-                $setting = Setting::query()->updateOrCreate(
-                    ['key' => $key],
-                    ['value' => $value],
-                );
+                if ($existing !== null) {
+                    $existing->update(['value' => $value]);
+                    $setting = $existing;
+                    $shouldInvalidateCache = true;
+                } else {
+                    $setting = Setting::query()->createOrFirst(
+                        ['key' => $key],
+                        ['value' => $value],
+                    );
+
+                    $shouldInvalidateCache = true;
+
+                    if (! $setting->wasRecentlyCreated) {
+                        if ($setting->value === $value) {
+                            continue;
+                        }
+
+                        /* @chisel-audit-trails */
+                        $oldValue = $setting->value;
+                        /* @end-chisel-audit-trails */
+
+                        $setting->update(['value' => $value]);
+                    }
+                }
 
                 /* @chisel-audit-trails */
                 $this->auditTrail->handle(
@@ -49,9 +86,13 @@ final readonly class UpdateSettings
                 );
                 /* @end-chisel-audit-trails */
             }
+
+            return $shouldInvalidateCache;
         });
 
-        Cache::forget('settings.all');
+        if ($changed) {
+            Cache::forget('settings.all');
+        }
     }
 
     public function set(SettingKey $key, mixed $value): void

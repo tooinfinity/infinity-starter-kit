@@ -424,6 +424,7 @@ final class OptionalModules
                     'resources/js/types/index.ts',
                     'resources/js/components/app-sidebar.tsx',
                     'tests/Feature/Controllers/DeleteAccountControllerTest.php',
+                    'tests/Feature/Controllers/SettingControllerTest.php',
                     'tests/Feature/Users/ChangePasswordTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
                     'tests/Unit/ArchTest.php',
