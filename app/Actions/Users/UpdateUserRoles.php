@@ -6,15 +6,13 @@ namespace App\Actions\Users;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+use App\Data\AuditTrails\UserAuditData;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\Role;
 use App\Enums\SuperAdminRestrictionOperation;
 use App\Models\User;
 use App\Rules\NotLastSuperAdmin;
-/* @chisel-audit-trails */
-use App\Services\UserAuditData;
-/* @end-chisel-audit-trails */
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -23,7 +21,6 @@ final readonly class UpdateUserRoles
     public function __construct(
         /* @chisel-audit-trails */
         private RecordAuditTrail $auditTrail = new RecordAuditTrail,
-        private UserAuditData $userAuditData = new UserAuditData,
         /* @end-chisel-audit-trails */
     ) {}
 
@@ -46,14 +43,14 @@ final readonly class UpdateUserRoles
             }
 
             /* @chisel-audit-trails */
-            $oldValues = $this->userAuditData->snapshot($user);
+            $oldValues = UserAuditData::fromModel($user)->toArray();
             /* @end-chisel-audit-trails */
 
             $user->syncRoles($roles);
 
             /* @chisel-audit-trails */
             if ($recordAuditTrail) {
-                $newValues = $this->userAuditData->snapshot($user, $roles);
+                $newValues = UserAuditData::fromModel($user, $roles)->toArray();
 
                 $oldRoles = $oldValues['roles'];
                 $newRoles = $newValues['roles'];

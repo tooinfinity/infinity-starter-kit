@@ -6,6 +6,7 @@ namespace App\Actions;
 
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
+use App\Data\AuditTrails\UserAuditData;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Models\User;
@@ -25,10 +26,7 @@ final readonly class UpdateUser
     public function handle(User $user, array $attributes): void
     {
         /* @chisel-audit-trails */
-        $oldValues = [
-            'name' => $user->name,
-            'email' => $user->email,
-        ];
+        $oldValues = UserAuditData::fromModel($user)->toArray();
         /* @end-chisel-audit-trails */
 
         /* @chisel-email-verification */
@@ -54,10 +52,7 @@ final readonly class UpdateUser
             event: AuditEvent::UserUpdated,
             auditable: $user,
             oldValues: $oldValues,
-            newValues: [
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
+            newValues: UserAuditData::fromModel($user)->toArray(),
             tags: ['users', 'profile'],
         );
         /* @end-chisel-audit-trails */

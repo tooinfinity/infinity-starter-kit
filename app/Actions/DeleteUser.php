@@ -7,6 +7,7 @@ namespace App\Actions;
 /* @chisel-audit-trails */
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Actions\AuditTrails\UpdateUserAuditTrails;
+use App\Data\AuditTrails\UserAuditData;
 use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 /* @chisel-user-management */
@@ -17,10 +18,6 @@ use App\Models\User;
 use App\Rules\NotLastSuperAdmin;
 /* @end-chisel-user-management */
 use Illuminate\Support\Facades\DB;
-/* @chisel-roles-permissions */
-use Spatie\Permission\Traits\HasRoles;
-
-/* @end-chisel-roles-permissions */
 
 final readonly class DeleteUser
 {
@@ -43,14 +40,7 @@ final readonly class DeleteUser
             $this->auditTrail->handle(
                 event: AuditEvent::UserDeleted,
                 auditable: $user,
-                oldValues: [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'is_active' => $user->is_active,
-                    /* @chisel-roles-permissions */
-                    'roles' => trait_exists(HasRoles::class) ? $user->getRoleNames()->toArray() : [],
-                    /* @end-chisel-roles-permissions */
-                ],
+                oldValues: UserAuditData::fromModel($user)->toArray(),
                 user: $user,
                 tags: ['users'],
             );

@@ -198,8 +198,12 @@ test('UpdateUser self-service action records user.updated audit trail (OBS-001)'
         ->and($audit->user_id)->toBe($user->id)
         ->and($audit->new_values['name'])->toBe('New Self')
         ->and($audit->new_values['email'])->toBe('new_self@example.com')
+        ->and($audit->new_values['is_active'])->toBeTrue()
+        ->and($audit->new_values['roles'])->toBe([])
         ->and($audit->old_values['name'])->toBe('Old Self')
-        ->and($audit->old_values['email'])->toBe('old_self@example.com');
+        ->and($audit->old_values['email'])->toBe('old_self@example.com')
+        ->and($audit->old_values['is_active'])->toBeTrue()
+        ->and($audit->old_values['roles'])->toBe([]);
 });
 
 test('UpdateUserPassword self-service action records user.password_changed audit trail (OBS-001)', function (): void {
@@ -273,7 +277,65 @@ test('DeleteUser self-service action retains name and email when anonymization i
         ->and($audit->actor_name)->toBe('Self Retained')
         ->and($audit->actor_email)->toBe('self_retained@example.com')
         ->and($audit->old_values['name'])->toBe('Self Retained')
-        ->and($audit->old_values['email'])->toBe('self_retained@example.com');
+        ->and($audit->old_values['email'])->toBe('self_retained@example.com')
+        ->and($audit->old_values['is_active'])->toBeTrue()
+        ->and($audit->old_values['roles'])->toBe([]);
+});
+
+test('user.updated audit payload has identical keys between self-service and admin paths', function (): void {
+    $admin = User::factory()->create();
+    $targetForAdmin = User::factory()->create(['name' => 'Admin Target', 'email' => 'admin_target@example.com']);
+    $selfUser = User::factory()->create(['name' => 'Self Target', 'email' => 'self_target@example.com']);
+
+    $this->actingAs($admin);
+    resolve(AdminUpdateUser::class)->handle($targetForAdmin, new UpdateUserData(
+        name: 'Admin Updated',
+        email: 'admin_updated@example.com',
+        roles: [],
+    ));
+
+    $this->actingAs($selfUser);
+    resolve(UpdateUser::class)->handle($selfUser, [
+        'name' => 'Self Updated',
+        'email' => 'self_updated@example.com',
+    ]);
+
+    $adminAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $targetForAdmin->id)->firstOrFail();
+    $selfAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $selfUser->id)->firstOrFail();
+
+    $expectedKeys = ['name', 'email', 'is_active', 'roles'];
+    sort($expectedKeys);
+
+    expect(collect(array_keys($adminAudit->old_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($selfAudit->old_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($adminAudit->new_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($selfAudit->new_values))->sort()->values()->all())->toBe($expectedKeys);
+});
+
+test('user.deleted audit payload has identical keys between self-service and admin paths', function (): void {
+    config()->set('audit.anonymize_on_delete', false);
+
+    $admin = User::factory()->create();
+    $targetForAdmin = User::factory()->create(['name' => 'Admin Target', 'email' => 'admin_del@example.com']);
+    $selfUser = User::factory()->create(['name' => 'Self Target', 'email' => 'self_del@example.com']);
+
+    $adminId = $targetForAdmin->id;
+    $selfId = $selfUser->id;
+
+    $this->actingAs($admin);
+    resolve(AdminDeleteUser::class)->handle($targetForAdmin, $admin);
+
+    $this->actingAs($selfUser);
+    resolve(DeleteUser::class)->handle($selfUser);
+
+    $adminAudit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $adminId)->firstOrFail();
+    $selfAudit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $selfId)->firstOrFail();
+
+    $expectedKeys = ['name', 'email', 'is_active', 'roles'];
+    sort($expectedKeys);
+
+    expect(collect(array_keys($adminAudit->old_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($selfAudit->old_values))->sort()->values()->all())->toBe($expectedKeys);
 });
 
 test('UpdateUserRoles records user.role_changed audit trail with roles and tags', function (): void {
