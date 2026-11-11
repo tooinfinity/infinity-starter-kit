@@ -21,7 +21,9 @@
 
 - After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `bun run test:unit`.
 - Run the full test suite or relevant unit/feature suites: `composer test:unit` and `composer test:database`.
+@if (file_exists(base_path('chisel.php')))
 - When modifying features affected by the feature installer, run `composer test:installer`.
+@endif
 - Fix failures introduced by the changes. Never lower coverage thresholds or exclude code just to pass. Report pre-existing failures or environment blockers explicitly; do not claim a check passed when it failed or could not run.
 
 ## Open source

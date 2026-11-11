@@ -29,13 +29,23 @@ if (! function_exists('chiselRun')) {
      * Run a console command with progress indicator.
      *
      * @param  list<string>  $command
+     * @param  array<string, string>  $env
      */
-    function chiselRun(array $command, string $label, ?string $cwd = null): void
+    function chiselRun(array $command, string $label, ?string $cwd = null, array $env = [], ?int $timeout = null): void
     {
         $directory = $cwd ?? __DIR__;
 
         if (class_exists(ProcessFacade::class) && ProcessFacade::getFacadeRoot() !== null) {
-            ProcessFacade::path($directory)->forever()->run($command)->throw();
+            $pendingProcess = ProcessFacade::path($directory);
+            if ($env !== []) {
+                $pendingProcess = $pendingProcess->env($env);
+            }
+            if ($timeout !== null) {
+                $pendingProcess = $pendingProcess->timeout($timeout);
+            } else {
+                $pendingProcess = $pendingProcess->forever();
+            }
+            $pendingProcess->run($command)->throw();
 
             return;
         }
@@ -47,9 +57,9 @@ if (! function_exists('chiselRun')) {
         $process = task(
             label: $label,
             keepSummary: true,
-            callback: function (Logger $logger) use ($command, $directory) {
-                $process = new Process($command, $directory);
-                $process->setTimeout(null);
+            callback: function (Logger $logger) use ($command, $directory, $env, $timeout) {
+                $process = new Process($command, $directory, $env !== [] ? $env : null);
+                $process->setTimeout($timeout);
                 $process->run(function ($type, $line) use ($logger): void {
                     $logger->line($line);
                 });

@@ -241,5 +241,26 @@ final class GeneratedProjectFixture
                 }
             }
         }
+
+        $guidelineForbiddenTokens = [
+            'Chisel',
+            'FeatureRegistry',
+            'install:features',
+            'test:installer',
+            'app.chisel',
+        ];
+
+        foreach (['AGENTS.md', 'CLAUDE.md', 'GEMINI.md'] as $guidelineFile) {
+            $guidelinePath = $tempDir.'/'.$guidelineFile;
+            if (file_exists($guidelinePath)) {
+                $guidelineContent = (string) file_get_contents($guidelinePath);
+                foreach ($guidelineForbiddenTokens as $token) {
+                    expect($guidelineContent)->not->toContain(
+                        $token,
+                        "Found stale reference [{$token}] in generated guideline file [{$guidelineFile}]"
+                    );
+                }
+            }
+        }
     }
 }

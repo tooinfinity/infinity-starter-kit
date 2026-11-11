@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from '@/hooks/use-translation';
 import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor';
 import type { TwoFactorSecretKey, TwoFactorSetupData } from '@/types';
 
@@ -31,6 +32,7 @@ const fetchJson = async <T>(url: string): Promise<T> => {
 };
 
 export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
+    const { __ } = useTranslation();
     const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null);
     const [manualSetupKey, setManualSetupKey] = useState<string | null>(null);
     const [recoveryCodesList, setRecoveryCodesList] = useState<string[]>([]);
@@ -43,7 +45,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
             const { svg } = await fetchJson<TwoFactorSetupData>(qrCode.url());
             setQrCodeSvg(svg);
         } catch {
-            setErrors((prev) => [...prev, 'Failed to fetch QR code']);
+            setErrors((prev) => [...prev, __('Failed to fetch QR code')]);
             setQrCodeSvg(null);
         }
     };
@@ -55,7 +57,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
             );
             setManualSetupKey(key);
         } catch {
-            setErrors((prev) => [...prev, 'Failed to fetch a setup key']);
+            setErrors((prev) => [...prev, __('Failed to fetch a setup key')]);
             setManualSetupKey(null);
         }
     };
@@ -76,7 +78,10 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
             const codes = await fetchJson<string[]>(recoveryCodes.url());
             setRecoveryCodesList(codes);
         } catch {
-            setErrors((prev) => [...prev, 'Failed to fetch recovery codes']);
+            setErrors((prev) => [
+                ...prev,
+                __('Failed to fetch recovery codes'),
+            ]);
             setRecoveryCodesList([]);
         }
     };

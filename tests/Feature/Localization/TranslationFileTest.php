@@ -238,6 +238,27 @@ test('no custom validation rule calls fail with an untranslated string literal',
     expect($untranslated)->toBeEmpty('Found custom validation rules calling $fail() with untranslated string literals: '.json_encode($untranslated, JSON_PRETTY_PRINT));
 });
 
+test('two factor hook error messages exist in all supported locales and resolve correctly', function (): void {
+    $keys = [
+        'Failed to fetch QR code',
+        'Failed to fetch a setup key',
+        'Failed to fetch recovery codes',
+    ];
+
+    foreach (Locale::cases() as $locale) {
+        app()->setLocale($locale->value);
+
+        foreach ($keys as $key) {
+            $translated = __($key);
+            expect($translated)->not->toBeEmpty();
+
+            if ($locale !== Locale::English) {
+                expect($translated)->not->toBe($key, "Translation missing for '{$key}' in {$locale->value}");
+            }
+        }
+    }
+});
+
 /**
  * @param  array<string, mixed>  $array
  * @return list<string>
