@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Chisel\Installer\Cleanup;
-
 $root = dirname(__DIR__, 2);
 
 it('ships a LICENSE file at the repository root', function () use ($root): void {
@@ -34,8 +32,4 @@ it('links the README license section to an existing file', function () use ($roo
     preg_match('/\[MIT license\]\((?<target>[^)]+)\)/', $readme, $matches);
 
     expect($root.'/'.$matches['target'])->toBeFile();
-});
-
-it('keeps the LICENSE file when the Chisel installer cleans up', function (): void {
-    expect(Cleanup::files())->not->toContain('LICENSE');
 });

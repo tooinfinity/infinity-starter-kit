@@ -245,6 +245,7 @@ final class OptionalModules
                     'tests/Unit/Models/UserTest.php',
                     'tests/Feature/Controllers/RegisterControllerTest.php',
                     'tests/Unit/ArchTest.php',
+                    'tests/Unit/Rules/ValidEmailTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/UpdateUserLocale.php',

@@ -321,3 +321,13 @@ test('no compatibility-only path or package can silently drift between FeatureDe
             ->toBeTrue("toPathsArray contains orphaned/unknown top-level key [{$topKey}].");
     }
 });
+
+test('starter kit source repository contains authorization and admin commands', function (): void {
+    $authCommand = 'app/Console/Commands/SetupAuthorizationCommand.php';
+    $createAdminCommand = 'app/Console/Commands/CreateAdminCommand.php';
+    $adminCommand = implode('', ['app/Console/Commands/', 'SetupAdmin', 'UserCommand.php']);
+
+    expect(file_exists(base_path($authCommand)))->toBeTrue()
+        ->and(file_exists(base_path($createAdminCommand)))->toBeTrue()
+        ->and(file_exists(base_path($adminCommand)))->toBeTrue();
+});

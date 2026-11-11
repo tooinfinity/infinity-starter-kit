@@ -28,6 +28,8 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+        with:
+          coverage: pcov
 
       - name: Build Assets
         run: bun run build
