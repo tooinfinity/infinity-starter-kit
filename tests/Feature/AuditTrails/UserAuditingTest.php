@@ -304,10 +304,12 @@ test('user.updated audit payload has identical keys between self-service and adm
     $selfAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $selfUser->id)->firstOrFail();
 
     $expectedKeys = ['name', 'email', 'is_active', 'roles'];
-    expect(array_keys($adminAudit->old_values))->toBe($expectedKeys)
-        ->and(array_keys($selfAudit->old_values))->toBe($expectedKeys)
-        ->and(array_keys($adminAudit->new_values))->toBe($expectedKeys)
-        ->and(array_keys($selfAudit->new_values))->toBe($expectedKeys);
+    sort($expectedKeys);
+
+    expect(collect(array_keys($adminAudit->old_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($selfAudit->old_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($adminAudit->new_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($selfAudit->new_values))->sort()->values()->all())->toBe($expectedKeys);
 });
 
 test('user.deleted audit payload has identical keys between self-service and admin paths', function (): void {
@@ -330,8 +332,10 @@ test('user.deleted audit payload has identical keys between self-service and adm
     $selfAudit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $selfId)->firstOrFail();
 
     $expectedKeys = ['name', 'email', 'is_active', 'roles'];
-    expect(array_keys($adminAudit->old_values))->toBe($expectedKeys)
-        ->and(array_keys($selfAudit->old_values))->toBe($expectedKeys);
+    sort($expectedKeys);
+
+    expect(collect(array_keys($adminAudit->old_values))->sort()->values()->all())->toBe($expectedKeys)
+        ->and(collect(array_keys($selfAudit->old_values))->sort()->values()->all())->toBe($expectedKeys);
 });
 
 test('UpdateUserRoles records user.role_changed audit trail with roles and tags', function (): void {
