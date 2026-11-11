@@ -31,7 +31,7 @@ if (! function_exists('chiselRun')) {
      * @param  list<string>  $command
      * @param  array<string, string>  $env
      */
-    function chiselRun(array $command, string $label, ?string $cwd = null, array $env = []): void
+    function chiselRun(array $command, string $label, ?string $cwd = null, array $env = [], ?int $timeout = null): void
     {
         $directory = $cwd ?? __DIR__;
 
@@ -40,7 +40,12 @@ if (! function_exists('chiselRun')) {
             if ($env !== []) {
                 $pendingProcess = $pendingProcess->env($env);
             }
-            $pendingProcess->forever()->run($command)->throw();
+            if ($timeout !== null) {
+                $pendingProcess = $pendingProcess->timeout($timeout);
+            } else {
+                $pendingProcess = $pendingProcess->forever();
+            }
+            $pendingProcess->run($command)->throw();
 
             return;
         }
@@ -52,9 +57,9 @@ if (! function_exists('chiselRun')) {
         $process = task(
             label: $label,
             keepSummary: true,
-            callback: function (Logger $logger) use ($command, $directory, $env) {
+            callback: function (Logger $logger) use ($command, $directory, $env, $timeout) {
                 $process = new Process($command, $directory, $env !== [] ? $env : null);
-                $process->setTimeout(null);
+                $process->setTimeout($timeout);
                 $process->run(function ($type, $line) use ($logger): void {
                     $logger->line($line);
                 });

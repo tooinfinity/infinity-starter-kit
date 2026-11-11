@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Process as ProcessFacade;
 use Laravel\Chisel\Chisel;
 use Laravel\Chisel\Filesystem\PendingFiles;
 use RuntimeException;
-use Symfony\Component\Process\Process;
+use Throwable;
 
 /**
  * Removes Chisel installer machinery and synchronizes configuration files after successful installation.
@@ -159,7 +159,7 @@ final class Cleanup
         DirectoryPruner::prune($directory, $paths['chisel']['empty_dirs'] ?? self::directories());
 
         if ($updateAiGuidelines) {
-            self::runAiGuidelinesUpdate($directory);
+            self::runAiGuidelinesUpdateSafely($directory);
         }
 
         try {
@@ -172,7 +172,7 @@ final class Cleanup
     public static function updateAiGuidelines(string $directory): void
     {
         if (self::canUpdateAiGuidelines($directory)) {
-            self::runAiGuidelinesUpdate($directory);
+            self::runAiGuidelinesUpdateSafely($directory);
         }
     }
 
@@ -185,17 +185,28 @@ final class Cleanup
         $command = [PHP_BINARY, 'artisan', 'list', '--raw', '--no-interaction'];
         $env = ['APP_ENV' => 'local'];
 
-        if (ProcessFacade::getFacadeRoot() !== null) {
-            $output = ProcessFacade::path($directory)->env($env)->run($command)->throw()->output();
-        } else {
-            $output = new Process($command, $directory, $env)->mustRun()->getOutput();
-        }
+        $output = ProcessFacade::path($directory)->env($env)->run($command)->throw()->output();
 
         return preg_match('/^boost:update(?:\s|$)/m', $output) === 1;
     }
 
+    private static function runAiGuidelinesUpdateSafely(string $directory): void
+    {
+        try {
+            self::runAiGuidelinesUpdate($directory);
+        } catch (Throwable) {
+            // Guideline regeneration is best-effort; failure must not abort cleanup.
+        }
+    }
+
     private static function runAiGuidelinesUpdate(string $directory): void
     {
-        chiselRun([PHP_BINARY, 'artisan', 'boost:update', '--no-interaction', '--no-discover', '--ignore-skills'], 'Update AI Guidelines', $directory, ['APP_ENV' => 'local']);
+        chiselRun(
+            [PHP_BINARY, 'artisan', 'boost:update', '--no-interaction', '--no-discover', '--ignore-skills'],
+            'Update AI Guidelines',
+            $directory,
+            ['APP_ENV' => 'local'],
+            timeout: 60,
+        );
     }
 }

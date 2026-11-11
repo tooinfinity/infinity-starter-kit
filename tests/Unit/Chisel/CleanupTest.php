@@ -192,3 +192,25 @@ test('cleanup preserves installer files when command discovery fails', function 
         ->toThrow(ProcessFailedException::class);
     expect(file_exists($this->tempDir.'/installer.php'))->toBeTrue();
 });
+
+test('cleanup allows required steps to complete when discovery succeeds but guideline update fails', function (): void {
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    touch($this->tempDir.'/artisan');
+    mkdir($this->tempDir.'/vendor/laravel/boost', 0777, true);
+    $installerFile = $this->tempDir.'/installer.php';
+    touch($installerFile);
+
+    Process::fake(function ($process) {
+        if (in_array('list', $process->command, true)) {
+            return Process::result(output: 'boost:update  Update Boost');
+        }
+
+        return Process::result(output: 'Update failed', exitCode: 1);
+    });
+
+    Cleanup::clean($this->tempDir, ['chisel' => ['files' => ['installer.php'], 'empty_dirs' => []]]);
+
+    expect(file_exists($installerFile))->toBeFalse();
+    Process::assertRan(fn ($process): bool => in_array('boost:update', $process->command, true));
+});
