@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 use App\Chisel\Installer\Cleanup;
+use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
+
+require_once __DIR__.'/../../../chisel.php';
 
 beforeEach(function (): void {
     $this->tempDir = sys_get_temp_dir().'/cleanup_test_'.bin2hex(random_bytes(6));
@@ -105,4 +109,108 @@ test('cleanup clean rethrows ComposerLockSynchronizer failure with recovery guid
 
     expect(fn () => Cleanup::clean($this->tempDir, $paths))
         ->toThrow(RuntimeException::class, 'Installer files were already removed. Run `composer update --with-all-dependencies`, then remove `.installer-state.json`.');
+});
+
+test('cleanup updateAiGuidelines returns early when required boost artifacts or directories are absent', function (): void {
+    // Missing all
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+
+    // Missing guidelines dir
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+
+    // Missing artisan
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+
+    // Missing vendor/laravel/boost
+    touch($this->tempDir.'/artisan');
+    expect(fn () => Cleanup::updateAiGuidelines($this->tempDir))->not->toThrow(Throwable::class);
+});
+
+test('cleanup updateAiGuidelines executes boost:update when all prerequisites exist', function (): void {
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    touch($this->tempDir.'/artisan');
+    mkdir($this->tempDir.'/vendor/laravel/boost', 0777, true);
+
+    Process::fake([
+        '*' => Process::result(output: 'boost:update  Update Boost'),
+    ]);
+
+    Cleanup::updateAiGuidelines($this->tempDir);
+
+    Process::assertRan(function ($process): bool {
+        $cmd = is_array($process->command) ? implode(' ', $process->command) : (string) $process->command;
+
+        return str_contains($cmd, 'boost:update')
+            && str_contains($cmd, '--ignore-skills');
+    });
+});
+
+test('cleanup checks Boost availability before deletion and updates guidelines afterward', function (bool $available): void {
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    touch($this->tempDir.'/artisan');
+    mkdir($this->tempDir.'/vendor/laravel/boost', 0777, true);
+    $installerFile = $this->tempDir.'/installer.php';
+    touch($installerFile);
+
+    Process::fake(function ($process) use ($available, $installerFile) {
+        if (in_array('list', $process->command, true)) {
+            expect(file_exists($installerFile))->toBeTrue();
+            expect($process->environment)->toMatchArray(['APP_ENV' => 'local']);
+
+            return Process::result(output: $available ? 'boost:update  Update Boost' : 'about  Display application information');
+        }
+
+        expect(file_exists($installerFile))->toBeFalse();
+
+        return Process::result();
+    });
+
+    Cleanup::clean($this->tempDir, ['chisel' => ['files' => ['installer.php'], 'empty_dirs' => []]]);
+
+    expect(file_exists($installerFile))->toBeFalse();
+    Process::assertRanTimes(fn (): bool => true, $available ? 2 : 1);
+    if ($available) {
+        Process::assertRan(fn ($process): bool => in_array('boost:update', $process->command, true));
+    } else {
+        Process::assertNotRan(fn ($process): bool => in_array('boost:update', $process->command, true));
+    }
+})->with([true, false]);
+
+test('cleanup preserves installer files when command discovery fails', function (): void {
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    touch($this->tempDir.'/artisan');
+    mkdir($this->tempDir.'/vendor/laravel/boost', 0777, true);
+    touch($this->tempDir.'/installer.php');
+    Process::fake(['*' => Process::result(exitCode: 1)]);
+
+    expect(fn () => Cleanup::clean($this->tempDir, ['chisel' => ['files' => ['installer.php']]]))
+        ->toThrow(ProcessFailedException::class);
+    expect(file_exists($this->tempDir.'/installer.php'))->toBeTrue();
+});
+
+test('cleanup allows required steps to complete when discovery succeeds but guideline update fails', function (): void {
+    file_put_contents($this->tempDir.'/boost.json', '{}');
+    mkdir($this->tempDir.'/.ai/guidelines', 0777, true);
+    touch($this->tempDir.'/artisan');
+    mkdir($this->tempDir.'/vendor/laravel/boost', 0777, true);
+    $installerFile = $this->tempDir.'/installer.php';
+    touch($installerFile);
+
+    Process::fake(function ($process) {
+        if (in_array('list', $process->command, true)) {
+            return Process::result(output: 'boost:update  Update Boost');
+        }
+
+        return Process::result(output: 'Update failed', exitCode: 1);
+    });
+
+    Cleanup::clean($this->tempDir, ['chisel' => ['files' => ['installer.php'], 'empty_dirs' => []]]);
+
+    expect(file_exists($installerFile))->toBeFalse();
+    Process::assertRan(fn ($process): bool => in_array('boost:update', $process->command, true));
 });
