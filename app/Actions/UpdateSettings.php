@@ -64,6 +64,10 @@ final readonly class UpdateSettings
                     $shouldInvalidateCache = true;
 
                     if (! $setting->wasRecentlyCreated) {
+                        $setting = Setting::query()
+                            ->lockForUpdate()
+                            ->findOrFail($setting->id);
+
                         if ($setting->value === $value) {
                             continue;
                         }
