@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { Form, router } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, Copy, ScanLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +22,7 @@ import { useAppearance } from '@/hooks/use-appearance';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { useTranslation } from '@/hooks/use-translation';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
-import { confirm } from '@/routes/two-factor';
+import { confirm, show } from '@/routes/two-factor';
 
 function GridScanIcon() {
     return (
@@ -56,12 +56,18 @@ function TwoFactorSetupStep({
     buttonText,
     onNextStep,
     errors,
+    onRetry,
+    isRetrying = false,
+    requiresPasswordConfirmation,
 }: {
     qrCodeSvg: string | null;
     manualSetupKey: string | null;
     buttonText: string;
     onNextStep: () => void;
     errors: string[];
+    onRetry?: () => void;
+    isRetrying?: boolean;
+    requiresPasswordConfirmation: boolean;
 }) {
     const { resolvedAppearance } = useAppearance();
     const { __ } = useTranslation();
@@ -71,7 +77,33 @@ function TwoFactorSetupStep({
     return (
         <>
             {errors?.length ? (
-                <AlertError errors={errors} />
+                <div className="flex w-full flex-col gap-4">
+                    <AlertError errors={errors} />
+                    {requiresPasswordConfirmation ? (
+                        <Button
+                            type="button"
+                            className="w-full"
+                            onClick={() => router.visit(show.url())}
+                        >
+                            {__('Confirm password')}
+                        </Button>
+                    ) : (
+                        onRetry && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                                onClick={onRetry}
+                                disabled={isRetrying}
+                            >
+                                {isRetrying && (
+                                    <Spinner className="size-4 animate-spin" />
+                                )}
+                                {__('Retry')}
+                            </Button>
+                        )
+                    )}
+                </div>
             ) : (
                 <>
                     <div className="mx-auto flex max-w-md overflow-hidden">
@@ -98,7 +130,11 @@ function TwoFactorSetupStep({
                     </div>
 
                     <div className="flex w-full gap-5">
-                        <Button className="w-full" onClick={onNextStep}>
+                        <Button
+                            className="w-full"
+                            onClick={onNextStep}
+                            disabled={!qrCodeSvg || !manualSetupKey}
+                        >
                             {buttonText}
                         </Button>
                     </div>
@@ -235,6 +271,7 @@ type Props = {
     isOpen: boolean;
     onClose: () => void;
     requiresConfirmation: boolean;
+    requiresPasswordConfirmation: boolean;
     twoFactorEnabled: boolean;
     qrCodeSvg: string | null;
     manualSetupKey: string | null;
@@ -247,6 +284,7 @@ export default function TwoFactorSetupModal({
     isOpen,
     onClose,
     requiresConfirmation,
+    requiresPasswordConfirmation,
     twoFactorEnabled,
     qrCodeSvg,
     manualSetupKey,
@@ -257,6 +295,8 @@ export default function TwoFactorSetupModal({
     const { __ } = useTranslation();
     const [showVerificationStep, setShowVerificationStep] =
         useState<boolean>(false);
+
+    const isPasswordConfirmationRequired = requiresPasswordConfirmation;
 
     const modalConfig = useMemo<{
         title: string;
@@ -292,29 +332,68 @@ export default function TwoFactorSetupModal({
         };
     }, [twoFactorEnabled, showVerificationStep, __]);
 
+    const [isFetching, setIsFetching] = useState<boolean>(false);
+    const hasFetchedRef = useRef<boolean>(false);
+    const modalSessionRef = useRef<number>(0);
+
+    const resetModalState = useCallback(() => {
+        setShowVerificationStep(false);
+        setIsFetching(false);
+        modalSessionRef.current++;
+        hasFetchedRef.current = false;
+
+        if (twoFactorEnabled || !qrCodeSvg || errors.length > 0) {
+            clearSetupData();
+        }
+    }, [twoFactorEnabled, qrCodeSvg, errors.length, clearSetupData]);
+
     const handleModalNextStep = useCallback(() => {
         if (requiresConfirmation) {
             setShowVerificationStep(true);
             return;
         }
 
-        clearSetupData();
+        resetModalState();
         onClose();
-    }, [requiresConfirmation, clearSetupData, onClose]);
+    }, [requiresConfirmation, resetModalState, onClose]);
 
-    const resetModalState = useCallback(() => {
-        setShowVerificationStep(false);
-
-        if (twoFactorEnabled) {
-            clearSetupData();
+    const loadSetupData = useCallback(async () => {
+        const sessionId = modalSessionRef.current;
+        setIsFetching(true);
+        try {
+            await fetchSetupData();
+        } finally {
+            if (modalSessionRef.current === sessionId) {
+                setIsFetching(false);
+            }
         }
-    }, [twoFactorEnabled, clearSetupData]);
+    }, [fetchSetupData]);
 
     useEffect(() => {
-        if (isOpen && !qrCodeSvg) {
-            void fetchSetupData();
+        if (!isOpen) {
+            modalSessionRef.current++;
+            hasFetchedRef.current = false;
+            return;
         }
-    }, [isOpen, qrCodeSvg, fetchSetupData]);
+
+        if ((!qrCodeSvg || !manualSetupKey) && !hasFetchedRef.current) {
+            hasFetchedRef.current = true;
+            void loadSetupData();
+        }
+    }, [isOpen, qrCodeSvg, manualSetupKey, loadSetupData]);
+
+    const handleRetry = useCallback(() => {
+        if (isFetching) {
+            return;
+        }
+
+        if (isPasswordConfirmationRequired) {
+            router.visit(show.url());
+            return;
+        }
+
+        void loadSetupData();
+    }, [isFetching, isPasswordConfirmationRequired, loadSetupData]);
 
     const handleClose = useCallback(() => {
         resetModalState();
@@ -345,6 +424,11 @@ export default function TwoFactorSetupModal({
                             buttonText={modalConfig.buttonText}
                             onNextStep={handleModalNextStep}
                             errors={errors}
+                            onRetry={handleRetry}
+                            isRetrying={isFetching}
+                            requiresPasswordConfirmation={
+                                isPasswordConfirmationRequired
+                            }
                         />
                     )}
                 </div>
