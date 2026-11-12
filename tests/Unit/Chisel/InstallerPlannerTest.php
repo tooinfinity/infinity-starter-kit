@@ -38,12 +38,14 @@ test('installer planner produces accurate plan when all features are selected', 
         ->and($plan->configurationPhases['Authorization Setup'])->toContain('authorization:setup')
         ->and($plan->configurationPhases['Administrator Setup'])->toContain('root@example.com')
         ->and($plan->postScaffoldCommands)->toHaveKeys([
+            'PHP Code Cleanup',
             'PHP Code Formatting',
             'Wayfinder Route Generation',
             'Frontend Dependencies',
             'Frontend Build',
             'Frontend Lint',
         ])
+        ->and($plan->postScaffoldCommands['PHP Code Cleanup'])->toBe('vendor/bin/rector --no-progress-bar')
         ->and($plan->dependencyDerivedFeatures)->toContain('authorization', 'audit-trails', 'user-management', 'login')
         ->and($plan->requiredBy['authorization'])->toContain('audit-trails', 'reporting', 'settings', 'user-management')
         ->and($plan->requiredBy['audit-trails'])->toBe(['reporting'])
