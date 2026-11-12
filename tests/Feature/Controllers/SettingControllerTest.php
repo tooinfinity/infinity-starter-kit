@@ -2,9 +2,15 @@
 
 declare(strict_types=1);
 
+/* @chisel-audit-trails */
+use App\Enums\AuditEvent;
+/* @end-chisel-audit-trails */
 use App\Enums\Permission;
 use App\Enums\SettingKey;
 use App\Http\Middleware\HandleSettings;
+/* @chisel-audit-trails */
+use App\Models\AuditTrail;
+/* @end-chisel-audit-trails */
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -267,3 +273,107 @@ it('rejects unknown setting keys', function (): void {
     $response->assertRedirect(route('settings.edit'))
         ->assertSessionHasErrors();
 });
+
+it('does not touch cache when saving unchanged settings', function (): void {
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Same App',
+    ]);
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationTimezone->value,
+        'value' => 'UTC',
+    ]);
+
+    Cache::put('settings.all', ['sentinel' => 'preserved'], now()->addHour());
+
+    $user = User::factory()->create();
+    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
+    $user->givePermissionTo($permission);
+
+    $response = $this->actingAs($user)
+        ->from(route('settings.edit'))
+        ->put(route('settings.update'), [
+            'settings' => [
+                'application.name' => 'Same App',
+                'application.timezone' => 'UTC',
+            ],
+        ]);
+
+    $response->assertRedirectToRoute('settings.edit')
+        ->assertSessionHas(SessionKey::FLASH_DATA, [
+            'toast' => [
+                'type' => 'success',
+                'message' => __('Settings updated.'),
+            ],
+        ]);
+
+    expect(Cache::get('settings.all'))->toBe(['sentinel' => 'preserved']);
+});
+
+/* @chisel-audit-trails */
+it('writes no audit rows when saving unchanged settings', function (): void {
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Same App',
+    ]);
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationTimezone->value,
+        'value' => 'UTC',
+    ]);
+
+    $user = User::factory()->create();
+    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
+    $user->givePermissionTo($permission);
+
+    $response = $this->actingAs($user)
+        ->from(route('settings.edit'))
+        ->put(route('settings.update'), [
+            'settings' => [
+                'application.name' => 'Same App',
+                'application.timezone' => 'UTC',
+            ],
+        ]);
+
+    $response->assertRedirectToRoute('settings.edit');
+
+    expect(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->count())->toBe(0);
+});
+
+it('writes exactly one audit row when changing only one setting', function (): void {
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Same App',
+    ]);
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationTimezone->value,
+        'value' => 'UTC',
+    ]);
+
+    $user = User::factory()->create();
+    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
+    $user->givePermissionTo($permission);
+
+    $response = $this->actingAs($user)
+        ->from(route('settings.edit'))
+        ->put(route('settings.update'), [
+            'settings' => [
+                'application.name' => 'Same App',
+                'application.timezone' => 'Europe/London',
+            ],
+        ]);
+
+    $response->assertRedirectToRoute('settings.edit');
+
+    $audits = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get();
+
+    expect($audits)->toHaveCount(1);
+
+    $audit = $audits->first();
+    expect($audit)->not->toBeNull()
+        ->and($audit->user_id)->toBe($user->id)
+        ->and($audit->old_values['key'])->toBe(SettingKey::ApplicationTimezone->value)
+        ->and($audit->old_values['value'])->toBe('UTC')
+        ->and($audit->new_values['key'])->toBe(SettingKey::ApplicationTimezone->value)
+        ->and($audit->new_values['value'])->toBe('Europe/London');
+});
+/* @end-chisel-audit-trails */
