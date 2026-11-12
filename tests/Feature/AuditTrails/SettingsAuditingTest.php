@@ -209,10 +209,8 @@ test('UpdateSettings uses the latest recovered value for comparison and auditing
     expect($inserted)->toBeTrue()
         ->and($updated)->toBeTrue();
 
-    $this->assertDatabaseHas('settings', [
-        'key' => SettingKey::ApplicationName->value,
-        'value' => json_encode('Final Value', JSON_THROW_ON_ERROR),
-    ]);
+    $setting = Setting::query()->where('key', SettingKey::ApplicationName->value)->first();
+    expect($setting?->value)->toBe('Final Value');
 
     expect(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get()->pluck('old_values.value')->all())
         ->toBe($expectedOldValues);
