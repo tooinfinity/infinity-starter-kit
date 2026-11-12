@@ -9,7 +9,9 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Event;
 
 it('registers AuthenticateSession on the web group', function (): void {
-    $webMiddleware = resolve(Router::class)->getMiddlewareGroups()['web'];
+    $this->get(route('home'));
+
+    $webMiddleware = resolve(Router::class)->getMiddlewareGroups()['web'] ?? [];
 
     expect(
         in_array(AuthenticateSession::class, $webMiddleware, true)
@@ -17,6 +19,7 @@ it('registers AuthenticateSession on the web group', function (): void {
     )->toBeTrue();
 });
 
+/* @chisel-login */
 it('logs out a session whose stored password hash is stale', function (): void {
     $user = User::factory()->create();
 
@@ -25,7 +28,9 @@ it('logs out a session whose stored password hash is stale', function (): void {
         ->get(route('dashboard'))
         ->assertRedirect(route('login'));
 });
+/* @end-chisel-login */
 
+/* @chisel-password-update */
 it('invalidates other sessions after self-service password update while keeping the current session', function (): void {
     Event::fake([OtherDeviceLogout::class]);
 
@@ -50,3 +55,4 @@ it('invalidates other sessions after self-service password update while keeping 
         ->get(route('dashboard'))
         ->assertRedirect(route('login'));
 });
+/* @end-chisel-password-update */

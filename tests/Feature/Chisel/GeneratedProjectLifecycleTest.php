@@ -150,6 +150,10 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             // PHPStan analysis on generated project
             $phpstan = runInGeneratedProject($tempDir, ['vendor/bin/phpstan', 'analyse', '--no-progress', '--memory-limit=512M']);
             expect($phpstan->getExitCode())->toBe(0, $phpstan->getOutput()."\n".$phpstan->getErrorOutput());
+
+            // Full composer test passes in generated project
+            $composerTest = runInGeneratedProject($tempDir, ['composer', 'test'], ['APP_ENV' => 'testing'], 600);
+            expect($composerTest->getExitCode())->toBe(0, $composerTest->getOutput()."\n".$composerTest->getErrorOutput());
         } finally {
             removeRealGeneratedProjectFixture($tempDir);
         }
@@ -275,12 +279,9 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
             $phpstan = runInGeneratedProject($tempDir, ['vendor/bin/phpstan', 'analyse', '--no-progress', '--memory-limit=512M']);
             expect($phpstan->getExitCode())->toBe(0, $phpstan->getOutput()."\n".$phpstan->getErrorOutput());
 
-            $pest = runInGeneratedProject($tempDir, [
-                'vendor/bin/pest',
-                'tests/Feature/Controllers/UserProfileControllerTest.php',
-                'tests/Unit/Actions/UpdateUserTest.php',
-            ], ['APP_ENV' => 'testing']);
-            expect($pest->getExitCode())->toBe(0, $pest->getOutput()."\n".$pest->getErrorOutput());
+            // Verify full composer test passes in minimal generated project
+            $composerTest = runInGeneratedProject($tempDir, ['composer', 'test'], ['APP_ENV' => 'testing'], 600);
+            expect($composerTest->getExitCode())->toBe(0, $composerTest->getOutput()."\n".$composerTest->getErrorOutput());
         } finally {
             removeRealGeneratedProjectFixture($tempDir);
         }

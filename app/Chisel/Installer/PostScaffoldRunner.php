@@ -16,6 +16,10 @@ final class PostScaffoldRunner
 {
     public static function run(InstallerContext $context, string $basePath): void
     {
+        if (file_exists($basePath.'/vendor/bin/rector')) {
+            chiselRun(['vendor/bin/rector', '--no-progress-bar'], 'Clean PHP Code', $basePath);
+        }
+
         if (file_exists($basePath.'/vendor/bin/pint')) {
             chiselRun(['vendor/bin/pint', '--format', 'agent'], 'Format PHP Code', $basePath);
         }

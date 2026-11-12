@@ -156,6 +156,8 @@ it('renders translated validation error message in active locale', function (str
     expect($validator->errors()->first('email'))->toBe($expectedMessage);
 })->with([
     ['en', 'The email field must be a valid email address.'],
+    /* @chisel-localization */
     ['fr', 'Le champ email doit être une adresse email valide.'],
     ['ar', 'يجب أن يكون حقل email بريداً إلكترونياً صالحاً.'],
+    /* @end-chisel-localization */
 ]);

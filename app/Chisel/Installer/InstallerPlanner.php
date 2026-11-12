@@ -181,6 +181,7 @@ final class InstallerPlanner
 
         // Post-scaffolding tooling
         $postScaffoldCommands = [
+            'PHP Code Cleanup' => 'vendor/bin/rector --no-progress-bar',
             'PHP Code Formatting' => 'vendor/bin/pint --format agent',
             'Wayfinder Route Generation' => 'php artisan wayfinder:generate --with-form --no-interaction',
         ];
