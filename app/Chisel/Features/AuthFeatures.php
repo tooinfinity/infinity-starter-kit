@@ -30,6 +30,7 @@ final class AuthFeatures
                     'app/Providers/FortifyServiceProvider.php',
                     'resources/js/pages/welcome.tsx',
                     'resources/js/pages/user/create.tsx',
+                    'tests/Feature/Middleware/AuthenticateSessionTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Http/Controllers/LoginController.php',
@@ -168,6 +169,7 @@ final class AuthFeatures
                     'routes/web.php',
                     'app/Http/Controllers/UserPasswordController.php',
                     'resources/js/layouts/settings/layout.tsx',
+                    'tests/Feature/Middleware/AuthenticateSessionTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/UpdateUserPassword.php',

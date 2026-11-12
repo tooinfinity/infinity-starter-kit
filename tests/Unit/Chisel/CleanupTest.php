@@ -214,3 +214,7 @@ test('cleanup allows required steps to complete when discovery succeeds but guid
     expect(file_exists($installerFile))->toBeFalse();
     Process::assertRan(fn ($process): bool => in_array('boost:update', $process->command, true));
 });
+
+test('cleanup files list does not contain LICENSE', function (): void {
+    expect(Cleanup::files())->not->toContain('LICENSE');
+});
