@@ -210,6 +210,7 @@ final class AuthFeatures
                     'resources/js/components/two-factor-recovery-codes.tsx',
                     'resources/js/hooks/use-two-factor-auth.ts',
                     'tests/Feature/Controllers/UserTwoFactorAuthenticationControllerTest.php',
+                    'tests/Browser/TwoFactorAuthenticationTest.php',
                 ],
                 emptyDirectories: [
                     'resources/js/pages/user-password-confirmation',

@@ -78,9 +78,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
             if (setupAttemptRef.current === attemptId) {
                 if (error instanceof HttpError && error.status === 423) {
                     setRequiresPasswordConfirmation(true);
-                    setErrors([
-                        error.message || 'Password confirmation required.',
-                    ]);
+                    setErrors([__('Password confirmation required.')]);
                 } else {
                     setErrors((prev) => [
                         ...prev,
@@ -105,9 +103,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
             if (setupAttemptRef.current === attemptId) {
                 if (error instanceof HttpError && error.status === 423) {
                     setRequiresPasswordConfirmation(true);
-                    setErrors([
-                        error.message || 'Password confirmation required.',
-                    ]);
+                    setErrors([__('Password confirmation required.')]);
                 } else {
                     setErrors((prev) => [
                         ...prev,
@@ -140,7 +136,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
         } catch (error) {
             if (error instanceof HttpError && error.status === 423) {
                 setRequiresPasswordConfirmation(true);
-                setErrors([error.message || 'Password confirmation required.']);
+                setErrors([__('Password confirmation required.')]);
             } else {
                 setErrors((prev) => [
                     ...prev,
@@ -163,14 +159,14 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
         let qrError: string | null = null;
         let keyError: string | null = null;
 
-        const handle423 = (error: HttpError) => {
+        const handle423 = () => {
             if (setupAttemptRef.current !== attemptId) {
                 return;
             }
 
             controller.abort();
             setRequiresPasswordConfirmation(true);
-            setErrors([error.message || 'Password confirmation required.']);
+            setErrors([__('Password confirmation required.')]);
             setQrCodeSvg(null);
             setManualSetupKey(null);
         };
@@ -193,7 +189,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
                     return;
                 }
                 if (error instanceof HttpError && error.status === 423) {
-                    handle423(error);
+                    handle423();
                     return;
                 }
                 qrError = __('Failed to fetch QR code');
@@ -221,7 +217,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
                     return;
                 }
                 if (error instanceof HttpError && error.status === 423) {
-                    handle423(error);
+                    handle423();
                     return;
                 }
                 keyError = __('Failed to fetch a setup key');

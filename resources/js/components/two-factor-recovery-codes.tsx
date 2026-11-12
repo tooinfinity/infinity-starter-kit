@@ -30,6 +30,7 @@ export default function TwoFactorRecoveryCodes({
 }: Props) {
     const { __ } = useTranslation();
     const [codesAreVisible, setCodesAreVisible] = useState<boolean>(false);
+    const hasFetchedRef = useRef(false);
     const codesSectionRef = useRef<HTMLDivElement | null>(null);
     const canRegenerateCodes = recoveryCodesList.length > 0 && codesAreVisible;
 
@@ -60,7 +61,8 @@ export default function TwoFactorRecoveryCodes({
     }, [codesAreVisible, recoveryCodesList.length, fetchRecoveryCodes]);
 
     useEffect(() => {
-        if (!recoveryCodesList.length) {
+        if (!recoveryCodesList.length && !hasFetchedRef.current) {
+            hasFetchedRef.current = true;
             void fetchRecoveryCodes();
         }
     }, [recoveryCodesList.length, fetchRecoveryCodes]);
