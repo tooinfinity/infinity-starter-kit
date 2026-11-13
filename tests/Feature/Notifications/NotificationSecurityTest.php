@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Support\Str;
 
-
 test('non-existent notification id returns 403', function (string $method, string $route): void {
     $user = User::factory()->create();
     $randomUuid = (string) Str::uuid();
