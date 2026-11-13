@@ -111,46 +111,34 @@ test('command fails when --answers option decodes to non-array scalar', function
         ->assertFailed();
 })->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
-test('command succeeds with --answers minimal selection', function (): void {
+test('command succeeds with --answers profile selections', function (array $answers): void {
     bindMockChiselScript();
 
     $this->artisan('install:features', [
-        '--answers' => json_encode([
-            'auth_features' => ['login'],
-            'optional_modules' => [],
-        ], JSON_THROW_ON_ERROR),
+        '--answers' => json_encode($answers, JSON_THROW_ON_ERROR),
     ])->assertSuccessful();
-});
-
-test('command succeeds with --answers standard selection', function (): void {
-    bindMockChiselScript();
-
-    $this->artisan('install:features', [
-        '--answers' => json_encode([
-            'auth_features' => ['login', 'registration'],
-            'optional_modules' => ['authorization', 'settings'],
-        ], JSON_THROW_ON_ERROR),
-    ])->assertSuccessful();
-});
-
-test('command succeeds with --answers full selection', function (): void {
-    bindMockChiselScript();
-
-    $this->artisan('install:features', [
-        '--answers' => json_encode([
-            'auth_features' => ['login', 'registration'],
-            'optional_modules' => [
-                'authorization',
-                'settings',
-                'user-management',
-                'localization',
-                'notifications',
-                'audit-trails',
-                'reporting',
-            ],
-        ], JSON_THROW_ON_ERROR),
-    ])->assertSuccessful();
-});
+})->with([
+    'minimal selection' => [[
+        'auth_features' => ['login'],
+        'optional_modules' => [],
+    ]],
+    'standard selection' => [[
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization', 'settings'],
+    ]],
+    'full selection' => [[
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => [
+            'authorization',
+            'settings',
+            'user-management',
+            'localization',
+            'notifications',
+            'audit-trails',
+            'reporting',
+        ],
+    ]],
+]);
 
 test('command fails before mutation when unknown feature name is provided in --answers', function (): void {
     $script = bindMockChiselScript();
