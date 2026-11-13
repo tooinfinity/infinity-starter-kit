@@ -128,9 +128,8 @@ test('NotLastSuperAdmin static check throws validation exception when only one s
 test('NotLastSuperAdmin check returns early when user is not super admin', function (): void {
     $user = User::factory()->create();
 
-    NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Delete);
-
-    expect(true)->toBeTrue();
+    expect(fn () => NotLastSuperAdmin::check($user, SuperAdminRestrictionOperation::Delete))
+        ->not->toThrow(Throwable::class);
 });
 
 test('NotLastSuperAdmin validate returns early if user is null', function (): void {

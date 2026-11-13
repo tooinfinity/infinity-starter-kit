@@ -96,11 +96,11 @@ it('NotLastSuperAdmin passes when multiple super admins exist', function (SuperA
     $superAdmin2 = User::factory()->create();
     $superAdmin2->assignRole($superAdminRole);
 
-    DB::transaction(function () use ($superAdmin1, $operation): void {
-        NotLastSuperAdmin::check($superAdmin1, $operation);
-    });
-
-    expect(true)->toBeTrue();
+    expect(function () use ($superAdmin1, $operation): void {
+        DB::transaction(function () use ($superAdmin1, $operation): void {
+            NotLastSuperAdmin::check($superAdmin1, $operation);
+        });
+    })->not->toThrow(Throwable::class);
 })->with([
     SuperAdminRestrictionOperation::Delete,
     SuperAdminRestrictionOperation::Deactivate,
