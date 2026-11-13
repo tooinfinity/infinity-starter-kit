@@ -172,12 +172,11 @@ final class InstallerContextResolver
         );
     }
 
-    private static function containsPasswordKey(mixed $data): bool
+    /**
+     * @param  array<array-key, mixed>  $data
+     */
+    private static function containsPasswordKey(array $data): bool
     {
-        if (! is_array($data)) {
-            return false;
-        }
-
         foreach ($data as $key => $value) {
             if (is_string($key) && str_contains(mb_strtolower($key), 'password')) {
                 return true;

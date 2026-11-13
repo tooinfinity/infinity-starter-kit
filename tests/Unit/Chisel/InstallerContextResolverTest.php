@@ -224,6 +224,19 @@ test('resolve normalizes ai_guidelines from answers', function (mixed $input, bo
     'empty array' => [[], false],
 ]);
 
+test('resolve normalizes ai_tooling legacy answer alias', function () use ($makeCommand, $makeScript): void {
+    $answers = [
+        'auth_features' => [],
+        'optional_modules' => [],
+        'ai_tooling' => false,
+    ];
+
+    $command = $makeCommand(['--answers' => json_encode($answers), '--no-interaction' => true]);
+    $context = InstallerContextResolver::resolve($command, $makeScript(), isMockedScript: true, isInteractive: false);
+
+    expect($context->includeAiGuidelines)->toBeFalse();
+});
+
 test('resolve loads answers from existing InstallerState checkpoint when --answers is omitted', function () use ($makeCommand, $makeScript): void {
     $stateDir = base_path();
     $stateFile = $stateDir.'/'.InstallerState::STATE_FILE;
