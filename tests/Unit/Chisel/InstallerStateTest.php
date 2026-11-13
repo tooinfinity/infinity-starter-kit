@@ -291,5 +291,6 @@ test('sanitizeAnswers and answersConflict preserve and compare ai_guidelines', f
     $conflictMessage = $state->formatConflictMessage($contextConflictingAi);
     expect($conflictMessage)->toContain('AI guidelines: guidelines')
         ->and($conflictMessage)->toContain('AI guidelines: (none)')
-        ->and($conflictMessage)->toContain('you will be prompted for a new password on retry');
+        ->and($conflictMessage)->toContain('you will be prompted for a new password on retry')
+        ->and($conflictMessage)->toContain('php artisan authorization:create-admin --stdin');
 });

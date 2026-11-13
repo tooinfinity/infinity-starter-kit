@@ -201,6 +201,7 @@ final class InstallFeaturesCommand extends Command
         $this->line('To retry and resume the installation:');
         $this->line('  <comment>php artisan install:features</comment>');
         $this->line('If administrator setup was requested, you will be prompted for a new password on retry; passwords are not stored in the checkpoint.');
+        $this->line('For non-interactive retries, create the administrator with <comment>php artisan authorization:create-admin --stdin</comment> after installation.');
         $this->line('To start fresh with a clean directory:');
         $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
     }
@@ -225,6 +226,7 @@ final class InstallFeaturesCommand extends Command
         $this->line('To retry with the previous answers, run:');
         $this->line('  <comment>php artisan install:features</comment>');
         $this->line('If administrator setup was requested, you will be prompted for a new password on retry; passwords are not stored in the checkpoint.');
+        $this->line('For non-interactive retries, create the administrator with <comment>php artisan authorization:create-admin --stdin</comment> after installation.');
         $this->newLine();
         $this->line('To start over with different features:');
         $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');

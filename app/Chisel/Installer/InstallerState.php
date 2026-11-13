@@ -326,6 +326,7 @@ final class InstallerState
             ."To retry with the previous answers, run:\n"
             ."  php artisan install:features\n"
             ."If administrator setup was requested, you will be prompted for a new password on retry; passwords are not stored in the checkpoint.\n"
+            ."For non-interactive retries, create the administrator with php artisan authorization:create-admin --stdin after installation.\n"
             .'To start over with different features, delete this directory and run composer create-project again.';
 
         return $msg;

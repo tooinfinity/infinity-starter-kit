@@ -76,7 +76,13 @@ final class GeneratedApplicationConfigurator
         InstallerContext $context,
         ?Factory $components = null,
     ): int {
-        if ($context->isNonInteractive) {
+        try {
+            $isNoInteraction = $command->hasOption('no-interaction') && (bool) $command->option('no-interaction');
+        } catch (Throwable) {
+            $isNoInteraction = false;
+        }
+
+        if ($context->isNonInteractive || $isNoInteraction) {
             $info = 'No administrator credentials provided in non-interactive mode; skipping administrator creation.';
             if ($components instanceof Factory) {
                 $components->info($info);

@@ -18,11 +18,11 @@ The test suite is structured into three distinct layers:
 
 2. **Feature / Integration Tests (`tests/Feature/Chisel/`)**
    - Command orchestration and filesystem sandboxes.
-   - Covers `install:features` interactive prompts, JSON answers, CLI options, dry-run previews, pairwise feature combinations (`FeatureCombinationTest`), feature contract compliance (`FeatureContractTest`), and documentation sync.
+   - Covers `install:features` interactive prompts, JSON answers, CLI options, pairwise feature combinations (`FeatureCombinationTest`), feature contract compliance (`FeatureContractTest`), and documentation sync.
 
-3. **Installer E2E (`tests/Feature/Chisel/GeneratedProjectLifecycleTest.php` & `ComposerCreateProjectLifecycleTest.php`)**
+3. **Installer E2E (`tests/Feature/Chisel/GeneratedProjectLifecycleTest.php`)**
    - Real generated application lifecycle against an isolated temporary project.
-   - Executes the real `chisel.php` script, real filesystem pruning, Composer manifest modification, Bun lockfile update, database migrations, admin setup, frontend asset compilation, PHPStan static analysis, and smoke HTTP request verification without mocks.
+   - Executes the real `chisel.php` script, real filesystem pruning, Composer manifest modification, Bun lockfile update, database migrations, admin setup, frontend asset compilation, PHPStan static analysis, and smoke HTTP request verification without mocks across representative scenarios (`full`, `minimal`, `dependency-heavy`, `db-early-migration-fresh`, `admin-no-credentials`, `failure-post-chisel-resume`).
    - Tagged with `@group installer-e2e`.
 
 ---
@@ -113,7 +113,7 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 
 ### 1. Auth Capabilities
 - **Minimal Auth (`login`, `logout`)**: Covered in `minimal`, `auth-minimal`, and individual module tests.
-- **Full Auth (7 capabilities)**: Covered in `full`, `no-modules`, and `ComposerCreateProjectLifecycleTest` (Scenario A).
+- **Full Auth (7 capabilities)**: Covered in `full`, `no-modules`, and `GeneratedProjectLifecycleTest` (full scenario).
 - **Registration Disabled**: Covered in `auth-no-registration` (`FeatureCombinationTest` & `InstallFeaturesCommandTest`).
 - **Email Verification Disabled**: Covered in `auth-no-email-verification`.
 - **Password Reset Disabled**: Covered in `auth-no-password-reset`.

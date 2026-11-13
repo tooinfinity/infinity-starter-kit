@@ -63,10 +63,11 @@ final class InstallerContextResolver
         $paths = require base_path('chisel-paths.php');
 
         $rawAnswers = $command->hasOption('answers') ? $command->option('answers') : null;
+        $hasAnswersOption = is_string($rawAnswers) && mb_trim($rawAnswers) !== '';
         $hasAnswersSource = false;
         $providedAnswers = [];
 
-        if (is_string($rawAnswers) && mb_trim($rawAnswers) !== '') {
+        if ($hasAnswersOption) {
             $hasAnswersSource = true;
             $decoded = json_decode($rawAnswers, true, 512, JSON_THROW_ON_ERROR);
             throw_unless(is_array($decoded), RuntimeException::class, 'The --answers option must decode to a JSON object.');
@@ -88,7 +89,7 @@ final class InstallerContextResolver
         }
 
         $isNoInteraction = $command->hasOption('no-interaction') && (bool) $command->option('no-interaction');
-        $isNonInteractive = $hasAnswersSource || ! $isInteractive || $isNoInteraction;
+        $isNonInteractive = $hasAnswersOption || ! $isInteractive || $isNoInteraction;
 
         throw_if($isNonInteractive && ! $hasAnswersSource, RuntimeException::class, 'The --answers option is required when running non-interactively.');
 
@@ -114,7 +115,7 @@ final class InstallerContextResolver
             $providedAnswers['ai_guidelines'] = $providedAnswers['ai_guidelines'] ? ['guidelines'] : [];
         }
 
-        $isInteractivePrompting = $isInteractive && ! $isNonInteractive;
+        $isInteractivePrompting = $isInteractive && ! $isNoInteraction && ! $hasAnswersSource;
 
         /** @var array<string, mixed> $providedAnswers */
         $pendingAnswers = $script

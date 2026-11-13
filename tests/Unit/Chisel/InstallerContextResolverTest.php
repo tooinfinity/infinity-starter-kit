@@ -238,8 +238,12 @@ test('resolve normalizes ai_tooling legacy answer alias', function () use ($make
 });
 
 test('resolve loads answers from existing InstallerState checkpoint when --answers is omitted', function () use ($makeCommand, $makeScript): void {
-    $stateDir = base_path();
-    $stateFile = $stateDir.'/'.InstallerState::STATE_FILE;
+    $tempDir = sys_get_temp_dir().'/chisel_checkpoint_test_'.uniqid();
+    mkdir($tempDir, 0777, true);
+    file_put_contents($tempDir.'/chisel-paths.php', '<?php return [];');
+
+    $originalBasePath = base_path();
+    app()->setBasePath($tempDir);
 
     $contextOriginal = new InstallerContext(
         providedAnswers: ['auth_features' => ['login'], 'optional_modules' => ['authorization']],
@@ -255,7 +259,7 @@ test('resolve loads answers from existing InstallerState checkpoint when --answe
         isMockedScript: true,
     );
 
-    InstallerState::initialize($stateDir, $contextOriginal);
+    InstallerState::initialize($tempDir, $contextOriginal);
 
     try {
         $command = $makeCommand(['--no-interaction' => true]);
@@ -266,7 +270,8 @@ test('resolve loads answers from existing InstallerState checkpoint when --answe
             ->and($resolved->adminName)->toBe('State Admin')
             ->and($resolved->adminEmail)->toBe('state@example.com');
     } finally {
-        File::delete($stateFile);
+        app()->setBasePath($originalBasePath);
+        File::deleteDirectory($tempDir);
     }
 });
 

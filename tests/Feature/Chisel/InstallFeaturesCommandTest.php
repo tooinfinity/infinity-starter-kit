@@ -286,6 +286,61 @@ test('interactive installation prompts for admin credentials and creates adminis
         ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
 });
 
+test('interactive failure before admin creation followed by retry without answers resumes and sets up admin', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_migration');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_migration';
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+        bindMockChiselScript();
+
+        expect(fn () => $this->artisan('install:features')
+            ->expectsChoice('Auth features', ['login', 'registration'], ['login' => 'Login', 'registration' => 'Registration'])
+            ->expectsChoice('Optional modules', ['authorization'], [
+                'authorization' => 'Authorization',
+                'settings' => 'Settings',
+                'user-management' => 'User Management',
+                'localization' => 'Localization',
+                'notifications' => 'Notifications',
+                'audit-trails' => 'Audit Trails',
+                'reporting' => 'Reporting',
+            ])
+            ->run()
+        )->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_migration]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        putenv('CHISEL_TEST_FAIL_STAGE');
+        unset($_ENV['CHISEL_TEST_FAIL_STAGE']);
+
+        bindMockChiselScript();
+
+        $this->artisan('install:features')
+            ->expectsQuestion('Name', 'Retry Admin')
+            ->expectsQuestion('Email', 'retry-admin@example.com')
+            ->expectsQuestion('Password', 'RetryPassword123!')
+            ->expectsQuestion('Confirm password', 'RetryPassword123!')
+            ->assertSuccessful();
+
+        $admin = User::query()->where('email', 'retry-admin@example.com')->first();
+        expect($admin)->not->toBeNull()
+            ->and($admin->name)->toBe('Retry Admin')
+            ->and(Hash::check('RetryPassword123!', $admin->password))->toBeTrue()
+            ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+
+        expect(file_exists($stateFile))->toBeFalse();
+    } finally {
+        $restoreEnv();
+        if (file_exists(base_path('.installer-state.json'))) {
+            File::delete(base_path('.installer-state.json'));
+        }
+    }
+});
+
 test('admin setup in non-interactive mode fails if admin creation options are supplied', function (): void {
     bindMockChiselScript();
 
