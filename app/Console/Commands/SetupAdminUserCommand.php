@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
@@ -126,7 +127,10 @@ final class SetupAdminUserCommand extends Command
             'password' => $inputPassword,
         ]);
 
-        if (Features::enabled(Features::emailVerification())) {
+        if (
+            Features::enabled(Features::emailVerification())
+            && Schema::hasColumn($user->getTable(), 'email_verified_at')
+        ) {
             $user->markEmailAsVerified();
         }
 

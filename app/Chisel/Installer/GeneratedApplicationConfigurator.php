@@ -18,6 +18,10 @@ final class GeneratedApplicationConfigurator
         InstallerContext $context,
         ?Factory $components = null,
     ): int {
+        if (is_file(config_path('fortify.php'))) {
+            config(['fortify' => require config_path('fortify.php')]);
+        }
+
         if (! $context->hasAuthorization) {
             return Command::SUCCESS;
         }

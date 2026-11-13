@@ -105,7 +105,6 @@ test('fresh database bootstrap with authorization setup and first admin creation
         'name' => 'Administrator',
         'email' => 'admin@example.com',
         'password' => 'secure-password',
-        'email_verified_at' => now(),
     ]);
     $user->assignRole(Role::SuperAdmin->value);
 
@@ -120,7 +119,6 @@ test('documented first admin promotion by email works end to end on fresh databa
         'name' => 'Regular User',
         'email' => 'registered@example.com',
         'password' => 'secure-password',
-        'email_verified_at' => now(),
     ]);
 
     User::query()

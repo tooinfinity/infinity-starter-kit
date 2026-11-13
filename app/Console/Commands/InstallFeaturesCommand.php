@@ -99,6 +99,10 @@ final class InstallFeaturesCommand extends Command
                 return self::FAILURE;
             }
 
+            if (is_file(config_path('fortify.php'))) {
+                config(['fortify' => require config_path('fortify.php')]);
+            }
+
             $state->markPhaseComplete($basePath, 'prune');
         } else {
             $this->components->info('Feature pruning already completed (skipped on retry).');

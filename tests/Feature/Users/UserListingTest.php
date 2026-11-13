@@ -34,7 +34,7 @@ it('forbids user listing for unauthorized user', function (): void {
 });
 
 it('filters users by search query', function (): void {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['name' => 'Listing Manager', 'email' => 'manager@example.com']);
     $permission = PermissionModel::findOrCreate(Permission::UsersView->value);
     $admin->givePermissionTo($permission);
 
