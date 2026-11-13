@@ -25,7 +25,6 @@ function makeTestContext(
     array $answers = [],
     ?string $adminName = null,
     ?string $adminEmail = null,
-    ?string $adminPassword = null,
 ): InstallerContext {
     $rawAuth = (array) ($answers['auth_features'] ?? []);
     $auth = array_values(array_filter($rawAuth, is_string(...)));
@@ -41,7 +40,6 @@ function makeTestContext(
         hasAuthorization: in_array('authorization', $modules, true),
         adminName: $adminName,
         adminEmail: $adminEmail,
-        adminPassword: $adminPassword,
         isNonInteractive: true,
         skipNode: true,
         isMockedScript: true,
@@ -58,7 +56,6 @@ test('initialize creates state file with sanitized answers and no secrets', func
         ],
         adminName: 'Admin Guy',
         adminEmail: 'admin@example.com',
-        adminPassword: 'super_secret_123',
     );
 
     $state = InstallerState::initialize($this->tempDir, $context);
@@ -294,5 +291,6 @@ test('sanitizeAnswers and answersConflict preserve and compare ai_guidelines', f
     $conflictMessage = $state->formatConflictMessage($contextConflictingAi);
     expect($conflictMessage)->toContain('AI guidelines: guidelines')
         ->and($conflictMessage)->toContain('AI guidelines: (none)')
-        ->and($conflictMessage)->toContain('--admin-password');
+        ->and($conflictMessage)->toContain('you will be prompted for a new password on retry')
+        ->and($conflictMessage)->toContain('php artisan authorization:create-admin --stdin');
 });

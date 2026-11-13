@@ -18,11 +18,11 @@ The test suite is structured into three distinct layers:
 
 2. **Feature / Integration Tests (`tests/Feature/Chisel/`)**
    - Command orchestration and filesystem sandboxes.
-   - Covers `install:features` interactive prompts, JSON answers, CLI options, dry-run previews, pairwise feature combinations (`FeatureCombinationTest`), feature contract compliance (`FeatureContractTest`), and documentation sync.
+   - Covers `install:features` interactive prompts, JSON answers, CLI options, pairwise feature combinations (`FeatureCombinationTest`), feature contract compliance (`FeatureContractTest`), and documentation sync.
 
-3. **Installer E2E (`tests/Feature/Chisel/GeneratedProjectLifecycleTest.php` & `ComposerCreateProjectLifecycleTest.php`)**
+3. **Installer E2E (`tests/Feature/Chisel/GeneratedProjectLifecycleTest.php`)**
    - Real generated application lifecycle against an isolated temporary project.
-   - Executes the real `chisel.php` script, real filesystem pruning, Composer manifest modification, Bun lockfile update, database migrations, admin setup, frontend asset compilation, PHPStan static analysis, and smoke HTTP request verification without mocks.
+   - Executes the real `chisel.php` script, real filesystem pruning, Composer manifest modification, Bun lockfile update, database migrations, admin setup, frontend asset compilation, PHPStan static analysis, and smoke HTTP request verification without mocks across representative scenarios (`full`, `minimal`, `dependency-heavy`, `db-early-migration-fresh`, `admin-no-credentials`, `failure-post-chisel-resume`).
    - Tagged with `@group installer-e2e`.
 
 ---
@@ -113,7 +113,7 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 
 ### 1. Auth Capabilities
 - **Minimal Auth (`login`, `logout`)**: Covered in `minimal`, `auth-minimal`, and individual module tests.
-- **Full Auth (7 capabilities)**: Covered in `full`, `no-modules`, and `ComposerCreateProjectLifecycleTest` (Scenario A).
+- **Full Auth (7 capabilities)**: Covered in `full`, `no-modules`, and `GeneratedProjectLifecycleTest` (full scenario).
 - **Registration Disabled**: Covered in `auth-no-registration` (`FeatureCombinationTest` & `InstallFeaturesCommandTest`).
 - **Email Verification Disabled**: Covered in `auth-no-email-verification`.
 - **Password Reset Disabled**: Covered in `auth-no-password-reset`.
@@ -141,13 +141,11 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 ### 4. Interactive and Non-Interactive Entry Points
 - Interactive mode: Covered in `InstallFeaturesCommandTest` using test input mock.
 - `--answers` JSON string: Covered in `InstallFeaturesCommandTest` and `GeneratedProjectLifecycleTest`.
-- `--preset`: Covered in `GeneratedApplicationSmokeTest` and `InstallFeaturesCommandTest`.
-- `--answers-file`: Covered in `InstallFeaturesCommandTest`.
-- Admin CLI options: Covered in `admin-cli-options` and `GeneratedProjectLifecycleTest`.
+- Admin provisioning: Covered in `SetupAdminUserCommandTest` and `GeneratedProjectLifecycleTest`.
 - Deferred hooks: Covered in `env-deferred-hooks` and `InstallerContextResolverTest`.
 
 ### 5. Fresh Project & Real Filesystem Lifecycle
-- Tested in `GeneratedProjectLifecycleTest` and `ComposerCreateProjectLifecycleTest`.
+- Tested in `GeneratedProjectLifecycleTest`.
 - Reflink-based copy of real repository including lockfiles and dependencies.
 - Real execution of `chisel.php` and `chisel-paths.php`.
 - Complete verification of installer overhead cleanup (`assertCleanOfInstallerArtifacts`).

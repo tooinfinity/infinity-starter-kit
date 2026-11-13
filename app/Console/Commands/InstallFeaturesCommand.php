@@ -7,11 +7,9 @@ namespace App\Console\Commands;
 use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\DependencyValidator;
 use App\Chisel\Installer\GeneratedApplicationConfigurator;
-use App\Chisel\Installer\GeneratedApplicationManifest;
 use App\Chisel\Installer\GeneratedApplicationValidator;
 use App\Chisel\Installer\InstallerContext;
 use App\Chisel\Installer\InstallerContextResolver;
-use App\Chisel\Installer\InstallerPlanner;
 use App\Chisel\Installer\InstallerState;
 use App\Chisel\Installer\PostScaffoldRunner;
 use App\Chisel\Installer\PreflightValidator;
@@ -27,13 +25,9 @@ use Throwable;
 #[Description('Choose which starter kit features to keep')]
 #[Signature('install:features
         {--answers= : JSON string of answers to skip interactive prompts}
-        {--answers-file= : Path to a JSON file of answers to skip interactive prompts}
-        {--preset= : Name of the preset to install (minimal, standard, full)}
         {--admin-name= : Name of the administrator user}
         {--admin-email= : Email of the administrator user}
-        {--admin-password= : Password for the administrator user}
-        {--fresh : Drop all tables and re-run all migrations}
-        {--dry-run : Preview all planned mutations without making any changes}')]
+        {--fresh : Drop all tables and re-run all migrations}')]
 final class InstallFeaturesCommand extends Command
 {
     /**
@@ -74,13 +68,6 @@ final class InstallFeaturesCommand extends Command
             $this->outputConflictDetails($state, $context);
 
             return self::FAILURE;
-        }
-
-        if ($context->isDryRun) {
-            $plan = InstallerPlanner::plan($context, base_path(), (bool) $this->option('fresh'));
-            $plan->render($this, $this->components);
-
-            return self::SUCCESS;
         }
 
         if (! $state instanceof InstallerState || ! $state->hasCompleted('preflight')) {
@@ -180,10 +167,8 @@ final class InstallFeaturesCommand extends Command
         try {
             GeneratedApplicationValidator::injectTestFailureIfRequested('cleanup');
             GeneratedApplicationValidator::validatePreCleanup($basePath);
-            $manifest = GeneratedApplicationManifest::fromContext($context, $basePath);
             $didCleanup = $this->cleanupInstaller($context);
             GeneratedApplicationValidator::validatePostCleanup($context, $didCleanup, $basePath);
-            $manifest->save($basePath);
         } catch (Throwable $throwable) {
             $state->recordFailure($basePath, 'cleanup', $context->redact($throwable->getMessage()));
 
@@ -215,7 +200,8 @@ final class InstallFeaturesCommand extends Command
         $this->newLine();
         $this->line('To retry and resume the installation:');
         $this->line('  <comment>php artisan install:features</comment>');
-        $this->line('If administrator setup was requested, provide a new password with <comment>--admin-password</comment> or <comment>CHISEL_ADMIN_PASSWORD</comment>; passwords are not stored in the checkpoint.');
+        $this->line('If administrator setup was requested, you will be prompted for a new password on retry; passwords are not stored in the checkpoint.');
+        $this->line('For non-interactive retries, create the administrator with <comment>php artisan authorization:create-admin --stdin</comment> after installation.');
         $this->line('To start fresh with a clean directory:');
         $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');
     }
@@ -239,7 +225,8 @@ final class InstallFeaturesCommand extends Command
         $this->line('The file structure has already been pruned according to the original selection and cannot be safely changed.');
         $this->line('To retry with the previous answers, run:');
         $this->line('  <comment>php artisan install:features</comment>');
-        $this->line('If administrator setup was requested, provide a new password with <comment>--admin-password</comment> or <comment>CHISEL_ADMIN_PASSWORD</comment>; passwords are not stored in the checkpoint.');
+        $this->line('If administrator setup was requested, you will be prompted for a new password on retry; passwords are not stored in the checkpoint.');
+        $this->line('For non-interactive retries, create the administrator with <comment>php artisan authorization:create-admin --stdin</comment> after installation.');
         $this->newLine();
         $this->line('To start over with different features:');
         $this->line('  <comment>Delete this directory and run composer create-project again.</comment>');

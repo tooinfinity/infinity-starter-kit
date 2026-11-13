@@ -46,19 +46,11 @@ beforeEach(function (): void {
     if (file_exists(base_path('.installer-state.json'))) {
         File::delete(base_path('.installer-state.json'));
     }
-
-    if (file_exists(base_path('starter-kit-manifest.json'))) {
-        File::delete(base_path('starter-kit-manifest.json'));
-    }
 });
 
 afterEach(function (): void {
     if (file_exists(base_path('.installer-state.json'))) {
         File::delete(base_path('.installer-state.json'));
-    }
-
-    if (file_exists(base_path('starter-kit-manifest.json'))) {
-        File::delete(base_path('starter-kit-manifest.json'));
     }
 });
 
@@ -119,28 +111,48 @@ test('command fails when --answers option decodes to non-array scalar', function
         ->assertFailed();
 })->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
-test('command succeeds with --preset minimal', function (): void {
+test('command succeeds with --answers minimal selection', function (): void {
     bindMockChiselScript();
 
-    $this->artisan('install:features', ['--preset' => 'minimal'])
-        ->assertSuccessful();
+    $this->artisan('install:features', [
+        '--answers' => json_encode([
+            'auth_features' => ['login'],
+            'optional_modules' => [],
+        ], JSON_THROW_ON_ERROR),
+    ])->assertSuccessful();
 });
 
-test('command succeeds with --preset standard', function (): void {
+test('command succeeds with --answers standard selection', function (): void {
     bindMockChiselScript();
 
-    $this->artisan('install:features', ['--preset' => 'standard'])
-        ->assertSuccessful();
+    $this->artisan('install:features', [
+        '--answers' => json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => ['authorization', 'settings'],
+        ], JSON_THROW_ON_ERROR),
+    ])->assertSuccessful();
 });
 
-test('command succeeds with --preset full', function (): void {
+test('command succeeds with --answers full selection', function (): void {
     bindMockChiselScript();
 
-    $this->artisan('install:features', ['--preset' => 'full'])
-        ->assertSuccessful();
+    $this->artisan('install:features', [
+        '--answers' => json_encode([
+            'auth_features' => ['login', 'registration'],
+            'optional_modules' => [
+                'authorization',
+                'settings',
+                'user-management',
+                'localization',
+                'notifications',
+                'audit-trails',
+                'reporting',
+            ],
+        ], JSON_THROW_ON_ERROR),
+    ])->assertSuccessful();
 });
 
-test('command fails before mutation when invalid preset name is provided', function (): void {
+test('command fails before mutation when unknown feature name is provided in --answers', function (): void {
     $script = bindMockChiselScript();
     $mutated = false;
     $script->apply(function () use (&$mutated): void {
@@ -148,71 +160,36 @@ test('command fails before mutation when invalid preset name is provided', funct
     });
 
     try {
-        $this->artisan('install:features', ['--preset' => 'non-existent-preset'])
-            ->assertFailed();
-    } catch (InvalidArgumentException $invalidArgumentException) {
-        expect($invalidArgumentException->getMessage())->toContain('Unknown preset [non-existent-preset]');
-    }
-
-    expect($mutated)->toBeFalse();
-});
-
-test('command succeeds with --answers-file', function (): void {
-    bindMockChiselScript();
-
-    $tempFile = sys_get_temp_dir().'/cli_answers_file_'.bin2hex(random_bytes(4)).'.json';
-    file_put_contents($tempFile, json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-    ], JSON_THROW_ON_ERROR));
-
-    try {
-        $this->artisan('install:features', ['--answers-file' => $tempFile])
-            ->assertSuccessful();
-    } finally {
-        File::delete($tempFile);
-    }
-});
-
-test('command fails before mutation when --answers-file does not exist', function (): void {
-    $script = bindMockChiselScript();
-    $mutated = false;
-    $script->apply(function () use (&$mutated): void {
-        $mutated = true;
-    });
-
-    $missingFile = sys_get_temp_dir().'/missing_answers_'.bin2hex(random_bytes(6)).'.json';
-
-    try {
-        $this->artisan('install:features', ['--answers-file' => $missingFile])
-            ->assertFailed();
+        $this->artisan('install:features', [
+            '--answers' => json_encode([
+                'auth_features' => ['login'],
+                'optional_modules' => ['non-existent-feature'],
+            ], JSON_THROW_ON_ERROR),
+        ])->assertFailed();
     } catch (RuntimeException $runtimeException) {
-        expect($runtimeException->getMessage())->toContain("Answers file [{$missingFile}] does not exist.");
+        expect($runtimeException->getMessage())->toContain('Unknown feature(s) specified: non-existent-feature.');
     }
 
     expect($mutated)->toBeFalse();
 });
 
-test('command fails before mutation when --answers-file contains invalid JSON', function (): void {
-    $script = bindMockChiselScript();
-    $mutated = false;
-    $script->apply(function () use (&$mutated): void {
-        $mutated = true;
-    });
+test('command fails before mutation when required answers are missing in non-interactive mode', function (): void {
+    bindMockChiselScript();
 
-    $tempFile = sys_get_temp_dir().'/invalid_json_'.bin2hex(random_bytes(4)).'.json';
-    file_put_contents($tempFile, 'not-valid-json');
+    expect(fn () => $this->artisan('install:features', [
+        '--answers' => json_encode([
+            'auth_features' => ['login'],
+        ], JSON_THROW_ON_ERROR),
+        '--no-interaction' => true,
+    ]))->toThrow(RuntimeException::class, "The 'optional_modules' key is required in --answers in non-interactive mode.");
+});
 
-    try {
-        $this->artisan('install:features', ['--answers-file' => $tempFile])
-            ->assertFailed();
-    } catch (JsonException) {
-        // expected
-    } finally {
-        File::delete($tempFile);
-    }
+test('command fails before mutation when non-interactive mode is requested without answers', function (): void {
+    bindMockChiselScript();
 
-    expect($mutated)->toBeFalse();
+    expect(fn () => $this->artisan('install:features', [
+        '--no-interaction' => true,
+    ]))->toThrow(RuntimeException::class, 'The --answers option is required when running non-interactively.');
 });
 
 test('command defers execution when LARAVEL_INSTALLER_DEFER_HOOKS is true and no answers given', function () use ($preserveEnv): void {
@@ -282,158 +259,133 @@ test('authorization setup and admin setup are skipped when authorization is disa
         ->and(User::query()->count())->toBe(0);
 });
 
-test('admin setup runs and creates administrator when credentials are provided in answers', function (): void {
+test('interactive installation prompts for admin credentials and creates administrator when authorization is selected', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features')
+        ->expectsChoice('Auth features', ['login', 'registration'], ['login' => 'Login', 'registration' => 'Registration'])
+        ->expectsChoice('Optional modules', ['authorization'], [
+            'authorization' => 'Authorization',
+            'settings' => 'Settings',
+            'user-management' => 'User Management',
+            'localization' => 'Localization',
+            'notifications' => 'Notifications',
+            'audit-trails' => 'Audit Trails',
+            'reporting' => 'Reporting',
+        ])
+        ->expectsQuestion('Name', 'Interactive SuperAdmin')
+        ->expectsQuestion('Email', 'superadmin@example.com')
+        ->expectsQuestion('Password', 'password1234')
+        ->expectsQuestion('Confirm password', 'password1234')
+        ->assertSuccessful();
+
+    $admin = User::query()->where('email', 'superadmin@example.com')->first();
+    expect($admin)->not->toBeNull()
+        ->and($admin->name)->toBe('Interactive SuperAdmin')
+        ->and(Hash::check('password1234', $admin->password))->toBeTrue()
+        ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+});
+
+test('interactive failure before admin creation followed by retry without answers resumes and sets up admin', function () use ($preserveEnv): void {
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'LARAVEL_INSTALLER_NO_NODE');
+
+    try {
+        putenv('CHISEL_TEST_FAIL_STAGE=post_migration');
+        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_migration';
+        putenv('LARAVEL_INSTALLER_NO_NODE=true');
+        $_ENV['LARAVEL_INSTALLER_NO_NODE'] = 'true';
+
+        bindMockChiselScript();
+
+        expect(fn () => $this->artisan('install:features')
+            ->expectsChoice('Auth features', ['login', 'registration'], ['login' => 'Login', 'registration' => 'Registration'])
+            ->expectsChoice('Optional modules', ['authorization'], [
+                'authorization' => 'Authorization',
+                'settings' => 'Settings',
+                'user-management' => 'User Management',
+                'localization' => 'Localization',
+                'notifications' => 'Notifications',
+                'audit-trails' => 'Audit Trails',
+                'reporting' => 'Reporting',
+            ])
+            ->run()
+        )->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_migration]');
+
+        $stateFile = base_path('.installer-state.json');
+        expect(file_exists($stateFile))->toBeTrue();
+
+        putenv('CHISEL_TEST_FAIL_STAGE');
+        unset($_ENV['CHISEL_TEST_FAIL_STAGE']);
+
+        bindMockChiselScript();
+
+        $this->artisan('install:features')
+            ->expectsQuestion('Name', 'Retry Admin')
+            ->expectsQuestion('Email', 'retry-admin@example.com')
+            ->expectsQuestion('Password', 'RetryPassword123!')
+            ->expectsQuestion('Confirm password', 'RetryPassword123!')
+            ->assertSuccessful();
+
+        $admin = User::query()->where('email', 'retry-admin@example.com')->first();
+        expect($admin)->not->toBeNull()
+            ->and($admin->name)->toBe('Retry Admin')
+            ->and(Hash::check('RetryPassword123!', $admin->password))->toBeTrue()
+            ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+
+        expect(file_exists($stateFile))->toBeFalse();
+    } finally {
+        $restoreEnv();
+        if (file_exists(base_path('.installer-state.json'))) {
+            File::delete(base_path('.installer-state.json'));
+        }
+    }
+});
+
+test('admin setup in non-interactive mode fails if admin creation options are supplied', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization'],
+    ], JSON_THROW_ON_ERROR);
+
+    expect(fn () => $this->artisan('install:features', [
+        '--answers' => $answers,
+        '--admin-name' => 'Option Admin',
+        '--admin-email' => 'option@example.com',
+    ]))->toThrow(RuntimeException::class, 'Administrator account creation requires secure password provisioning, which cannot be supplied non-interactively.');
+});
+
+test('admin setup in non-interactive mode fails if admin object is supplied in answers', function (): void {
     bindMockChiselScript();
 
     $answers = json_encode([
         'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization'],
         'admin' => [
-            'name' => 'Root Admin',
-            'email' => 'root@example.com',
+            'name' => 'Admin In Answers',
+            'email' => 'admin@example.com',
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    expect(fn () => $this->artisan('install:features', [
+        '--answers' => $answers,
+    ]))->toThrow(RuntimeException::class, 'Administrator account creation requires secure password provisioning, which cannot be supplied non-interactively.');
+});
+
+test('admin passwords supplied in answers are rejected with security error', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['login', 'registration'],
+        'optional_modules' => ['authorization'],
+        'admin' => [
             'password' => 'secret1234',
         ],
     ], JSON_THROW_ON_ERROR);
 
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->doesntExpectOutputToContain('secret1234')
-        ->assertSuccessful();
-
-    $admin = User::query()->where('email', 'root@example.com')->first();
-    expect($admin)->not->toBeNull()
-        ->and($admin->name)->toBe('Root Admin')
-        ->and(Hash::check('secret1234', $admin->password))->toBeTrue()
-        ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
-});
-
-test('admin setup runs and creates administrator when credentials are provided via options', function (): void {
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', [
-        '--answers' => $answers,
-        '--admin-name' => 'Option Admin',
-        '--admin-email' => 'option@example.com',
-        '--admin-password' => 'optionpassword123',
-    ])
-        ->doesntExpectOutputToContain('optionpassword123')
-        ->assertSuccessful();
-
-    $admin = User::query()->where('email', 'option@example.com')->first();
-    expect($admin)->not->toBeNull()
-        ->and($admin->name)->toBe('Option Admin')
-        ->and(Hash::check('optionpassword123', $admin->password))->toBeTrue()
-        ->and($admin->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
-});
-
-test('admin setup safely handles existing user in non-interactive installation without changing password', function (): void {
-    $existing = User::factory()->create([
-        'email' => 'existing-admin@example.com',
-        'password' => 'original-pass-1234',
-    ]);
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-        'admin' => [
-            'email' => 'existing-admin@example.com',
-            'password' => 'new-ignored-pass-9999',
-        ],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->assertSuccessful();
-
-    $fresh = $existing->fresh();
-    expect($fresh->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue()
-        ->and(Hash::check('original-pass-1234', $fresh->password))->toBeTrue();
-});
-
-test('admin setup fails installation if invalid credentials provided and never leaks password', function (): void {
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-        'admin' => [
-            'name' => 'Bad Admin',
-            'email' => 'bad@example.com',
-            'password' => 'short7!',
-        ],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->expectsOutputToContain('Administrator setup failed.')
-        ->doesntExpectOutputToContain('short7!')
-        ->assertFailed();
-});
-
-test('admin setup fails installation when password is provided without email', function (): void {
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-        'admin' => [
-            'name' => 'No Email Admin',
-            'password' => 'valid-password-1234',
-        ],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->expectsOutputToContain('Administrator setup failed.')
-        ->doesntExpectOutputToContain('valid-password-1234')
-        ->assertFailed();
-});
-
-test('admin setup does not create duplicate users on repeated execution', function (): void {
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-        'admin' => [
-            'name' => 'Admin Twice',
-            'email' => 'twice@example.com',
-            'password' => 'password1234',
-        ],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->assertSuccessful();
-
-    bindMockChiselScript();
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->assertSuccessful();
-
-    expect(User::query()->where('email', 'twice@example.com')->count())->toBe(1)
-        ->and(User::query()->where('email', 'twice@example.com')->first()->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
-});
-
-test('admin setup assigns role to existing user already with Super Admin without error', function (): void {
-    $existing = User::factory()->create(['email' => 'already-super@example.com']);
-    $this->artisan('authorization:setup')->assertSuccessful();
-    $existing->assignRole(App\Enums\Role::SuperAdmin->value);
-
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization'],
-        'admin' => [
-            'email' => 'already-super@example.com',
-        ],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', ['--answers' => $answers])
-        ->assertSuccessful();
-
-    expect($existing->fresh()->hasRole(App\Enums\Role::SuperAdmin->value))->toBeTrue();
+    expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
+        ->toThrow(RuntimeException::class, 'Administrator passwords cannot be supplied via --answers for security reasons.');
 });
 
 test('non-interactive mode with authorization enabled skips admin when no credentials provided', function (): void {
@@ -1042,15 +994,17 @@ test('failed database migration returns non-zero exit status and outputs error',
 });
 
 test('database migration exception returns non-zero exit status and outputs redacted error', function () use ($preserveEnv): void {
-    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS');
+    $secretPass = 'SuperSecretDbPassword123';
+    $restoreEnv = $preserveEnv('CHISEL_RUN_MIGRATIONS', 'DB_PASSWORD');
 
     try {
         putenv('CHISEL_RUN_MIGRATIONS=true');
         $_ENV['CHISEL_RUN_MIGRATIONS'] = 'true';
+        putenv('DB_PASSWORD='.$secretPass);
+        $_ENV['DB_PASSWORD'] = $secretPass;
 
         bindMockChiselScript();
 
-        $secretPass = 'SuperSecretDbPassword123';
         Artisan::command('migrate {--force}', function () use ($secretPass): never {
             throw new RuntimeException('Connection failed with password '.$secretPass);
         });
@@ -1058,9 +1012,6 @@ test('database migration exception returns non-zero exit status and outputs reda
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => [],
-            'admin' => [
-                'password' => $secretPass,
-            ],
         ], JSON_THROW_ON_ERROR);
 
         $this->artisan('install:features', ['--answers' => $answers])
@@ -1071,79 +1022,6 @@ test('database migration exception returns non-zero exit status and outputs reda
         $restoreEnv();
     }
 });
-
-test('command dry-run previews all mutations without applying any changes', function (): void {
-    bindMockChiselScript();
-    Process::fake();
-
-    $userCountBefore = User::query()->count();
-    $permissionCountBefore = Permission::query()->count();
-
-    $answers = json_encode([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization', 'user-management'],
-        'admin' => [
-            'name' => 'Dry Run Admin',
-            'email' => 'dryrun@example.com',
-            'password' => 'secret1234',
-        ],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', [
-        '--answers' => $answers,
-        '--dry-run' => true,
-    ])
-        ->expectsOutputToContain('Planned Feature Installation Preview')
-        ->expectsOutputToContain('Explicit Auth Features')
-        ->expectsOutputToContain('Explicit Optional Modules')
-        ->expectsOutputToContain('Dependency-Derived Selections')
-        ->expectsOutputToContain('PACKAGES (COMPOSER & FRONTEND)')
-        ->expectsOutputToContain('DATABASE & CONFIGURATION PHASES')
-        ->expectsOutputToContain('POST-SCAFFOLDING TOOLING')
-        ->expectsOutputToContain('VALIDATION & CLEANUP PHASES')
-        ->expectsOutputToContain('PLANNED FILESYSTEM MUTATIONS')
-        ->expectsOutputToContain('0 mutations executed')
-        ->assertSuccessful();
-
-    expect(User::query()->count())->toBe($userCountBefore)
-        ->and(Permission::query()->count())->toBe($permissionCountBefore);
-
-    Process::assertNothingRan();
-});
-
-test('command dry-run displays fresh migration command when --fresh option is supplied', function (): void {
-    bindMockChiselScript();
-    Process::fake();
-
-    $answers = json_encode([
-        'auth_features' => ['login'],
-        'optional_modules' => [],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', [
-        '--answers' => $answers,
-        '--dry-run' => true,
-        '--fresh' => true,
-    ])
-        ->expectsOutputToContain('php artisan migrate:fresh --force')
-        ->assertSuccessful();
-
-    Process::assertNothingRan();
-});
-
-test('command dry-run fails with invalid feature dependencies identical to normal execution', function (): void {
-    bindMockChiselScript();
-
-    $answers = json_encode([
-        'auth_features' => ['login'],
-        'optional_modules' => ['user-management'],
-    ], JSON_THROW_ON_ERROR);
-
-    $this->artisan('install:features', [
-        '--answers' => $answers,
-        '--dry-run' => true,
-    ]);
-})->throws(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
 
 test('preflight failure stops before pruning and does not create installer state file', function () use ($preserveEnv): void {
     $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
@@ -1169,23 +1047,20 @@ test('preflight failure stops before pruning and does not create installer state
 });
 
 test('failure after pruning generates installer state file without secrets and outputs actionable recovery', function () use ($preserveEnv): void {
-    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
+    $secret = 'UltraSecretPassword999';
+    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE', 'DB_PASSWORD');
 
     try {
         putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
         $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
+        putenv('DB_PASSWORD='.$secret);
+        $_ENV['DB_PASSWORD'] = $secret;
 
         bindMockChiselScript();
 
-        $secret = 'UltraSecretPassword999';
         $answers = json_encode([
             'auth_features' => ['login', 'registration'],
             'optional_modules' => ['authorization'],
-            'admin' => [
-                'name' => 'Admin User',
-                'email' => 'admin@example.com',
-                'password' => $secret,
-            ],
         ], JSON_THROW_ON_ERROR);
 
         expect(fn () => $this->artisan('install:features', ['--answers' => $answers]))
@@ -1201,8 +1076,6 @@ test('failure after pruning generates installer state file without secrets and o
         expect($json['status'])->toBe('failed')
             ->and($json['failed_phase'])->toBe('post_chisel')
             ->and($json['completed_phases'])->toContain('preflight', 'prune')
-            ->and($json['metadata']['admin_name'])->toBe('Admin User')
-            ->and($json['metadata']['admin_email'])->toBe('admin@example.com')
             ->and($json['metadata'])->not->toHaveKey('admin_password');
     } finally {
         $restoreEnv();
@@ -1462,64 +1335,6 @@ test('failure at cleanup stage after installer files are removed outputs manual 
     }
 });
 
-test('successful validated installation records non-secret starter-kit-manifest.json', function (): void {
-    bindMockChiselScript();
-
-    $this->artisan('install:features', [
-        '--preset' => 'standard',
-        '--admin-name' => 'Super Admin',
-        '--admin-email' => 'admin@example.com',
-        '--admin-password' => 'super_secret_admin_pass',
-    ])->assertSuccessful();
-
-    $manifestPath = base_path('starter-kit-manifest.json');
-    expect(file_exists($manifestPath))->toBeTrue();
-
-    $raw = (string) file_get_contents($manifestPath);
-    expect($raw)->not->toContain('super_secret_admin_pass');
-
-    $manifest = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-    expect($manifest['schema_version'])->toBe(1)
-        ->and($manifest['preset'])->toBe('standard')
-        ->and($manifest['features']['explicit']['auth_features'])->toContain('login', 'registration')
-        ->and($manifest['features']['explicit']['optional_modules'])->toContain('authorization', 'settings')
-        ->and($manifest['features']['dependency_derived'])->toContain('login', 'authorization')
-        ->and($manifest['auth_capabilities'])->toContain('login', 'registration')
-        ->and($manifest)->toHaveKey('generated_at')
-        ->and($manifest)->not->toHaveKey('admin')
-        ->and($manifest)->not->toHaveKey('admin_password');
-});
-
-test('manifest is not recorded when installation fails prior to cleanup validation', function () use ($preserveEnv): void {
-    $restoreEnv = $preserveEnv('CHISEL_TEST_FAIL_STAGE');
-
-    try {
-        putenv('CHISEL_TEST_FAIL_STAGE=post_chisel');
-        $_ENV['CHISEL_TEST_FAIL_STAGE'] = 'post_chisel';
-
-        bindMockChiselScript();
-
-        expect(fn () => $this->artisan('install:features', ['--preset' => 'standard']))
-            ->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_chisel]');
-
-        expect(file_exists(base_path('starter-kit-manifest.json')))->toBeFalse();
-    } finally {
-        $restoreEnv();
-    }
-});
-
-test('manifest is not recorded during dry-run', function (): void {
-    bindMockChiselScript();
-    Process::fake();
-
-    $this->artisan('install:features', [
-        '--preset' => 'standard',
-        '--dry-run' => true,
-    ])->assertSuccessful();
-
-    expect(file_exists(base_path('starter-kit-manifest.json')))->toBeFalse();
-});
-
 /**
  * @param  array<string, mixed>  $processFakes
  */
@@ -1536,8 +1351,11 @@ function bindMockChiselScript(array $processFakes = []): Script
             Question::multiselect(
                 name: 'auth_features',
                 label: 'Auth features',
-                options: ['registration' => 'Registration'],
-                default: ['registration'],
+                options: [
+                    'login' => 'Login',
+                    'registration' => 'Registration',
+                ],
+                default: ['login', 'registration'],
             ),
             Question::multiselect(
                 name: 'optional_modules',

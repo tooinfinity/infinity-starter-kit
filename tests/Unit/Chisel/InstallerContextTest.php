@@ -14,11 +14,9 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         hasAuthorization: true,
         adminName: 'Admin',
         adminEmail: 'admin@example.com',
-        adminPassword: 'secret-password',
         isNonInteractive: true,
         skipNode: false,
         isMockedScript: true,
-        preset: 'minimal',
     );
 
     expect($context->providedAnswers)->toBe(['auth_features' => ['login', 'registration']])
@@ -29,35 +27,18 @@ test('installer context holds strongly-typed lifecycle properties', function ():
         ->and($context->hasAuthorization)->toBeTrue()
         ->and($context->adminName)->toBe('Admin')
         ->and($context->adminEmail)->toBe('admin@example.com')
-        ->and($context->adminPassword)->toBe('secret-password')
         ->and($context->isNonInteractive)->toBeTrue()
         ->and($context->skipNode)->toBeFalse()
         ->and($context->isMockedScript)->toBeTrue()
-        ->and($context->isDryRun)->toBeFalse()
-        ->and($context->preset)->toBe('minimal');
-
-    $dryRunContext = new InstallerContext(
-        providedAnswers: [],
-        answers: [],
-        paths: [],
-        selectedModules: [],
-        selectedAuthFeatures: [],
-        hasAuthorization: false,
-        adminName: null,
-        adminEmail: null,
-        adminPassword: null,
-        isNonInteractive: true,
-        skipNode: false,
-        isMockedScript: false,
-        isDryRun: true,
-    );
-
-    expect($dryRunContext->isDryRun)->toBeTrue();
+        ->and($context->includeAiGuidelines)->toBeTrue();
 });
 
-test('installer context redacts admin secrets from messages', function (): void {
+test('installer context redacts admin secrets from provided answers in messages', function (): void {
     $context = new InstallerContext(
-        providedAnswers: ['admin' => ['password' => 'inner-secret']],
+        providedAnswers: [
+            'admin' => ['password' => 'nested-secret'],
+            'admin_password' => 'flat-secret',
+        ],
         answers: [],
         paths: [],
         selectedModules: [],
@@ -65,40 +46,11 @@ test('installer context redacts admin secrets from messages', function (): void 
         hasAuthorization: false,
         adminName: null,
         adminEmail: null,
-        adminPassword: 'direct-secret',
         isNonInteractive: true,
         skipNode: false,
         isMockedScript: false,
     );
 
-    $redacted = $context->redact('Error: direct-secret failed with inner-secret');
+    $redacted = $context->redact('Error: flat-secret failed with nested-secret');
     expect($redacted)->toBe('Error: [REDACTED] failed with [REDACTED]');
-});
-
-test('installer context redacts secrets from CHISEL_ADMIN_PASSWORD env and flat admin_password answer', function (): void {
-    putenv('CHISEL_ADMIN_PASSWORD=env-super-secret');
-    $_ENV['CHISEL_ADMIN_PASSWORD'] = 'env-super-secret';
-
-    try {
-        $context = new InstallerContext(
-            providedAnswers: ['admin_password' => 'flat-secret'],
-            answers: [],
-            paths: [],
-            selectedModules: [],
-            selectedAuthFeatures: [],
-            hasAuthorization: false,
-            adminName: null,
-            adminEmail: null,
-            adminPassword: null,
-            isNonInteractive: true,
-            skipNode: false,
-            isMockedScript: false,
-        );
-
-        $redacted = $context->redact('Failed env-super-secret and flat-secret');
-        expect($redacted)->toBe('Failed [REDACTED] and [REDACTED]');
-    } finally {
-        putenv('CHISEL_ADMIN_PASSWORD');
-        unset($GLOBALS['_ENV']['CHISEL_ADMIN_PASSWORD'], $GLOBALS['_SERVER']['CHISEL_ADMIN_PASSWORD']);
-    }
 });
