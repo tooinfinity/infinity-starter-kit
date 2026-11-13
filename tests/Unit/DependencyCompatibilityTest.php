@@ -68,4 +68,3 @@ test('backend and frontend lockfiles exist and enforce reproducibility', functio
 
     expect($composerLock['platform']['php'] ?? null)->toBe('^8.5.0');
 });
-
