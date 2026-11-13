@@ -141,13 +141,11 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 ### 4. Interactive and Non-Interactive Entry Points
 - Interactive mode: Covered in `InstallFeaturesCommandTest` using test input mock.
 - `--answers` JSON string: Covered in `InstallFeaturesCommandTest` and `GeneratedProjectLifecycleTest`.
-- `--preset`: Covered in `GeneratedApplicationSmokeTest` and `InstallFeaturesCommandTest`.
-- `--answers-file`: Covered in `InstallFeaturesCommandTest`.
-- Admin CLI options: Covered in `admin-cli-options` and `GeneratedProjectLifecycleTest`.
+- Admin provisioning: Covered in `SetupAdminUserCommandTest` and `GeneratedProjectLifecycleTest`.
 - Deferred hooks: Covered in `env-deferred-hooks` and `InstallerContextResolverTest`.
 
 ### 5. Fresh Project & Real Filesystem Lifecycle
-- Tested in `GeneratedProjectLifecycleTest` and `ComposerCreateProjectLifecycleTest`.
+- Tested in `GeneratedProjectLifecycleTest`.
 - Reflink-based copy of real repository including lockfiles and dependencies.
 - Real execution of `chisel.php` and `chisel-paths.php`.
 - Complete verification of installer overhead cleanup (`assertCleanOfInstallerArtifacts`).

@@ -437,7 +437,7 @@ final readonly class InstallerScenario
         return new self(
             id: 'admin-cli-options',
             name: 'Admin via CLI Options',
-            description: 'Admin credentials supplied through --admin-name, --admin-email, --admin-password flags.',
+            description: 'Admin credentials supplied through --admin-name, --admin-email flags.',
             category: 'admin',
             authFeatures: ['login', 'logout'],
             optionalModules: ['authorization'],

@@ -17,21 +17,28 @@ describe('Generated Application Smoke Pipeline', function (): void {
                 PHP_BINARY,
                 'artisan',
                 'install:features',
-                '--preset='.$profile->presetName(),
+                '--answers='.json_encode($profile->answers(), JSON_THROW_ON_ERROR),
                 '--no-interaction',
             ];
-
-            if ($profile->hasAuthorization()) {
-                $command[] = '--admin-name=Smoke Admin';
-                $command[] = '--admin-email=smoke-admin@example.com';
-                $command[] = '--admin-password=SmokeAdminPassword123!';
-            }
 
             $installProcess = GeneratedProjectFixture::run($tempDir, $command);
             expect($installProcess->getExitCode())->toBe(
                 0,
                 "Installer failed for profile [{$profile->name}]:\n".$installProcess->getOutput()."\n".$installProcess->getErrorOutput()
             );
+
+            if ($profile->hasAuthorization()) {
+                $adminProcess = GeneratedProjectFixture::run($tempDir, [
+                    PHP_BINARY,
+                    'artisan',
+                    'authorization:create-admin',
+                    '--name=Smoke Admin',
+                    '--email=smoke-admin@example.com',
+                    '--stdin',
+                ], [], 60, "SmokeAdminPassword123!\n");
+
+                expect($adminProcess->getExitCode())->toBe(0, $adminProcess->getOutput()."\n".$adminProcess->getErrorOutput());
+            }
 
             GeneratedApplicationSmokePipeline::run($tempDir, $profile);
         } finally {

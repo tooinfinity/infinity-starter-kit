@@ -33,9 +33,9 @@ if (! function_exists('runInGeneratedProject')) {
      * @param  list<string>  $command
      * @param  array<string, string>  $env
      */
-    function runInGeneratedProject(string $dir, array $command, array $env = [], int $timeout = 300): Process
+    function runInGeneratedProject(string $dir, array $command, array $env = [], int $timeout = 300, ?string $input = null): Process
     {
-        return GeneratedProjectFixture::run($dir, $command, $env, $timeout);
+        return GeneratedProjectFixture::run($dir, $command, $env, $timeout, $input);
     }
 }
 
@@ -57,17 +57,27 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 'artisan',
                 'install:features',
                 '--answers='.json_encode(InstallerScenario::full()->answers(), JSON_THROW_ON_ERROR),
-                '--admin-name=Integration Admin',
-                '--admin-email=integration-admin@example.com',
-                '--admin-password='.$secretPassword,
                 '--no-interaction',
             ]);
 
             expect($installProcess->getExitCode())->toBe(0, $installProcess->getOutput()."\n".$installProcess->getErrorOutput());
 
+            $adminProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                'artisan',
+                'authorization:create-admin',
+                '--name=Integration Admin',
+                '--email=integration-admin@example.com',
+                '--stdin',
+            ], input: $secretPassword."\n");
+
+            expect($adminProcess->getExitCode())->toBe(0, $adminProcess->getOutput()."\n".$adminProcess->getErrorOutput());
+
             // Secret protection check: password must never appear in stdout, stderr, or logs
             expect($installProcess->getOutput())->not->toContain($secretPassword)
-                ->and($installProcess->getErrorOutput())->not->toContain($secretPassword);
+                ->and($installProcess->getErrorOutput())->not->toContain($secretPassword)
+                ->and($adminProcess->getOutput())->not->toContain($secretPassword)
+                ->and($adminProcess->getErrorOutput())->not->toContain($secretPassword);
 
             if (is_file($tempDir.'/storage/logs/laravel.log')) {
                 expect((string) file_get_contents($tempDir.'/storage/logs/laravel.log'))->not->toContain($secretPassword);
@@ -500,9 +510,6 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                     'artisan',
                     'install:features',
                     '--answers='.json_encode($scenario->answers(), JSON_THROW_ON_ERROR),
-                    '--admin-name='.$scenario->admin['name'],
-                    '--admin-email='.$scenario->admin['email'],
-                    '--admin-password='.$secretPassword,
                     '--no-interaction',
                 ],
                 ['CHISEL_TEST_FAIL_STAGE' => 'post_chisel', 'LARAVEL_INSTALLER_NO_NODE' => 'true']
@@ -529,9 +536,6 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                     'artisan',
                     'install:features',
                     '--answers='.json_encode($scenario->answers(), JSON_THROW_ON_ERROR),
-                    '--admin-name='.$scenario->admin['name'],
-                    '--admin-email='.$scenario->admin['email'],
-                    '--admin-password='.$secretPassword,
                     '--no-interaction',
                 ],
                 ['LARAVEL_INSTALLER_NO_NODE' => 'true']
@@ -545,6 +549,17 @@ describe('Real Generated Project E2E Lifecycle', function (): void {
                 ->and($retryOutput)->not->toContain($secretPassword);
 
             assertGeneratedProjectCleanOfInstallerArtifacts($tempDir, authorizationEnabled: true);
+
+            $adminProcess = runInGeneratedProject($tempDir, [
+                PHP_BINARY,
+                'artisan',
+                'authorization:create-admin',
+                '--name='.$scenario->admin['name'],
+                '--email='.$scenario->admin['email'],
+                '--stdin',
+            ], input: $secretPassword."\n");
+
+            expect($adminProcess->getExitCode())->toBe(0, $adminProcess->getOutput()."\n".$adminProcess->getErrorOutput());
 
             // Verify administrator exists, has Super Admin role, and stored password hash verifies against $secretPassword
             $verifyAdminProcess = runInGeneratedProject($tempDir, [

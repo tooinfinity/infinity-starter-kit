@@ -40,7 +40,6 @@ function makeContext(
         hasAuthorization: true,
         adminName: null,
         adminEmail: null,
-        adminPassword: null,
         isNonInteractive: true,
         skipNode: true,
         isMockedScript: true,
