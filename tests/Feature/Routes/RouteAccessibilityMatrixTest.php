@@ -64,11 +64,8 @@ function getAuthGetRoutes(): array
 test('guest get routes redirect authenticated users to dashboard', function (): void {
     $guestRoutes = getGuestGetRoutes();
 
-    if ($guestRoutes === []) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
+    expect($guestRoutes)->not->toBeEmpty()
+        ->and($guestRoutes)->toContain('login');
 
     $user = User::factory()->create();
 
@@ -81,11 +78,8 @@ test('guest get routes redirect authenticated users to dashboard', function (): 
 test('auth get routes redirect guests to login', function (): void {
     $authRoutes = getAuthGetRoutes();
 
-    if ($authRoutes === []) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
+    expect($authRoutes)->not->toBeEmpty()
+        ->and($authRoutes)->toContain('dashboard');
 
     foreach ($authRoutes as $uri) {
         $response = $this->get($uri);

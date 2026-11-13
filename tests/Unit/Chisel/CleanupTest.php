@@ -218,3 +218,9 @@ test('cleanup allows required steps to complete when discovery succeeds but guid
 test('cleanup files list does not contain LICENSE', function (): void {
     expect(Cleanup::files())->not->toContain('LICENSE');
 });
+
+test('cleanup files list contains matrix test runner scripts', function (): void {
+    expect(Cleanup::files())
+        ->toContain('scripts/test-feature-matrix.sh')
+        ->toContain('scripts/test-feature-matrix.php');
+});

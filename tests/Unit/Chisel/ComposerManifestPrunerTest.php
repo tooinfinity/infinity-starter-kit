@@ -89,6 +89,7 @@ test('composer manifest pruner cleanPostCreate removes chisel, install:features,
             'docs:check' => '@php artisan chisel:docs --check',
             'test:installer' => 'pest --group=installer-e2e --compact',
             'test:smoke' => 'pest --group=installer-smoke --compact',
+            'test:matrix' => 'bash scripts/test-feature-matrix.sh',
             'test:lint' => [
                 'pint --parallel --test',
                 'rector --dry-run',
@@ -114,6 +115,7 @@ test('composer manifest pruner cleanPostCreate removes chisel, install:features,
         ->and($decoded['scripts'])->not->toHaveKey('docs:check')
         ->and($decoded['scripts'])->not->toHaveKey('test:installer')
         ->and($decoded['scripts'])->not->toHaveKey('test:smoke')
+        ->and($decoded['scripts'])->not->toHaveKey('test:matrix')
         ->and($decoded['scripts']['test:lint'])->toBe([
             'pint --parallel --test',
             'rector --dry-run',

@@ -276,7 +276,7 @@ it('redirects to intended URL after successful login', function (): void {
     ]);
 
     // Access protected route as guest to store intended URL
-    $this->get(route('dashboard'))
+    $this->get(route('dashboard', ['tab' => 'analytics']))
         ->assertRedirectToRoute('login');
 
     // Login and verify redirect to intended URL
@@ -285,7 +285,7 @@ it('redirects to intended URL after successful login', function (): void {
         'password' => 'password123',
     ]);
 
-    $response->assertRedirect(route('dashboard'));
+    $response->assertRedirect(route('dashboard', ['tab' => 'analytics']));
     $this->assertAuthenticatedAs($user);
 });
 

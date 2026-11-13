@@ -177,7 +177,8 @@ final class GeneratedProjectFixture
         expect($scripts)->not->toHaveKey('docs:generate')
             ->and($scripts)->not->toHaveKey('docs:check')
             ->and($scripts)->not->toHaveKey('test:installer')
-            ->and($scripts)->not->toHaveKey('test:smoke');
+            ->and($scripts)->not->toHaveKey('test:smoke')
+            ->and($scripts)->not->toHaveKey('test:matrix');
 
         if (isset($scripts['test:lint']) && is_array($scripts['test:lint'])) {
             foreach ($scripts['test:lint'] as $lintCmd) {

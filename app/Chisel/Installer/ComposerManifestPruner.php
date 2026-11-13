@@ -49,6 +49,7 @@ final class ComposerManifestPruner
             $composerData['scripts']['docs:check'],
             $composerData['scripts']['test:installer'],
             $composerData['scripts']['test:smoke'],
+            $composerData['scripts']['test:matrix'],
         );
 
         if (isset($composerData['scripts']['post-create-project-cmd']) && is_array($composerData['scripts']['post-create-project-cmd'])) {

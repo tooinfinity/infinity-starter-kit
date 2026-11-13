@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
+use Inertia\Testing\AssertableInertia as Assert;
 
 it('shares app name from config', function (): void {
     $middleware = new HandleInertiaRequests();
@@ -94,13 +96,23 @@ it('includes parent shared data', function (): void {
 });
 
 it('shares flash data and validation errors through session', function (): void {
-    $response = $this->withSession([
-        'errors' => new ViewErrorBag(),
+    $user = User::factory()->create();
+
+    $errorBag = new ViewErrorBag();
+    $messages = new MessageBag(['name' => ['The name field is required.']]);
+    $errorBag->put('default', $messages);
+
+    $this->actingAs($user)->withSession([
+        'errors' => $errorBag,
         'status' => 'profile-updated',
-    ])->get('/');
+    ]);
+    session()->save();
+
+    $response = $this->get(route('user-profile.edit'));
 
     $response->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->has('errors')
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('errors.name', 'The name field is required.')
+            ->where('status', 'profile-updated')
         );
 });

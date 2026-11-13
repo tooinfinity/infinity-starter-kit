@@ -301,7 +301,8 @@ it('protects against mass assignment of sensitive attributes', function (): void
     // Verify sensitive attributes were not mass-assigned
     $attributes = $user->getAttributes();
     expect($attributes)->not->toHaveKey('is_admin')
-        ->and($attributes)->not->toHaveKey('role');
+        ->and($attributes)->not->toHaveKey('role')/* @chisel-user-management */
+        ->and($user->is_active)->toBeTrue()/* @end-chisel-user-management */;
 });
 
 it('supports unicode and max-length names on registration', function (string $name): void {

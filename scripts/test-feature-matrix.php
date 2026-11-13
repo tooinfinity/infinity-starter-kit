@@ -95,7 +95,6 @@ function testVariant(int $index, array $variant): bool
             return false;
         }
 
-        // 1. Verify Pint code formatting
         echo "-> Checking Pint formatting...\n";
         $pintProcess = GeneratedProjectFixture::run($tempDir, ['vendor/bin/pint', '--test', '--parallel'], [], 60);
         if ($pintProcess->getExitCode() !== 0) {
@@ -104,7 +103,6 @@ function testVariant(int $index, array $variant): bool
             return false;
         }
 
-        // 2. Verify PHPStan static analysis
         echo "-> Checking PHPStan static analysis...\n";
         $stanProcess = GeneratedProjectFixture::run($tempDir, ['vendor/bin/phpstan', '--no-progress'], [], 120);
         if ($stanProcess->getExitCode() !== 0) {
@@ -113,7 +111,6 @@ function testVariant(int $index, array $variant): bool
             return false;
         }
 
-        // 3. Verify TypeScript types
         echo "-> Checking TypeScript types...\n";
         $tsProcess = GeneratedProjectFixture::run($tempDir, ['bun', 'run', 'test:types'], [], 60);
         if ($tsProcess->getExitCode() !== 0) {
@@ -122,7 +119,6 @@ function testVariant(int $index, array $variant): bool
             return false;
         }
 
-        // 4. Verify Pest test suite
         echo "-> Running Pest test suite...\n";
         $pestProcess = GeneratedProjectFixture::run($tempDir, [
             'vendor/bin/pest',
@@ -138,9 +134,15 @@ function testVariant(int $index, array $variant): bool
             return false;
         }
 
-        // 5. Verify Disabled Feature Invariants
         echo "-> Verifying disabled feature invariants...\n";
-        $routeList = GeneratedProjectFixture::run($tempDir, [PHP_BINARY, 'artisan', 'route:list'])->getOutput();
+        $routeListProcess = GeneratedProjectFixture::run($tempDir, [PHP_BINARY, 'artisan', 'route:list']);
+        if ($routeListProcess->getExitCode() !== 0) {
+            echo "FAILED: artisan route:list failed:\n".$routeListProcess->getOutput()."\n";
+
+            return false;
+        }
+
+        $routeList = $routeListProcess->getOutput();
 
         if (! $variant['reg'] && str_contains($routeList, 'register')) {
             echo "FAILED: /register route remains in route list when registration is pruned.\n";
@@ -188,11 +190,21 @@ function testVariant(int $index, array $variant): bool
 
 // Parse CLI arguments: specific variant index or all 16
 $targetVariant = null;
-foreach ($argv as $arg) {
-    if (is_numeric($arg)) {
-        $targetVariant = (int) $arg;
-    } elseif (str_starts_with($arg, '--variant=')) {
-        $targetVariant = (int) mb_substr($arg, 10);
+foreach (array_slice($argv, 1) as $arg) {
+    $rawVal = null;
+    if (str_starts_with($arg, '--variant=')) {
+        $rawVal = mb_substr($arg, 10);
+    } elseif (! str_starts_with($arg, '-')) {
+        $rawVal = $arg;
+    }
+
+    if ($rawVal !== null) {
+        if (! ctype_digit($rawVal) || (int) $rawVal < 0 || (int) $rawVal > 15) {
+            fwrite(STDERR, "Error: Invalid variant [{$arg}]. Must be an integer between 0 and 15.\n");
+            exit(1);
+        }
+
+        $targetVariant = (int) $rawVal;
     }
 }
 

@@ -205,9 +205,12 @@ it('redirects to login when accessing two factor challenge without pending login
 });
 
 it('fails challenge authentication with invalid code', function (): void {
-    $provider = resolve(TwoFactorAuthenticationProvider::class);
+    $mockProvider = Mockery::mock(TwoFactorAuthenticationProvider::class);
+    $mockProvider->shouldReceive('verify')->andReturn(false);
+    $this->app->instance(TwoFactorAuthenticationProvider::class, $mockProvider);
+
     $user = User::factory()->create([
-        'two_factor_secret' => encrypt($provider->generateSecretKey()),
+        'two_factor_secret' => encrypt('test-secret-key-16-chars'),
         'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
         'two_factor_confirmed_at' => now(),
     ]);

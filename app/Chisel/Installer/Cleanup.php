@@ -105,6 +105,8 @@ final class Cleanup
             '.github/workflows/installer.yml',
             'tests/Unit/CiWorkflowIntegrityTest.php',
             '.ai/guidelines/app.chisel.blade.php',
+            'scripts/test-feature-matrix.sh',
+            'scripts/test-feature-matrix.php',
         ];
     }
 
