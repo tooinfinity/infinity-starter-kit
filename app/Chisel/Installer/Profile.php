@@ -145,19 +145,6 @@ final readonly class Profile
         return self::answersFor($this->name);
     }
 
-    /**
-     * Returns the matching installer preset name.
-     */
-    public function presetName(): string
-    {
-        return match (self::canonicalName($this->name)) {
-            self::MINIMAL => Preset::MINIMAL,
-            self::STANDARD => Preset::STANDARD,
-            self::FULL => Preset::FULL,
-            default => $this->name,
-        };
-    }
-
     public function hasFeature(string $feature): bool
     {
         $answers = $this->answers();

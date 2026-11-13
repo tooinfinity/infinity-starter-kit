@@ -30,7 +30,6 @@ final class Cleanup
             'app/Chisel/FeatureDefinition.php',
             'app/Chisel/FeatureRegistry.php',
             'app/Chisel/FeatureMatrixGenerator.php',
-            'app/Chisel/ManifestExampleGenerator.php',
             'app/Chisel/LegacyPathsAdapter.php',
             'app/Chisel/Features/AuthFeatures.php',
             'app/Chisel/Features/OptionalModules.php',
@@ -39,13 +38,11 @@ final class Cleanup
             'app/Chisel/Installer/InstallerContext.php',
             'app/Chisel/Installer/InstallerContextResolver.php',
             'app/Chisel/Installer/Profile.php',
-            'app/Chisel/Installer/Preset.php',
             'app/Chisel/Installer/InstallerState.php',
             'app/Chisel/Installer/PreflightValidator.php',
             'app/Chisel/Installer/PostScaffoldRunner.php',
             'app/Chisel/Installer/GeneratedApplicationValidator.php',
             'app/Chisel/Installer/GeneratedApplicationConfigurator.php',
-            'app/Chisel/Installer/GeneratedApplicationManifest.php',
             'app/Chisel/Installer/PerformanceBudget.php',
             'app/Chisel/Installer/ComposerManifestPruner.php',
             'app/Chisel/Installer/ComposerLockSynchronizer.php',
@@ -55,8 +52,6 @@ final class Cleanup
             'app/Chisel/Installer/Cleanup.php',
             'app/Chisel/Installer/FeaturePruner.php',
             'app/Chisel/Installer/AiToolingPruner.php',
-            'app/Chisel/Installer/InstallationPlan.php',
-            'app/Chisel/Installer/InstallerPlanner.php',
             'app/Chisel/Installer/InstallerScenario.php',
             'tests/Support/CrossFeatureTests.php',
             'tests/Support/GeneratedProjectFixture.php',
@@ -69,17 +64,13 @@ final class Cleanup
             'tests/Unit/Chisel/DependencyValidatorTest.php',
             'tests/Unit/Chisel/InstallerContextTest.php',
             'tests/Unit/Chisel/ProfileTest.php',
-            'tests/Unit/Chisel/PresetTest.php',
             'tests/Unit/Chisel/FeaturePrunerTest.php',
             'tests/Unit/Chisel/CleanupTest.php',
             'tests/Unit/Chisel/ComposerManifestPrunerTest.php',
             'tests/Unit/Chisel/ComposerLockSynchronizerTest.php',
             'tests/Unit/Chisel/GeneratedApplicationConfiguratorTest.php',
             'tests/Unit/Chisel/GeneratedApplicationValidatorTest.php',
-            'tests/Unit/Chisel/GeneratedApplicationManifestTest.php',
             'tests/Unit/Chisel/InstallerContextResolverTest.php',
-            'tests/Unit/Chisel/InstallationPlanTest.php',
-            'tests/Unit/Chisel/InstallerPlannerTest.php',
             'tests/Feature/Chisel/AiGuidelinesInstallationTest.php',
             'tests/Unit/Chisel/InstallerStateTest.php',
             'tests/Unit/Chisel/PreflightValidatorTest.php',
@@ -87,16 +78,13 @@ final class Cleanup
             'tests/Feature/Chisel/FeatureCombinationTest.php',
             'tests/Feature/Chisel/GeneratedProjectLifecycleTest.php',
             'tests/Feature/Chisel/GeneratedApplicationSmokeTest.php',
-            'tests/Feature/Chisel/ComposerCreateProjectLifecycleTest.php',
             'tests/Feature/Chisel/InstallFeaturesCommandTest.php',
             'tests/Feature/Chisel/MarkerIntegrityTest.php',
             'tests/Feature/Chisel/RegistryIntegrityTest.php',
             'tests/Feature/Chisel/FeatureContractTest.php',
             'tests/Feature/Chisel/GenerateFeatureDocsCommandTest.php',
             'tests/Feature/Chisel/FeatureMatrixDocumentationTest.php',
-            'tests/Feature/Chisel/ManifestDocumentationTest.php',
             'tests/Unit/Chisel/FeatureMatrixGeneratorTest.php',
-            'tests/Unit/Chisel/ManifestExampleGeneratorTest.php',
             'tests/Unit/Chisel/PerformanceBudgetTest.php',
             'tests/Feature/Chisel/GeneratedApplicationPerformanceTest.php',
             'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
@@ -137,7 +125,6 @@ final class Cleanup
     {
         // Preload installer classes before their files are removed from disk
         FeatureRegistry::all();
-        class_exists(Preset::class);
         class_exists(Profile::class);
         class_exists(ConfigCleaner::class);
         class_exists(ComposerManifestPruner::class);
@@ -146,7 +133,6 @@ final class Cleanup
         class_exists(AiToolingPruner::class);
         class_exists(InstallerState::class);
         class_exists(PreflightValidator::class);
-        class_exists(GeneratedApplicationManifest::class);
         class_exists(Chisel::class);
         class_exists(PendingFiles::class);
 

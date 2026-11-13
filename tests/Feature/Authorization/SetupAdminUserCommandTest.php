@@ -5,18 +5,18 @@ declare(strict_types=1);
 use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role as RoleModel;
 
 beforeEach(function (): void {
     RoleModel::findOrCreate(Role::SuperAdmin->value);
 });
 
-test('admin setup command creates a new admin user', function (): void {
+test('admin setup command creates a new admin user interactively with password confirmation', function (): void {
     $this->artisan('admin:setup')
         ->expectsQuestion('Name', 'Admin User')
         ->expectsQuestion('Email', 'admin@example.com')
         ->expectsQuestion('Password', 'password1234')
+        ->expectsQuestion('Confirm password', 'password1234')
         ->assertSuccessful();
 
     $user = User::query()->where('email', 'admin@example.com')->first();
@@ -60,12 +60,13 @@ test('admin setup skips creation in non-interactive mode when no email is provid
     expect(User::query()->count())->toBe(0);
 });
 
-test('admin setup creates administrator from CLI options with default name when name is omitted', function (): void {
+test('admin setup creates administrator when options are provided interactively', function (): void {
     $this->artisan('admin:setup', [
         '--email' => 'admin-options@example.com',
-        '--password' => 'secure-pass-1234',
-        '--no-interaction' => true,
-    ])->assertSuccessful();
+    ])
+        ->expectsQuestion('Password', 'secure-pass-1234')
+        ->expectsQuestion('Confirm password', 'secure-pass-1234')
+        ->assertSuccessful();
 
     $user = User::query()->where('email', 'admin-options@example.com')->first();
 
@@ -76,26 +77,13 @@ test('admin setup creates administrator from CLI options with default name when 
         ->and($user->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });
 
-test('admin setup fails when provided password is under 8 characters', function (): void {
-    $this->artisan('admin:setup', [
-        '--name' => 'Short Pass Admin',
-        '--email' => 'short@example.com',
-        '--password' => 'short',
-        '--no-interaction' => true,
-    ])
-        ->expectsOutputToContain('The password field must be at least 8 characters.')
-        ->assertFailed();
-
-    expect(User::query()->where('email', 'short@example.com')->first())->toBeNull();
-});
-
-test('admin setup fails in non-interactive mode when email is provided without password', function (): void {
+test('admin setup fails in non-interactive mode when email is provided because password cannot be passed via CLI', function (): void {
     $this->artisan('admin:setup', [
         '--name' => 'No Pass Admin',
         '--email' => 'nopass@example.com',
         '--no-interaction' => true,
     ])
-        ->expectsOutputToContain('A valid password is required to create an administrator user in non-interactive mode.')
+        ->expectsOutputToContain('A valid password is required to create an administrator user. Passwords cannot be supplied via CLI options.')
         ->assertFailed();
 
     expect(User::query()->where('email', 'nopass@example.com')->first())->toBeNull();
@@ -118,9 +106,10 @@ test('admin setup does not create duplicate users on repeated execution', functi
     $this->artisan('admin:setup', [
         '--name' => 'Dupe Admin',
         '--email' => 'dupe-admin@example.com',
-        '--password' => 'secure-pass-1234',
-        '--no-interaction' => true,
-    ])->assertSuccessful();
+    ])
+        ->expectsQuestion('Password', 'secure-pass-1234')
+        ->expectsQuestion('Confirm password', 'secure-pass-1234')
+        ->assertSuccessful();
 
     // Run again with same email — should assign role to existing user, not create a duplicate
     $this->artisan('admin:setup', [
@@ -154,73 +143,44 @@ test('admin setup does not modify an existing user password when run again', fun
     $this->artisan('admin:setup', [
         '--name' => 'Different Name',
         '--email' => 'keep-pass@example.com',
-        '--password' => 'completely-different-password',
         '--no-interaction' => true,
     ])->assertSuccessful();
 
     $fresh = $user->fresh();
     expect($fresh->hasRole(Role::SuperAdmin->value))->toBeTrue()
-        ->and(Hash::check('original-password-1234', $fresh->password))->toBeTrue()
-        ->and(Hash::check('completely-different-password', $fresh->password))->toBeFalse();
+        ->and(Hash::check('original-password-1234', $fresh->password))->toBeTrue();
 });
 
-test('admin setup fails in non-interactive mode when password or name is provided without email', function (): void {
+test('admin setup fails in non-interactive mode when name is provided without email', function (): void {
     $this->artisan('admin:setup', [
         '--name' => 'Missing Email Admin',
-        '--password' => 'secure-pass-1234',
         '--no-interaction' => true,
     ])
         ->expectsOutputToContain('A valid email address is required to create an administrator user.')
-        ->doesntExpectOutputToContain('secure-pass-1234')
         ->assertFailed();
 
     expect(User::query()->count())->toBe(0);
-});
-
-test('admin setup never leaks administrator password in console output on success or failure', function (): void {
-    $secret = 'TopSecretAdminPass99!';
-
-    $this->artisan('admin:setup', [
-        '--name' => 'Secret Admin',
-        '--email' => 'secret@example.com',
-        '--password' => $secret,
-        '--no-interaction' => true,
-    ])
-        ->doesntExpectOutputToContain($secret)
-        ->assertSuccessful();
-
-    $shortSecret = 'Short7!';
-    $this->artisan('admin:setup', [
-        '--name' => 'Short Secret Admin',
-        '--email' => 'short-secret@example.com',
-        '--password' => $shortSecret,
-        '--no-interaction' => true,
-    ])
-        ->doesntExpectOutputToContain($shortSecret)
-        ->assertFailed();
 });
 
 test('admin setup fails when provided email option is not a valid email address', function (): void {
     $this->artisan('admin:setup', [
         '--name' => 'Invalid Email Admin',
         '--email' => 'not-a-valid-email',
-        '--password' => 'secure-pass-1234',
-        '--no-interaction' => true,
     ])
         ->expectsOutputToContain('A valid email address is required to create an administrator user.')
-        ->doesntExpectOutputToContain('secure-pass-1234')
         ->assertFailed();
 
     expect(User::query()->count())->toBe(0);
 });
 
-test('creates a verified super admin', function (): void {
+test('creates a verified super admin interactively', function (): void {
     $this->artisan('admin:setup', [
         '--email' => 'admin-verified@example.com',
         '--name' => 'Admin',
-        '--password' => 'a-strong-passphrase-123',
-        '--no-interaction' => true,
-    ])->assertSuccessful();
+    ])
+        ->expectsQuestion('Password', 'a-strong-passphrase-123')
+        ->expectsQuestion('Confirm password', 'a-strong-passphrase-123')
+        ->assertSuccessful();
 
     $user = User::query()->where('email', 'admin-verified@example.com')->firstOrFail();
 
@@ -228,27 +188,14 @@ test('creates a verified super admin', function (): void {
         ->and($user->hasRole(Role::SuperAdmin->value))->toBeTrue();
 });
 
-test('rejects passwords that Password::defaults rejects', function (): void {
-    Password::defaults(fn () => Password::min(12));
-
-    try {
-        $this->artisan('admin:setup', [
-            '--email' => 'a@example.com',
-            '--password' => 'short-pass',
-            '--no-interaction' => true,
-        ])->assertFailed();
-    } finally {
-        Password::defaults(fn () => Password::min(8));
-    }
-});
-
 test('first login of the created admin goes straight to dashboard', function (): void {
     $this->artisan('admin:setup', [
         '--name' => 'Dashboard Admin',
         '--email' => 'dashboard-admin@example.com',
-        '--password' => 'secure-pass-1234',
-        '--no-interaction' => true,
-    ])->assertSuccessful();
+    ])
+        ->expectsQuestion('Password', 'secure-pass-1234')
+        ->expectsQuestion('Confirm password', 'secure-pass-1234')
+        ->assertSuccessful();
 
     $response = $this->post(route('login.store'), [
         'email' => 'dashboard-admin@example.com',
@@ -265,9 +212,10 @@ test('admin setup normalizes mixed-case and whitespace-padded email', function (
     $this->artisan('admin:setup', [
         '--name' => 'Case Admin',
         '--email' => '  Case.Admin@Example.COM  ',
-        '--password' => 'secure-pass-1234',
-        '--no-interaction' => true,
-    ])->assertSuccessful();
+    ])
+        ->expectsQuestion('Password', 'secure-pass-1234')
+        ->expectsQuestion('Confirm password', 'secure-pass-1234')
+        ->assertSuccessful();
 
     $user = User::query()->where('email', 'case.admin@example.com')->first();
     expect($user)->not->toBeNull()

@@ -80,6 +80,23 @@ final class GeneratedApplicationConfigurator
         InstallerContext $context,
         ?Factory $components = null,
     ): int {
+        try {
+            $isNoInteraction = $command->hasOption('no-interaction') && (bool) $command->option('no-interaction');
+        } catch (Throwable) {
+            $isNoInteraction = false;
+        }
+
+        if ($context->isNonInteractive || $isNoInteraction) {
+            $info = 'No administrator credentials provided in non-interactive mode; skipping administrator creation.';
+            if ($components instanceof Factory) {
+                $components->info($info);
+            } else {
+                $command->info($info);
+            }
+
+            return Command::SUCCESS;
+        }
+
         $adminParams = [];
         if ($context->adminName !== null) {
             $adminParams['--name'] = $context->adminName;
@@ -89,34 +106,6 @@ final class GeneratedApplicationConfigurator
             $adminParams['--email'] = $context->adminEmail;
         }
 
-        if ($context->adminPassword !== null) {
-            $adminParams['--password'] = $context->adminPassword;
-        }
-
-        $hasExplicitCredentials = $context->adminEmail !== null
-            || $context->adminName !== null
-            || $context->adminPassword !== null
-            || (is_array($context->providedAnswers['admin'] ?? null) && $context->providedAnswers['admin'] !== []);
-
-        if ($hasExplicitCredentials) {
-            if ($context->isNonInteractive) {
-                $adminParams['--no-interaction'] = true;
-            }
-
-            return $command->call('admin:setup', $adminParams);
-        }
-
-        if (! $context->isNonInteractive) {
-            return $command->call('admin:setup', $adminParams);
-        }
-
-        $info = 'No administrator credentials provided in non-interactive mode; skipping administrator creation.';
-        if ($components instanceof Factory) {
-            $components->info($info);
-        } else {
-            $command->info($info);
-        }
-
-        return Command::SUCCESS;
+        return $command->call('admin:setup', $adminParams);
     }
 }

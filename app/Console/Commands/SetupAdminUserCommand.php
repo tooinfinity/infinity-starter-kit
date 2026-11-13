@@ -10,7 +10,6 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Features;
@@ -20,8 +19,7 @@ use function Laravel\Prompts\text;
 
 #[Signature('admin:setup
         {--name= : Name of the administrator}
-        {--email= : Email of the administrator}
-        {--password= : Password for the administrator}')]
+        {--email= : Email of the administrator}')]
 #[Description('Create an administrator user and assign the Super Admin role')]
 final class SetupAdminUserCommand extends Command
 {
@@ -31,16 +29,14 @@ final class SetupAdminUserCommand extends Command
 
         $optionName = $this->option('name');
         $optionEmail = $this->option('email');
-        $optionPassword = $this->option('password');
 
         $hasName = is_string($optionName) && mb_trim($optionName) !== '';
         $hasEmail = is_string($optionEmail) && mb_trim($optionEmail) !== '';
-        $hasPassword = is_string($optionPassword) && $optionPassword !== '';
 
         $isInteractive = $this->input->isInteractive();
 
         if (! $isInteractive && ! $hasEmail) {
-            if ($optionEmail !== null || $hasName || $hasPassword) {
+            if ($optionEmail !== null || $hasName) {
                 $this->components->error('A valid email address is required to create an administrator user.');
 
                 return self::FAILURE;
@@ -96,27 +92,20 @@ final class SetupAdminUserCommand extends Command
             return self::SUCCESS;
         }
 
-        if (is_string($optionPassword) && $optionPassword !== '') {
-            $validator = Validator::make(
-                ['password' => $optionPassword],
-                ['password' => ['required', 'string', Password::defaults()]],
-            );
-
-            if ($validator->fails()) {
-                $this->components->error($validator->errors()->first('password'));
-
-                return self::FAILURE;
-            }
-
-            $inputPassword = $optionPassword;
-        } elseif ($isInteractive) {
+        if ($isInteractive) {
             $inputPassword = password(
                 label: 'Password',
                 required: true,
                 validate: ['password' => ['required', 'string', Password::defaults()]],
             );
+
+            password(
+                label: 'Confirm password',
+                required: true,
+                validate: fn (string $value): ?string => $value === $inputPassword ? null : 'The password confirmation does not match.',
+            );
         } else {
-            $this->components->error('A valid password is required to create an administrator user in non-interactive mode.');
+            $this->components->error('A valid password is required to create an administrator user. Passwords cannot be supplied via CLI options.');
 
             return self::FAILURE;
         }

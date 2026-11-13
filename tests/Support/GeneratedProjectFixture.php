@@ -105,7 +105,7 @@ final class GeneratedProjectFixture
      * @param  list<string>  $command
      * @param  array<string, string>  $env
      */
-    public static function run(string $dir, array $command, array $env = [], int $timeout = 300): Process
+    public static function run(string $dir, array $command, array $env = [], int $timeout = 300, ?string $input = null): Process
     {
         $baseEnv = getenv();
         $envClean = is_array($baseEnv) ? $baseEnv : [];
@@ -126,7 +126,7 @@ final class GeneratedProjectFixture
             'TMPDIR' => $dir.'/storage/framework/testing',
         ], $env);
 
-        $process = new Process($command, $dir, $mergedEnv, null, $timeout);
+        $process = new Process($command, $dir, $mergedEnv, $input, $timeout);
         $process->run();
 
         return $process;

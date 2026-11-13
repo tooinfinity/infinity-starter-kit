@@ -28,7 +28,6 @@ function makePreflightContext(
         hasAuthorization: true,
         adminName: null,
         adminEmail: null,
-        adminPassword: null,
         isNonInteractive: true,
         skipNode: $skipNode,
         isMockedScript: $isMockedScript,
@@ -38,6 +37,7 @@ function makePreflightContext(
 afterEach(function () use ($cleanEnv): void {
     $cleanEnv('CHISEL_TEST_FAIL_STAGE');
     $cleanEnv('CHISEL_PREFLIGHT_DISABLE_EXTENSIONS');
+    $cleanEnv('CHISEL_RUN_COMPOSER');
 });
 
 test('preflight passes on standard valid environment', function (): void {

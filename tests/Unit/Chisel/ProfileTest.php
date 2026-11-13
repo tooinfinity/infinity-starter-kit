@@ -6,7 +6,6 @@ namespace Tests\Unit\Chisel;
 
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\DependencyValidator;
-use App\Chisel\Installer\Preset;
 use App\Chisel\Installer\Profile;
 use InvalidArgumentException;
 use Throwable;
@@ -81,11 +80,10 @@ test('all features in profiles exist in feature registry', function (Profile $pr
     }
 })->with(Profile::representative());
 
-test('minimal profile provides core auth with no optional modules and maps to minimal preset', function (): void {
+test('minimal profile provides core auth with no optional modules', function (): void {
     $profile = Profile::fromName(Profile::MINIMAL);
 
     expect($profile->answers())->toBe(Profile::answersFor(Profile::MINIMAL))
-        ->and($profile->presetName())->toBe(Preset::MINIMAL)
         ->and($profile->hasAuthorization())->toBeFalse()
         ->and($profile->hasTwoFactor())->toBeFalse()
         ->and($profile->hasAuditTrails())->toBeFalse()
@@ -102,13 +100,11 @@ test('minimal profile provides core auth with no optional modules and maps to mi
         ->and($profile->expectedAbsentColumns()['users'])->toContain('two_factor_secret', 'locale');
 });
 
-test('default profile matches standard preset and provides default application features', function (): void {
+test('default profile provides default application features', function (): void {
     $defaultProfile = Profile::fromName(Profile::DEFAULT);
     $standardProfile = Profile::fromName(Profile::STANDARD);
 
     expect($defaultProfile->answers())->toBe($standardProfile->answers())
-        ->and($defaultProfile->presetName())->toBe(Preset::STANDARD)
-        ->and($standardProfile->presetName())->toBe(Preset::STANDARD)
         ->and($defaultProfile->hasAuthorization())->toBeTrue()
         ->and($defaultProfile->hasSettings())->toBeTrue()
         ->and($defaultProfile->hasUserManagement())->toBeTrue()
@@ -124,11 +120,10 @@ test('default profile matches standard preset and provides default application f
         ->and($defaultProfile->expectedAbsentColumns()['users'])->toContain('two_factor_secret', 'locale');
 });
 
-test('full profile provides all available features and maps to full preset', function (): void {
+test('full profile provides all available features', function (): void {
     $profile = Profile::fromName(Profile::FULL);
 
     expect($profile->answers())->toBe(Profile::answersFor(Profile::FULL))
-        ->and($profile->presetName())->toBe(Preset::FULL)
         ->and($profile->hasAuthorization())->toBeTrue()
         ->and($profile->hasSettings())->toBeTrue()
         ->and($profile->hasUserManagement())->toBeTrue()

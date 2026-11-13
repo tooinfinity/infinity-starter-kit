@@ -73,24 +73,6 @@ Which optional modules should be installed?
 
 Select the features you want using `Space`, then press `Enter`.
 
-#### Dry-Run Mode (Preview Planned Mutations)
-
-To inspect all planned operations without applying any changes to your files, packages, or database, pass the `--dry-run` flag:
-
-```bash
-# Preview interactive feature selection
-php artisan install:features --dry-run
-
-# Preview automated/CI selections via JSON answers
-php artisan install:features --dry-run --answers='{"auth_features":["registration"],"optional_modules":["authorization","user-management"]}'
-```
-
-Dry-run mode:
-- Resolves explicitly selected features and identifies dependency-derived requirements (e.g. `login` required by `registration`).
-- Enforces identical validation semantics as real installations (failing on invalid or missing dependencies).
-- Displays a structured preview of pruned files and directories, package removals, database operations, tooling steps, and installer cleanup.
-- Guarantees **zero mutations** to the filesystem, dependencies, database, or git status.
-
 ### 3. Authorization & Super Admin (if enabled)
 
 During interactive installation, authorization permissions and an administrator account are configured automatically. If you installed non-interactively, need to bootstrap a fresh production database, or updated the `Permission` or `Role` enums:
@@ -344,38 +326,27 @@ Include AI assistant guidelines?
  [x] AI assistant guidelines (.claude, .cursor, AGENTS.md, ...)
 ```
 
-#### Non-Interactive Installation & Presets
+#### Non-Interactive Installation (`--answers`)
 
-The installer supports multiple flexible ways to configure features non-interactively in CI, local scripts, or project templates:
-
-##### 1. Named Presets (`--preset`)
-
-Choose from pre-configured, validated feature profiles:
-
-- `--preset=minimal` — Core application with a minimal authentication surface (`login`, `logout`) and zero optional modules.
-- `--preset=standard` — Sensible default application (`login`, `logout`, `registration`, `email-verification`, `password-reset`, `password-update` with `authorization`, `settings`, `user-management`, `notifications`).
-- `--preset=full` — All supported authentication features and optional modules.
+For continuous integration, automation scripts, and reproducible setups, pass an inline JSON object to `--answers` with `--no-interaction`:
 
 ```bash
-# Standard starter application
-php artisan install:features --preset=standard --no-interaction
-
-# Minimal authentication core
-php artisan install:features --preset=minimal --no-interaction
-
-# Full feature suite
-php artisan install:features --preset=full --no-interaction
+php artisan install:features \
+  --answers='{"auth_features":["login","logout","registration","email-verification","password-reset","password-update"],"optional_modules":["authorization","settings","user-management","notifications"]}' \
+  --no-interaction
 ```
 
-##### 2. Reproducible Configuration File (`--answers-file`)
+##### Configuration Contract & Schema
 
-Provide an explicit JSON answers file for reproducible automation across environments and CI pipelines:
+- **Interactive Default:** When `--answers` is omitted, the installer runs the interactive flow.
+- **Strict Non-Interactive Mode:** In non-interactive mode (`--no-interaction`), the `--answers` option is required. Prompts are never triggered.
+- **Required Keys:** `--answers` must supply both `auth_features` and `optional_modules` as arrays. Missing keys or unknown feature names fail immediately before any filesystem mutation occurs.
+- **Secure Administrator Handling:** Administrator passwords cannot be provided via `--answers` or command-line options. In non-interactive installations where `authorization` is enabled, the installer skips interactive admin account prompts. After installation, create an initial administrator securely using:
+  ```bash
+  echo "SecurePassword123" | php artisan authorization:create-admin --name="Admin" --email="admin@example.com" --stdin
+  ```
 
-```bash
-php artisan install:features --answers-file=starter-kit.json --no-interaction
-```
-
-Example `starter-kit.json`:
+##### Supported JSON Schema
 
 ```json
 {
@@ -385,46 +356,27 @@ Example `starter-kit.json`:
     "registration",
     "email-verification",
     "password-reset",
-    "password-update"
+    "password-update",
+    "two-factor"
   ],
   "optional_modules": [
     "authorization",
     "settings",
     "user-management",
-    "notifications"
+    "localization",
+    "notifications",
+    "audit-trails",
+    "reporting"
   ],
   "ai_guidelines": [
     "guidelines"
-  ],
-  "admin": {
-    "name": "Administrator",
-    "email": "admin@example.com",
-    "password": "secret-password"
-  }
+  ]
 }
 ```
 
-##### 3. Inline JSON Answers (`--answers`)
-
-Pass a raw JSON string directly on the command line (backward compatible):
-
-```bash
-php artisan install:features --answers='{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"],"ai_guidelines":["guidelines"]}' --no-interaction
-```
-
-Pass `"ai_guidelines": []` (or `"ai_guidelines": false`) to decline and prune all maintainer AI configuration files (`.agents`, `.ai`, `.amp`, `.claude`, `.codex`, `.cursor`, `.gemini`, `.junie`, `.mcp.json`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `opencode.json`, `boost.json`).
-
-##### Precedence Order
-
-When multiple answer sources are present, they are resolved in this deterministic order:
-
-1. **Explicit CLI Inline Answers** (`--answers='{...}'`)
-2. **Explicit CLI Answers File** (`--answers-file=path/to/file.json`)
-3. **Explicit CLI Named Preset** (`--preset=standard`)
-4. **Environment Inline Answers** (`CHISEL_ANSWERS` or `LARAVEL_INSTALLER_ANSWERS`)
-5. **Environment Answers File** (`CHISEL_ANSWERS_FILE` or `LARAVEL_INSTALLER_ANSWERS_FILE`)
-6. **Environment Named Preset** (`CHISEL_PRESET` or `LARAVEL_INSTALLER_PRESET`)
-7. **Interactive Prompts / Defaults** (multiselect prompt when interactive, or default questions when non-interactive)
+- `auth_features` *(array of strings, required)*: Authentication capabilities to retain.
+- `optional_modules` *(array of strings, required)*: Starter kit modules to retain. Dependencies are validated before pruning (e.g. `user-management` requires `authorization`).
+- `ai_guidelines` *(array or boolean, optional)*: Pass `["guidelines"]` or `true` (default) to keep AI guidelines. Pass `[]` or `false` to prune all maintainer AI configuration files (`.agents`, `.ai`, `.amp`, `.claude`, `.codex`, `.cursor`, `.gemini`, `.junie`, `.mcp.json`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `opencode.json`, `boost.json`).
 
 Unselected modules and declined guidelines have all exclusive code, routes, permissions, translations, and configs cleanly pruned.
 
@@ -437,105 +389,6 @@ Upon finishing execution, Chisel automatically cleans up the repository:
 4. Deletes `chisel.php`, `chisel-paths.php`, `app/Console/Commands/InstallFeaturesCommand.php`, `app/Console/Commands/SetupAdminUserCommand.php`, and Chisel installer tests.
 
 > **Note:** `InstallFeaturesCommand`, `SetupAdminUserCommand`, `chisel.php`, and `chisel-paths.php` are **installer-only infrastructure**. They are used while creating the application via `composer create-project` and are automatically removed from the generated application after successful installation. Your generated project will not contain any of these files. `SetupAuthorizationCommand` and `CreateAdminCommand` are persistent runtime commands that remain available in the generated application when Authorization is enabled.
-
-#### Generated Application Manifest (`starter-kit-manifest.json`)
-
-Upon completing a successful and validated installation, Chisel records a non-secret configuration manifest at the project root (`starter-kit-manifest.json`).
-
-This manifest serves as a machine-readable record for debugging, support requests, and future upgrade tooling. Generated applications are **not** required to consume this file at runtime (zero runtime overhead).
-
-**Key Guarantees:**
-- **Strictly Non-Secret:** Contains no passwords, API tokens, database credentials, or secret environment blobs.
-- **Versioned Schema:** Includes `schema_version` (currently `1`) to facilitate future tool compatibility.
-- **Deterministic & Reproducible:** Supports reproducible builds via standard environment variables (`SOURCE_DATE_EPOCH`, `CHISEL_MANIFEST_TIMESTAMP`, or `CHISEL_DETERMINISTIC_MANIFEST`).
-- **Zero Runtime Dependencies:** Plain JSON that can be inspected with standard tools (`jq`, `json_decode()`) without needing any installer classes.
-
-**Schema Version Semantics:**
-- `schema_version` denotes the version of the manifest data contract (currently `1`).
-- The `schema_version` is bumped only upon **breaking changes** to the manifest schema (such as renaming, removing, or restructuring mandatory top-level or nested keys).
-- Additive, backward-compatible enhancements (e.g. adding optional metadata properties) do not bump `schema_version`.
-- Tooling consuming `starter-kit-manifest.json` should assert that `schema_version === 1` before evaluating schema-dependent fields.
-
-**Structure Overview:**
-<!-- @chisel-manifest-example -->
-```json
-{
-    "schema_version": 1,
-    "starter_kit": {
-        "name": "tooinfinity/infinity-starter-kit",
-        "version": "1.0.0",
-        "source_revision": "1c253c2000000000000000000000000000000000"
-    },
-    "preset": "standard",
-    "features": {
-        "explicit": {
-            "auth_features": [
-                "email-verification",
-                "login",
-                "logout",
-                "password-reset",
-                "password-update",
-                "registration"
-            ],
-            "optional_modules": [
-                "authorization",
-                "notifications",
-                "settings",
-                "user-management"
-            ]
-        },
-        "dependency_derived": [
-            "authorization",
-            "login"
-        ],
-        "all_selected": [
-            "authorization",
-            "email-verification",
-            "login",
-            "logout",
-            "notifications",
-            "password-reset",
-            "password-update",
-            "registration",
-            "settings",
-            "user-management"
-        ],
-        "unselected": [
-            "audit-trails",
-            "localization",
-            "reporting",
-            "two-factor"
-        ]
-    },
-    "auth_capabilities": [
-        "email-verification",
-        "login",
-        "logout",
-        "password-reset",
-        "password-update",
-        "registration"
-    ],
-    "generated_at": "2026-11-02T22:00:00Z"
-}
-```
-<!-- @end-chisel-manifest-example -->
-
-**Field Reference:**
-- `schema_version`: (integer) The version of the manifest schema.
-- `starter_kit`: Source repository provenance metadata:
-  - `name`: Starter kit package name (`tooinfinity/infinity-starter-kit`).
-  - `version`: Release tag or version string if available, or `null`.
-  - `source_revision`: Full Git commit SHA from which the project was scaffolded.
-- `preset`: (string or null) The installation preset chosen (`standard`, `minimal`, `full`), or `null` if a custom combination was configured.
-- `features`: Full breakdown of feature selection and dependency resolution:
-  - `explicit.auth_features`: Authentication features directly selected during setup (`email-verification`, `login`, `logout`, `password-reset`, `password-update`, `registration`, `two-factor`).
-  - `explicit.optional_modules`: Optional modules directly selected during setup (`audit-trails`, `authorization`, `localization`, `notifications`, `reporting`, `settings`, `user-management`).
-  - `explicit.ai_guidelines`: Optional AI guideline profiles if selected.
-  - `dependency_derived`: Features included automatically because another selected feature requires them (e.g. `authorization` depends on `login`).
-  - `all_selected`: Complete sorted list of all active features in the generated application.
-  - `unselected`: Pruned features that were removed from the generated application.
-- `auth_capabilities`: Canonical list of effective authentication capabilities enabled in the application.
-- `generated_at`: ISO 8601 UTC timestamp of manifest generation.
 
 ---
 

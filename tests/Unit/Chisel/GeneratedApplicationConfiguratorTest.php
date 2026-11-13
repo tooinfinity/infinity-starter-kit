@@ -15,7 +15,6 @@ function createTestInstallerContext(
     bool $isNonInteractive = false,
     ?string $adminName = null,
     ?string $adminEmail = null,
-    ?string $adminPassword = null,
     array $providedAnswers = [],
 ): InstallerContext {
     return new InstallerContext(
@@ -27,7 +26,6 @@ function createTestInstallerContext(
         hasAuthorization: $hasAuthorization,
         adminName: $adminName,
         adminEmail: $adminEmail,
-        adminPassword: $adminPassword,
         isNonInteractive: $isNonInteractive,
         skipNode: true,
         isMockedScript: true,
@@ -102,8 +100,8 @@ test('configure handles authorization:setup non-zero exit without components', f
 test('configure handles setupAdminUser exception with and without components', function (): void {
     $context = createTestInstallerContext(
         hasAuthorization: true,
+        isNonInteractive: false,
         adminEmail: 'admin@example.com',
-        adminPassword: 'password123',
     );
 
     // With components
@@ -150,8 +148,8 @@ test('configure handles setupAdminUser exception with and without components', f
 test('configure handles admin:setup non-zero exit without components', function (): void {
     $context = createTestInstallerContext(
         hasAuthorization: true,
+        isNonInteractive: false,
         adminEmail: 'admin@example.com',
-        adminPassword: 'password123',
     );
 
     $command = new class extends Command
@@ -238,8 +236,8 @@ test('configure handles authorization:setup non-zero exit with components', func
 test('configure handles admin:setup non-zero exit with components', function (): void {
     $context = createTestInstallerContext(
         hasAuthorization: true,
+        isNonInteractive: false,
         adminEmail: 'admin@example.com',
-        adminPassword: 'password123',
     );
 
     $command = new class extends Command
@@ -260,13 +258,12 @@ test('configure handles admin:setup non-zero exit with components', function ():
         ->and($output->fetch())->toContain('Administrator setup failed.');
 });
 
-test('setupAdminUser passes adminName and no-interaction flags when credentials present non-interactively', function (): void {
+test('setupAdminUser passes adminName and adminEmail in interactive mode', function (): void {
     $context = createTestInstallerContext(
         hasAuthorization: true,
-        isNonInteractive: true,
+        isNonInteractive: false,
         adminName: 'Root Admin',
         adminEmail: 'admin@example.com',
-        adminPassword: 'secretpassword',
     );
 
     $command = new class extends Command
@@ -287,8 +284,6 @@ test('setupAdminUser passes adminName and no-interaction flags when credentials 
         ->and($command->capturedArgs)->toBe([
             '--name' => 'Root Admin',
             '--email' => 'admin@example.com',
-            '--password' => 'secretpassword',
-            '--no-interaction' => true,
         ]);
 });
 

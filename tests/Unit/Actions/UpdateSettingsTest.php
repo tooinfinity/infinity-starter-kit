@@ -103,3 +103,102 @@ test('UpdateSettings set method works with SettingKey enum', function (): void {
 
     expect($setting->value)->toBe('Enum Set');
 });
+
+test('UpdateSettings skips unchanged settings and does not bust cache', function (): void {
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Same Name',
+    ]);
+
+    Cache::spy();
+
+    $action = resolve(UpdateSettings::class);
+    $action->handle([
+        SettingKey::ApplicationName->value => 'Same Name',
+    ]);
+
+    Cache::shouldNotHaveReceived('forget');
+});
+
+test('UpdateSettings returns early and does not bust cache when settings array is empty', function (): void {
+    Cache::spy();
+
+    $action = resolve(UpdateSettings::class);
+    $action->handle([]);
+
+    Cache::shouldNotHaveReceived('forget');
+});
+
+test('UpdateSettings only updates changed settings and busts cache when one of multiple settings changes', function (): void {
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationName->value,
+        'value' => 'Same Name',
+    ]);
+    Setting::factory()->create([
+        'key' => SettingKey::ApplicationTimezone->value,
+        'value' => 'UTC',
+    ]);
+
+    Cache::spy();
+
+    $action = resolve(UpdateSettings::class);
+    $action->handle([
+        SettingKey::ApplicationName->value => 'Same Name',
+        SettingKey::ApplicationTimezone->value => 'Europe/London',
+    ]);
+
+    Cache::shouldHaveReceived('forget')->with('settings.all')->once();
+
+    $name = Setting::query()->where('key', SettingKey::ApplicationName->value)->first();
+    $tz = Setting::query()->where('key', SettingKey::ApplicationTimezone->value)->first();
+
+    expect($name?->value)->toBe('Same Name')
+        ->and($tz?->value)->toBe('Europe/London');
+});
+
+test('UpdateSettings recovers from unique constraint conflict when setting is concurrently created', function (): void {
+    $inserted = false;
+    DB::listen(function ($query) use (&$inserted): void {
+        if (! $inserted && preg_match('/where\s+[`"]?key[`"]?\s+in/i', $query->sql)) {
+            $inserted = true;
+            Setting::factory()->create([
+                'key' => SettingKey::ApplicationName->value,
+                'value' => 'Concurrent Value',
+            ]);
+        }
+    });
+
+    $action = resolve(UpdateSettings::class);
+    $action->handle([
+        SettingKey::ApplicationName->value => 'Final Value',
+    ]);
+
+    expect($inserted)->toBeTrue();
+
+    $setting = Setting::query()->where('key', SettingKey::ApplicationName->value)->first();
+    expect($setting?->value)->toBe('Final Value');
+});
+
+test('UpdateSettings busts cache but skips update when concurrent insert matches submitted value', function (): void {
+    $inserted = false;
+    DB::listen(function ($query) use (&$inserted): void {
+        if (! $inserted && preg_match('/where\s+[`"]?key[`"]?\s+in/i', $query->sql)) {
+            $inserted = true;
+            Setting::factory()->create([
+                'key' => SettingKey::ApplicationName->value,
+                'value' => 'Matching Value',
+            ]);
+        }
+    });
+
+    Cache::spy();
+
+    $action = resolve(UpdateSettings::class);
+    $action->handle([
+        SettingKey::ApplicationName->value => 'Matching Value',
+    ]);
+
+    expect($inserted)->toBeTrue();
+
+    Cache::shouldHaveReceived('forget')->with('settings.all')->once();
+});
