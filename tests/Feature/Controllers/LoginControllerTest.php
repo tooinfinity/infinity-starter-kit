@@ -18,40 +18,31 @@ it('renders login page', function (): void {
             ->has('status'));
 });
 
-it('may create a session', function (): void {
+it('creates a session upon valid credentials', function (bool $remember): void {
     $user = User::factory()/* @chisel-two-factor */ ->withoutTwoFactor()/* @end-chisel-two-factor */ ->create([
         'email' => 'test@example.com',
         'password' => Hash::make('password'),
     ]);
 
-    $response = $this->fromRoute('login')
-        ->post(route('login.store'), [
-            'email' => 'test@example.com',
-            'password' => 'password',
-        ]);
-
-    $response->assertRedirectToRoute('dashboard');
-
-    $this->assertAuthenticatedAs($user);
-});
-
-it('may create a session with remember me', function (): void {
-    $user = User::factory()/* @chisel-two-factor */ ->withoutTwoFactor()/* @end-chisel-two-factor */ ->create([
+    $payload = [
         'email' => 'test@example.com',
-        'password' => Hash::make('password'),
-    ]);
+        'password' => 'password',
+    ];
+
+    if ($remember) {
+        $payload['remember'] = true;
+    }
 
     $response = $this->fromRoute('login')
-        ->post(route('login.store'), [
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'remember' => true,
-        ]);
+        ->post(route('login.store'), $payload);
 
     $response->assertRedirectToRoute('dashboard');
 
     $this->assertAuthenticatedAs($user);
-});
+})->with([
+    'without remember me' => false,
+    'with remember me' => true,
+]);
 
 /* @chisel-two-factor */
 it('redirects to two-factor challenge when enabled', function (): void {
@@ -93,25 +84,22 @@ it('fails with invalid credentials', function (): void {
     $this->assertGuest();
 });
 
-it('requires email', function (): void {
+it('validates required fields on login', function (array $payload, string $errorField): void {
     $response = $this->fromRoute('login')
-        ->post(route('login.store'), [
-            'password' => 'password',
-        ]);
+        ->post(route('login.store'), $payload);
 
     $response->assertRedirectToRoute('login')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires password', function (): void {
-    $response = $this->fromRoute('login')
-        ->post(route('login.store'), [
-            'email' => 'test@example.com',
-        ]);
-
-    $response->assertRedirectToRoute('login')
-        ->assertSessionHasErrors('password');
-});
+        ->assertSessionHasErrors($errorField);
+})->with([
+    'missing email' => [
+        ['password' => 'password'],
+        'email',
+    ],
+    'missing password' => [
+        ['email' => 'test@example.com'],
+        'password',
+    ],
+]);
 
 it('redirects authenticated users away from login', function (): void {
     $user = User::factory()->create();
