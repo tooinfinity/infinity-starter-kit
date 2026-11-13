@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 
@@ -253,4 +254,54 @@ it('shares throttle bucket regardless of email case or whitespace', function ():
 
     $errors = session('errors');
     expect($errors->get('email')[0])->toContain('Too many login attempts');
+});
+
+it('fails with unknown email address', function (): void {
+    $response = $this->fromRoute('login')
+        ->post(route('login.store'), [
+            'email' => 'nonexistent@example.com',
+            'password' => 'secret-password',
+        ]);
+
+    $response->assertRedirectToRoute('login')
+        ->assertSessionHasErrors('email');
+
+    $this->assertGuest();
+});
+
+it('redirects to intended URL after successful login', function (): void {
+    $user = User::factory()/* @chisel-two-factor */ ->withoutTwoFactor()/* @end-chisel-two-factor */ ->create([
+        'email' => 'intended@example.com',
+        'password' => Hash::make('password123'),
+    ]);
+
+    // Access protected route as guest to store intended URL
+    $this->get(route('dashboard'))
+        ->assertRedirectToRoute('login');
+
+    // Login and verify redirect to intended URL
+    $response = $this->post(route('login.store'), [
+        'email' => 'intended@example.com',
+        'password' => 'password123',
+    ]);
+
+    $response->assertRedirect(route('dashboard'));
+    $this->assertAuthenticatedAs($user);
+});
+
+it('attaches remember cookie when remember flag is provided', function (): void {
+    $user = User::factory()/* @chisel-two-factor */ ->withoutTwoFactor()/* @end-chisel-two-factor */ ->create([
+        'email' => 'remember@example.com',
+        'password' => Hash::make('password123'),
+    ]);
+
+    $response = $this->post(route('login.store'), [
+        'email' => 'remember@example.com',
+        'password' => 'password123',
+        'remember' => true,
+    ]);
+
+    $response->assertRedirectToRoute('dashboard');
+    $this->assertAuthenticatedAs($user);
+    $response->assertCookie(Auth::guard()->getRecallerName());
 });

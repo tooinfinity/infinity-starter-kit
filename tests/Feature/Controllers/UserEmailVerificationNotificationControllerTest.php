@@ -65,3 +65,23 @@ it('redirects verified users when sending notification', function (): void {
 
     Notification::assertNothingSent();
 });
+
+it('throttles email verification notification resend requests', function (): void {
+    Notification::fake();
+
+    $user = User::factory()->create([
+        'email_verified_at' => null,
+    ]);
+
+    for ($i = 0; $i < 6; $i++) {
+        $this->actingAs($user)
+            ->fromRoute('user.verification.notice')
+            ->post(route('verification.send'));
+    }
+
+    $response = $this->actingAs($user)
+        ->fromRoute('user.verification.notice')
+        ->post(route('verification.send'));
+
+    $response->assertTooManyRequests();
+});

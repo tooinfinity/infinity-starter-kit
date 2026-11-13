@@ -23,11 +23,25 @@ final class DependencyValidator
      */
     public static function validate(array $answers, ?array $featuresOrMap = null): void
     {
+        if (array_key_exists('auth_features', $answers)) {
+            throw_unless(is_array($answers['auth_features']), RuntimeException::class, 'The auth_features key must be an array of strings.');
+            foreach ($answers['auth_features'] as $item) {
+                throw_unless(is_string($item), RuntimeException::class, 'All items in auth_features must be strings.');
+            }
+        }
+
+        if (array_key_exists('optional_modules', $answers)) {
+            throw_unless(is_array($answers['optional_modules']), RuntimeException::class, 'The optional_modules key must be an array of strings.');
+            foreach ($answers['optional_modules'] as $item) {
+                throw_unless(is_string($item), RuntimeException::class, 'All items in optional_modules must be strings.');
+            }
+        }
+
         $rawAuth = (array) ($answers['auth_features'] ?? []);
-        $authFeatures = array_values(array_filter($rawAuth, is_string(...)));
+        $authFeatures = array_values(array_unique(array_filter($rawAuth, is_string(...))));
 
         $rawModules = (array) ($answers['optional_modules'] ?? []);
-        $optionalModules = array_values(array_filter($rawModules, is_string(...)));
+        $optionalModules = array_values(array_unique(array_filter($rawModules, is_string(...))));
 
         $selectedFeatures = array_values(array_unique(array_merge($authFeatures, $optionalModules)));
 

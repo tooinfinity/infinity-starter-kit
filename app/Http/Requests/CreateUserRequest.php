@@ -47,6 +47,8 @@ final class CreateUserRequest extends FormRequest
         return is_string($locale) ? Locale::tryFrom($locale) : null;
     }
 
+    /* @end-chisel-localization */
+
     public function prepareForValidation(): void
     {
         if (is_string($this->input('email'))) {
@@ -55,6 +57,4 @@ final class CreateUserRequest extends FormRequest
             ]);
         }
     }
-
-    /* @end-chisel-localization */
 }

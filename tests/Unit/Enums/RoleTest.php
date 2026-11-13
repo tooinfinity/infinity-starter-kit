@@ -13,3 +13,13 @@ test('role enum is string-backed', function (): void {
         expect($case->value)->toBeString();
     }
 });
+
+test('all role values are unique and kebab-cased', function (): void {
+    $values = array_column(Role::cases(), 'value');
+
+    expect($values)->toHaveCount(count(array_unique($values)));
+
+    foreach ($values as $value) {
+        expect($value)->toMatch('/^[a-z]+(-[a-z]+)*$/');
+    }
+});

@@ -14,6 +14,10 @@ arch()->preset()->security()->ignoring([
     'assert',
 ]);
 
+arch('app does not use debugging functions')
+    ->expect('App')
+    ->not->toUse(['dd', 'dump', 'ray']);
+
 // 1. Controllers
 arch('controllers are final and readonly')
     ->expect('App\Http\Controllers')
@@ -104,6 +108,13 @@ arch('actions do not depend on http responses')
         'Illuminate\Http\JsonResponse',
         'Illuminate\Http\Response',
         'Symfony\Component\HttpFoundation\Response',
+    ]);
+
+arch('actions do not use authorization or validation facades')
+    ->expect('App\Actions')
+    ->not->toUse([
+        'Illuminate\Support\Facades\Gate',
+        'Illuminate\Support\Facades\Validator',
     ]);
 
 // 3. Enums
@@ -327,4 +338,29 @@ test('http controller and middleware tests belong strictly in tests/Feature', fu
         ->name(['*ControllerTest.php', '*MiddlewareTest.php']);
 
     expect(iterator_to_array($unitTests))->toBeEmpty();
+});
+
+test('inertia component names in controllers resolve to existing page files', function (): void {
+    $controllers = new Finder()
+        ->files()
+        ->in(dirname(__DIR__, 2).'/app/Http/Controllers')
+        ->name('*.php');
+
+    $components = [];
+
+    foreach ($controllers as $file) {
+        if (preg_match_all('/(?:Inertia::render|inertia)\(\s*[\'"]([^\'"]+)[\'"]/', $file->getContents(), $matches)) {
+            foreach ($matches[1] as $component) {
+                $components[$component] = $file->getRelativePathname();
+            }
+        }
+    }
+
+    expect($components)->not->toBeEmpty();
+
+    foreach ($components as $component => $controller) {
+        $path = dirname(__DIR__, 2)."/resources/js/pages/{$component}.tsx";
+        expect(file_exists($path))
+            ->toBeTrue("Inertia page [{$component}] referenced in [{$controller}] does not exist at [{$path}].");
+    }
 });

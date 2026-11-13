@@ -29,6 +29,13 @@ final class SetupAuthorizationCommand extends Command
 
         $this->components->twoColumnDetail('Permissions synchronized', (string) count($permissions));
 
+        $stalePermissions = PermissionModel::query()->whereNotIn('name', $permissions);
+        $staleCount = (clone $stalePermissions)->count();
+        if ($staleCount > 0) {
+            $stalePermissions->delete();
+            $this->components->twoColumnDetail('Stale permissions pruned', (string) $staleCount);
+        }
+
         $superAdminRole = RoleModel::findOrCreate(Role::SuperAdmin->value);
         $superAdminRole->syncPermissions($permissions);
 

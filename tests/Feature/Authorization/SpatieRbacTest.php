@@ -23,27 +23,27 @@ test('super admin bypasses all gate checks', function (): void {
 
 test('normal user is denied without required permission', function (): void {
     $user = User::factory()->create();
-    PermissionModel::findOrCreate(Permission::UsersView->value);
+    PermissionModel::findOrCreate(Permission::AuthorizationManage->value);
 
-    expect(Gate::forUser($user)->allows(Permission::UsersView->value))->toBeFalse();
+    expect(Gate::forUser($user)->allows(Permission::AuthorizationManage->value))->toBeFalse();
 });
 
 test('user with permission is authorized via gate', function (): void {
     $user = User::factory()->create();
-    $permission = PermissionModel::findOrCreate(Permission::UsersCreate->value);
+    $permission = PermissionModel::findOrCreate(Permission::AuthorizationManage->value);
     $user->givePermissionTo($permission);
 
-    expect(Gate::forUser($user)->allows(Permission::UsersCreate->value))->toBeTrue();
+    expect(Gate::forUser($user)->allows(Permission::AuthorizationManage->value))->toBeTrue();
 });
 
 test('user with role permission is authorized via gate', function (): void {
     $user = User::factory()->create();
     $role = RoleModel::findOrCreate('editor');
-    $permission = PermissionModel::findOrCreate(Permission::UsersUpdate->value);
+    $permission = PermissionModel::findOrCreate(Permission::AuthorizationManage->value);
     $role->givePermissionTo($permission);
     $user->assignRole($role);
 
-    expect(Gate::forUser($user)->allows(Permission::UsersUpdate->value))->toBeTrue();
+    expect(Gate::forUser($user)->allows(Permission::AuthorizationManage->value))->toBeTrue();
 });
 
 test('authorization setup command creates permissions and roles', function (): void {
@@ -129,12 +129,12 @@ test('documented first admin promotion by email works end to end on fresh databa
         ->assignRole(Role::SuperAdmin->value);
 
     expect($user->fresh()->hasRole(Role::SuperAdmin->value))->toBeTrue()
-        ->and(Gate::forUser($user)->allows(Permission::UsersView->value))->toBeTrue();
+        ->and(Gate::forUser($user)->allows(Permission::AuthorizationManage->value))->toBeTrue();
 });
 
 test('shared inertia props include authorization data for authenticated user', function (): void {
     $user = User::factory()->create();
-    $permission = PermissionModel::findOrCreate(Permission::UsersView->value);
+    $permission = PermissionModel::findOrCreate(Permission::AuthorizationManage->value);
     $user->givePermissionTo($permission);
 
     $response = $this->actingAs($user)
@@ -144,7 +144,7 @@ test('shared inertia props include authorization data for authenticated user', f
         ->assertInertia(fn ($page) => $page
             ->has('auth.permissions')
             ->has('auth.roles')
-            ->where('auth.permissions', [Permission::UsersView->value])
+            ->where('auth.permissions', [Permission::AuthorizationManage->value])
         );
 });
 
@@ -173,8 +173,46 @@ test('uses a non-integer model_id column in the Spatie pivot tables', function (
 test('stores the UUID user id as the pivot model_id', function (): void {
     $user = User::factory()->create();
     $user->assignRole(RoleModel::findOrCreate(Role::SuperAdmin->value));
-    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
+    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     expect(DB::table('model_has_roles')->value('model_id'))->toBe($user->id)
         ->and(DB::table('model_has_permissions')->value('model_id'))->toBe($user->id);
+});
+
+test('authorization setup command prunes stale permissions not present in enum', function (): void {
+    $this->artisan('authorization:setup')->assertSuccessful();
+
+    // Create a stale permission in the database
+    PermissionModel::findOrCreate('stale.obsolete-permission');
+    expect(PermissionModel::query()->where('name', 'stale.obsolete-permission')->exists())->toBeTrue();
+
+    // Run setup again
+    $this->artisan('authorization:setup')
+        ->expectsOutputToContain('Stale permissions pruned')
+        ->assertSuccessful();
+
+    expect(PermissionModel::query()->where('name', 'stale.obsolete-permission')->exists())->toBeFalse();
+});
+
+test('permission cache is invalidated when permissions are refreshed via command', function (): void {
+    $this->artisan('authorization:setup')->assertSuccessful();
+
+    $registrar = resolve(PermissionRegistrar::class);
+    $initialPermissions = $registrar->getPermissions();
+    expect($initialPermissions->count())->toBe(count(Permission::cases()));
+
+    // Directly insert without registrar cache
+    DB::table('permissions')->insert([
+        'name' => 'temp.manual-permission',
+        'guard_name' => 'web',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Setup command must flush cache
+    $this->artisan('authorization:setup')->assertSuccessful();
+
+    $cachedNames = $registrar->getPermissions()->pluck('name')->all();
+    expect($cachedNames)->not->toContain('temp.manual-permission')
+        ->and(count($cachedNames))->toBe(count(Permission::cases()));
 });

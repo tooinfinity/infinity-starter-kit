@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\ViewErrorBag;
 
 it('shares app name from config', function (): void {
     $middleware = new HandleInertiaRequests();
@@ -90,4 +91,16 @@ it('includes parent shared data', function (): void {
 
     // Parent Inertia middleware shares 'errors' by default
     expect($shared)->toHaveKey('errors');
+});
+
+it('shares flash data and validation errors through session', function (): void {
+    $response = $this->withSession([
+        'errors' => new ViewErrorBag(),
+        'status' => 'profile-updated',
+    ])->get('/');
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('errors')
+        );
 });

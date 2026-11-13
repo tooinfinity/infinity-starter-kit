@@ -63,3 +63,27 @@ jobs:
 
       - name: Generated Application Smoke Tests (${{ matrix.profile }})
         run: composer test:smoke -- --filter="${{ matrix.profile }}"
+
+  feature-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build Assets
+        run: bun run build
+
+      - name: Test Feature Combination ${{ matrix.variant }}
+        run: bash scripts/test-feature-matrix.sh ${{ matrix.variant }}

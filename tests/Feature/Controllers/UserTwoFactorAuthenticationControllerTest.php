@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 it('renders two factor authentication page', function (): void {
     $user = User::factory()->create();
@@ -135,4 +136,112 @@ it('redirects to password confirmation when visiting two factor page without con
     $response->assertRedirect(route('password.confirm'));
 
     expect(session('url.intended'))->toBe(route('two-factor.show'));
+});
+
+it('requires password confirmation to enable two factor authentication', function (): void {
+    $user = User::factory()->withoutTwoFactor()->create();
+
+    $response = $this->actingAs($user)->post(route('two-factor.enable'));
+
+    $response->assertRedirect(route('password.confirm'));
+
+    expect($user->fresh()->two_factor_secret)->toBeNull();
+});
+
+it('enables two factor authentication when password is confirmed', function (): void {
+    $user = User::factory()->withoutTwoFactor()->create();
+
+    $this->actingAs($user)->session(['auth.password_confirmed_at' => time()]);
+
+    $response = $this->fromRoute('two-factor.show')->post(route('two-factor.enable'));
+
+    $response->assertRedirectToRoute('two-factor.show');
+
+    expect($user->fresh()->two_factor_secret)->not->toBeNull();
+});
+
+it('disables two factor authentication flow', function (): void {
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt('secret'),
+        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $this->actingAs($user)->session(['auth.password_confirmed_at' => time()]);
+
+    $response = $this->fromRoute('two-factor.show')->delete(route('two-factor.disable'));
+
+    $response->assertRedirectToRoute('two-factor.show');
+
+    $fresh = $user->fresh();
+    expect($fresh->two_factor_secret)->toBeNull()
+        ->and($fresh->two_factor_recovery_codes)->toBeNull()
+        ->and($fresh->two_factor_confirmed_at)->toBeNull();
+});
+
+it('regenerates recovery codes for two factor authentication', function (): void {
+    $initialCodes = ['code-1', 'code-2'];
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt('secret'),
+        'two_factor_recovery_codes' => encrypt(json_encode($initialCodes)),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $this->actingAs($user)->session(['auth.password_confirmed_at' => time()]);
+
+    $response = $this->fromRoute('two-factor.show')->post(route('two-factor.regenerate-recovery-codes'));
+
+    $response->assertRedirectToRoute('two-factor.show');
+
+    $newCodes = json_decode(decrypt($user->fresh()->two_factor_recovery_codes), true);
+    expect($newCodes)->toBeArray()
+        ->and($newCodes)->not->toBe($initialCodes);
+});
+
+it('redirects to login when accessing two factor challenge without pending login', function (): void {
+    $response = $this->get(route('two-factor.login'));
+
+    $response->assertRedirectToRoute('login');
+});
+
+it('fails challenge authentication with invalid code', function (): void {
+    $provider = resolve(TwoFactorAuthenticationProvider::class);
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt($provider->generateSecretKey()),
+        'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $response = $this->withSession(['login.id' => $user->getKey()])
+        ->post(route('two-factor.login.store'), [
+            'code' => '000000',
+        ]);
+
+    $response->assertRedirectToRoute('two-factor.login')
+        ->assertSessionHasErrors('code');
+
+    $this->assertGuest();
+});
+
+it('authenticates user with recovery code and consumes it for single use', function (): void {
+    $recoveryCode = 'recovery-code-valid';
+    $provider = resolve(TwoFactorAuthenticationProvider::class);
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt($provider->generateSecretKey()),
+        'two_factor_recovery_codes' => encrypt(json_encode([$recoveryCode, 'unused-code'])),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $response = $this->withSession(['login.id' => $user->getKey(), 'login.remember' => false])
+        ->post(route('two-factor.login.store'), [
+            'recovery_code' => $recoveryCode,
+        ]);
+
+    $response->assertRedirectToRoute('dashboard');
+    $this->assertAuthenticatedAs($user);
+
+    // Verify recovery code was consumed (single-use)
+    $remainingCodes = json_decode(decrypt($user->fresh()->two_factor_recovery_codes), true);
+    expect($remainingCodes)->not->toContain($recoveryCode)
+        ->and($remainingCodes)->toContain('unused-code');
 });

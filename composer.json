@@ -111,6 +111,7 @@
         "test:quick": "pest --parallel --exclude-testsuite=Browser --exclude-group=installer-e2e --exclude-group=installer-smoke",
         "test:installer": "pest --group=installer-e2e --compact",
         "test:smoke": "pest --group=installer-smoke --compact",
+        "test:matrix": "bash scripts/test-feature-matrix.sh",
         "test:dependencies": [
             "composer validate --strict --check-lock",
             "composer check-platform-reqs --lock",

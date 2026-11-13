@@ -267,3 +267,75 @@ it('respects configurable registration rate limit', function (): void {
 
     $response->assertTooManyRequests();
 });
+
+it('rejects weak password that fails password defaults', function (): void {
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Weak Pass User',
+            'email' => 'weak@example.com',
+            'password' => '123',
+            'password_confirmation' => '123',
+        ]);
+
+    $response->assertRedirectToRoute('register')
+        ->assertSessionHasErrors('password');
+});
+
+it('protects against mass assignment of sensitive attributes', function (): void {
+    Event::fake([Registered::class]);
+
+    $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => 'Injected User',
+            'email' => 'injected@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+            'is_admin' => true,
+            'role' => 'super-admin',
+            'is_active' => false,
+        ]);
+
+    $user = User::query()->where('email', 'injected@example.com')->first();
+    expect($user)->not->toBeNull();
+
+    // Verify sensitive attributes were not mass-assigned
+    $attributes = $user->getAttributes();
+    expect($attributes)->not->toHaveKey('is_admin')
+        ->and($attributes)->not->toHaveKey('role');
+});
+
+it('supports unicode and max-length names on registration', function (string $name): void {
+    Event::fake([Registered::class]);
+
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => $name,
+            'email' => 'unicode@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertRedirectToRoute('dashboard');
+
+    $user = User::query()->where('email', 'unicode@example.com')->first();
+    expect($user)->not->toBeNull()
+        ->and($user->name)->toBe($name);
+})->with([
+    'accented and umlauts' => 'José Müller',
+    'cjk characters' => '山本 太郎',
+    'arabic characters' => 'أحمد محمد',
+    'max length 255 chars' => str_repeat('a', 255),
+]);
+
+it('fails registration when name exceeds 255 characters', function (): void {
+    $response = $this->fromRoute('register')
+        ->post(route('register.store'), [
+            'name' => str_repeat('a', 256),
+            'email' => 'toolong@example.com',
+            'password' => 'password1234',
+            'password_confirmation' => 'password1234',
+        ]);
+
+    $response->assertRedirectToRoute('register')
+        ->assertSessionHasErrors('name');
+});

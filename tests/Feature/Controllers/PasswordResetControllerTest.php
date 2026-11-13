@@ -61,6 +61,56 @@ it('fails with invalid token', function (): void {
         ->assertSessionHasErrors('email');
 });
 
+it('prevents token reuse after successful password reset', function (): void {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $token = Password::createToken($user);
+
+    $this->fromRoute('password.reset', ['token' => $token])
+        ->post(route('password.store'), [
+            'email' => 'test@example.com',
+            'password' => 'first-new-password',
+            'password_confirmation' => 'first-new-password',
+            'token' => $token,
+        ])
+        ->assertRedirectToRoute('login');
+
+    // Attempting to reuse the same token must fail
+    $this->fromRoute('password.reset', ['token' => $token])
+        ->post(route('password.store'), [
+            'email' => 'test@example.com',
+            'password' => 'second-new-password',
+            'password_confirmation' => 'second-new-password',
+            'token' => $token,
+        ])
+        ->assertRedirect(route('password.reset', ['token' => $token]))
+        ->assertSessionHasErrors('email');
+});
+
+it('fails with expired token', function (): void {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $token = Password::createToken($user);
+
+    // Travel beyond the password reset token expiration (default 60 minutes)
+    $this->travel(61)->minutes();
+
+    $response = $this->fromRoute('password.reset', ['token' => $token])
+        ->post(route('password.store'), [
+            'email' => 'test@example.com',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+            'token' => $token,
+        ]);
+
+    $response->assertRedirect(route('password.reset', ['token' => $token]))
+        ->assertSessionHasErrors('email');
+});
+
 it('fails with non-existent email', function (): void {
     $response = $this->fromRoute('password.reset', ['token' => 'fake-token'])
         ->post(route('password.store'), [

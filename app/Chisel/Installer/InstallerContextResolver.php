@@ -170,7 +170,7 @@ final class InstallerContextResolver
             ? 'The --answers-file option must decode to a JSON object.'
             : 'The answers file must decode to a JSON object.';
 
-        throw_unless(is_array($decoded), RuntimeException::class, $errorMessage);
+        throw_unless(is_array($decoded) && (! array_is_list($decoded) || $decoded === []), RuntimeException::class, $errorMessage);
 
         /** @var array<string, mixed> $decoded */
         return $decoded;
@@ -197,7 +197,7 @@ final class InstallerContextResolver
         if (is_string($rawAnswers) && mb_trim($rawAnswers) !== '') {
             $hasAnswersSource = true;
             $decoded = json_decode($rawAnswers, true, 512, JSON_THROW_ON_ERROR);
-            throw_unless(is_array($decoded), RuntimeException::class, 'The --answers option must decode to a JSON object.');
+            throw_unless(is_array($decoded) && (! array_is_list($decoded) || $decoded === []), RuntimeException::class, 'The --answers option must decode to a JSON object.');
             $providedAnswers = $decoded;
         } elseif ($answersFile !== null) {
             $hasAnswersSource = true;
@@ -213,7 +213,7 @@ final class InstallerContextResolver
         } elseif (($envAnswers = self::environmentAnswers()) !== null) {
             $hasAnswersSource = true;
             $decoded = json_decode($envAnswers, true, 512, JSON_THROW_ON_ERROR);
-            throw_unless(is_array($decoded), RuntimeException::class, 'The --answers option must decode to a JSON object.');
+            throw_unless(is_array($decoded) && (! array_is_list($decoded) || $decoded === []), RuntimeException::class, 'The --answers option must decode to a JSON object.');
             $providedAnswers = $decoded;
         } elseif (($envAnswersFile = self::environmentAnswersFile()) !== null) {
             $hasAnswersSource = true;

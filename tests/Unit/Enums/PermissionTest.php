@@ -42,3 +42,9 @@ test('each permission is a string-backed enum', function (): void {
         expect($case->value)->toBeString();
     }
 });
+
+test('all permission values use lowercase dot notation', function (): void {
+    foreach (Permission::values() as $value) {
+        expect($value)->toMatch('/^[a-z]+(\.[a-z\-]+)+$/');
+    }
+});

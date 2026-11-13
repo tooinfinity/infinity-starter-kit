@@ -119,6 +119,72 @@ test('command fails when --answers option decodes to non-array scalar', function
         ->assertFailed();
 })->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
 
+test('command fails when --answers option decodes to non-object JSON array', function (): void {
+    $this->artisan('install:features', ['--answers' => '[1, 2, 3]'])
+        ->assertFailed();
+})->throws(RuntimeException::class, 'The --answers option must decode to a JSON object.');
+
+test('command fails when auth_features in answers is not an array', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--answers' => json_encode(['auth_features' => 'login'], JSON_THROW_ON_ERROR)])
+        ->assertFailed();
+})->throws(RuntimeException::class, 'The auth_features key must be an array of strings.');
+
+test('command fails when auth_features contains non-string items', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--answers' => json_encode(['auth_features' => [123]], JSON_THROW_ON_ERROR)])
+        ->assertFailed();
+})->throws(RuntimeException::class, 'All items in auth_features must be strings.');
+
+test('command fails when optional_modules in answers is not an array', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--answers' => json_encode(['optional_modules' => 'authorization'], JSON_THROW_ON_ERROR)])
+        ->assertFailed();
+})->throws(RuntimeException::class, 'The optional_modules key must be an array of strings.');
+
+test('command fails when optional_modules contains non-string items', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--answers' => json_encode(['optional_modules' => ['authorization', 456]], JSON_THROW_ON_ERROR)])
+        ->assertFailed();
+})->throws(RuntimeException::class, 'All items in optional_modules must be strings.');
+
+test('command handles duplicate feature values and missing keys cleanly', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['login', 'login'],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+});
+
+test('command succeeds when answers is empty object', function (): void {
+    bindMockChiselScript();
+
+    $this->artisan('install:features', ['--answers' => '{}'])
+        ->assertSuccessful();
+});
+
+test('command is idempotent when executed repeatedly', function (): void {
+    bindMockChiselScript();
+
+    $answers = json_encode([
+        'auth_features' => ['login'],
+        'optional_modules' => [],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+
+    $this->artisan('install:features', ['--answers' => $answers])
+        ->assertSuccessful();
+});
+
 test('command succeeds with --preset minimal', function (): void {
     bindMockChiselScript();
 
@@ -1536,8 +1602,11 @@ function bindMockChiselScript(array $processFakes = []): Script
             Question::multiselect(
                 name: 'auth_features',
                 label: 'Auth features',
-                options: ['registration' => 'Registration'],
-                default: ['registration'],
+                options: [
+                    'login' => 'Login',
+                    'registration' => 'Registration',
+                ],
+                default: ['login', 'registration'],
             ),
             Question::multiselect(
                 name: 'optional_modules',
