@@ -25,7 +25,12 @@ arch('controllers are not used directly in application code')
     ->expect('App\Http\Controllers')
     ->not->toBeUsed();
 
-// 2. Actions
+// 2. Requests
+arch('form requests do not probe for permission enum existence')
+    ->expect('App\Http\Requests')
+    ->not->toUse('enum_exists');
+
+// 3. Actions
 arch('actions are final and readonly')
     ->expect('App\Actions')
     ->classes()
@@ -106,7 +111,7 @@ arch('actions do not depend on http responses')
         'Symfony\Component\HttpFoundation\Response',
     ]);
 
-// 3. Enums
+// 4. Enums
 arch('enums are strictly defined within app enums')
     ->expect('App\Enums')
     ->toBeEnums()
@@ -117,7 +122,7 @@ arch('no enums exist outside app enums')
     ->not->toBeEnums()
     ->ignoring('App\Enums');
 
-// 4. Installer / Chisel Boundary
+// 5. Installer / Chisel Boundary
 $installerPackages = [
     implode('\\', ['App', 'Ch'.'isel']),
     implode('\\', ['Laravel', 'Ch'.'isel']),
@@ -159,7 +164,7 @@ arch('runtime console commands do not depend on chisel or installer internals')
     ->expect($runtimeCommands !== [] ? $runtimeCommands : 'App\Console\Commands')
     ->not->toUse($installerPackages);
 
-// 5. Cross-Feature Modular Boundaries
+// 6. Cross-Feature Modular Boundaries
 /* @chisel-audit-trails */
 arch('audit-trails does not depend on reporting or user management')
     ->expect([
@@ -319,7 +324,7 @@ arch('reporting does not depend on settings, notifications, or localization')
     ]);
 /* @end-chisel-reporting */
 
-// 6. Test Suite Organization Boundaries
+// 7. Test Suite Organization Boundaries
 test('http controller and middleware tests belong strictly in tests/Feature', function (): void {
     $unitTests = new Finder()
         ->files()

@@ -15,9 +15,7 @@ final class UpdateSettingsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user !== null && (! enum_exists(Permission::class) || $user->can(Permission::SettingsManage->value));
+        return $this->user()?->can(Permission::SettingsManage->value) ?? false;
     }
 
     /**

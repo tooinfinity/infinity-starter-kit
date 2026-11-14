@@ -17,8 +17,11 @@ final class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ! enum_exists(Permission::class) || (($this->user()?->can(Permission::UsersView->value) ?? false)
-            && $this->user()->can(Permission::UsersCreate->value));
+        $user = $this->user();
+
+        return $user !== null
+            && $user->can(Permission::UsersView->value)
+            && $user->can(Permission::UsersCreate->value);
     }
 
     /**
@@ -52,7 +55,7 @@ final class StoreUserRequest extends FormRequest
         /** @var array{name: string, email: string, password: string, is_active?: bool, roles?: list<string>} $validated */
         $validated = $this->validated();
 
-        $canManageRoles = ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersManageRoles->value) ?? false);
+        $canManageRoles = $this->user()?->can(Permission::UsersManageRoles->value) ?? false;
 
         return new CreateUserData(
             name: $validated['name'],

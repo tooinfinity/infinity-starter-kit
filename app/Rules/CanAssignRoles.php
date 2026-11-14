@@ -30,7 +30,7 @@ final readonly class CanAssignRoles implements ValidationRule
             return;
         }
 
-        $canManageRoles = ! enum_exists(Permission::class) || $this->actor->can(Permission::UsersManageRoles->value);
+        $canManageRoles = $this->actor->can(Permission::UsersManageRoles->value);
 
         if (! $canManageRoles) {
             return;
