@@ -439,6 +439,8 @@ function getFullCombinations(array $allAuth, array $allModules): array
     return $combos;
 }
 
+mt_srand(42);
+
 $combinations = match ($tier) {
     'fast' => getFastCombinations($allAuth, $allModules),
     'pairwise' => getPairwiseCombinations($allAuth, $allModules),

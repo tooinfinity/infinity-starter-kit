@@ -19,6 +19,10 @@ return [
 
     'guard' => 'web',
 
+    /* @chisel-login */
+    'routes' => true,
+    /* @end-chisel-login */
+
     /*
     |--------------------------------------------------------------------------
     | Fortify Password Broker

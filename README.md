@@ -459,12 +459,6 @@ composer test:browser
 
 # Full suite code coverage verification (100% required)
 composer test:coverage
-
-# Installer end-to-end scaffolding tests
-composer test:installer
-
-# Generated application smoke & performance budget verification
-composer test:smoke
 ```
 
 ### Feature Combination Verification

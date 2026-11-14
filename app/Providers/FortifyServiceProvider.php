@@ -24,7 +24,7 @@ final class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        if (config('fortify.limiters.login') === null) {
+        if (! config()->boolean('fortify.routes', false)) {
             Fortify::ignoreRoutes();
         }
     }
@@ -34,7 +34,7 @@ final class FortifyServiceProvider extends ServiceProvider
         $this->bootFortifyDefaults();
         $this->bootRateLimitingDefaults();
         /* @chisel-user-management */
-        if (config('fortify.limiters.login') === null) {
+        if (! config()->boolean('fortify.routes', false)) {
             $this->bootPasswordConfirmationRoutes();
         }
 
@@ -46,7 +46,11 @@ final class FortifyServiceProvider extends ServiceProvider
     {
         $authMiddleware = config()->string('fortify.auth_middleware', 'auth').':'.config()->string('fortify.guard', 'web');
 
-        Route::group(['middleware' => config('fortify.middleware', ['web'])], function () use ($authMiddleware): void {
+        Route::group([
+            'domain' => config('fortify.domain'),
+            'prefix' => config('fortify.prefix'),
+            'middleware' => config('fortify.middleware', ['web']),
+        ], function () use ($authMiddleware): void {
             Route::get(RoutePath::for('password.confirm', '/user/confirm-password'), [ConfirmablePasswordController::class, 'show'])
                 ->middleware([$authMiddleware])
                 ->name('password.confirm');
