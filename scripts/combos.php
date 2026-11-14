@@ -64,14 +64,6 @@ function resolveDependencies(array $auth, array $modules): array
         $modules[] = 'authorization';
     }
 
-    // Authorization and notifications require login
-    if (
-        (in_array('authorization', $modules, true) || in_array('notifications', $modules, true))
-        && ! in_array('login', $auth, true)
-    ) {
-        $auth[] = 'login';
-    }
-
     return [
         'auth_features' => array_values(array_unique($auth)),
         'optional_modules' => array_values(array_unique($modules)),
@@ -326,6 +318,40 @@ function getPairwiseCombinations(array $allAuth, array $allModules): array
         }
 
         if ($bestCoveredCount <= 0 || $bestVector === null || $bestAnswers === null) {
+            // Before breaking, exhaustively search valid combinations for a candidate that covers remaining pairs
+            $allValid = getFullCombinations($allAuth, $allModules);
+            foreach ($allValid as $validCombo) {
+                $resolved = resolveDependencies($validCombo['answers']['auth_features'], $validCombo['answers']['optional_modules']);
+                if (! isValidCombination($resolved)) {
+                    continue;
+                }
+
+                $testVector = [];
+                foreach ($allFeatures as $feat) {
+                    $testVector[] = in_array($feat, $resolved['auth_features'], true) || in_array($feat, $resolved['optional_modules'], true) ? 1 : 0;
+                }
+
+                $count = 0;
+                for ($i = 0; $i < $n; $i++) {
+                    for ($j = $i + 1; $j < $n; $j++) {
+                        if (isset($uncoveredPairs["{$i}:{$testVector[$i]}:{$j}:{$testVector[$j]}"])) {
+                            $count++;
+                        }
+                    }
+                }
+
+                if ($count > $bestCoveredCount) {
+                    $bestCoveredCount = $count;
+                    $bestVector = $testVector;
+                    $bestAnswers = $resolved;
+                    if ($count > 0) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($bestCoveredCount <= 0 || $bestVector === null || $bestAnswers === null) {
             // No further valid assignments can cover remaining pairs (they may be untestable contradictions)
             break;
         }
@@ -433,13 +459,26 @@ if ($shard !== null && $totalShards !== null && $totalShards > 0 && $shard > 0) 
     $combinations = $sharded;
 }
 
-$matrix = [
-    'include' => array_map(function (array $combo): array {
-        return [
-            'name' => $combo['name'],
-            'answers' => json_encode($combo['answers'], JSON_UNESCAPED_SLASHES),
-        ];
-    }, $combinations),
-];
+if ($tier === 'full') {
+    $batchSize = 20;
+    $batches = array_chunk($combinations, $batchSize);
+    $matrix = [
+        'include' => array_map(function (int $index, array $batch): array {
+            return [
+                'name' => 'batch-'.($index + 1),
+                'answers' => json_encode(array_column($batch, 'answers'), JSON_UNESCAPED_SLASHES),
+            ];
+        }, array_keys($batches), $batches),
+    ];
+} else {
+    $matrix = [
+        'include' => array_map(function (array $combo): array {
+            return [
+                'name' => $combo['name'],
+                'answers' => json_encode($combo['answers'], JSON_UNESCAPED_SLASHES),
+            ];
+        }, $combinations),
+    ];
+}
 
-echo json_encode($matrix, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
+echo json_encode($matrix, JSON_UNESCAPED_SLASHES)."\n";

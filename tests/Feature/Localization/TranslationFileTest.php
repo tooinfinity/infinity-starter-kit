@@ -115,7 +115,9 @@ test('all supported locales have all PHP translation keys matching English', fun
         'reports.php',
     ];
 
-    return array_values(array_filter($candidates, fn (string $file): bool => file_exists(lang_path("en/{$file}"))));
+    $langPath = dirname(__DIR__, 3).'/lang/en';
+
+    return array_values(array_filter($candidates, fn (string $file): bool => file_exists("{$langPath}/{$file}")));
 });
 
 test('all supported locales have matching JSON translation keys', function (): void {

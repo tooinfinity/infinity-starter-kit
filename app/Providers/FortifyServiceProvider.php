@@ -7,9 +7,18 @@ namespace App\Providers;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+/* @chisel-user-management */
+use Illuminate\Support\Facades\Route;
+/* @end-chisel-user-management */
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use Laravel\Fortify\Fortify;
+/* @chisel-user-management */
+use Laravel\Fortify\Http\Controllers\ConfirmablePasswordController;
+use Laravel\Fortify\Http\Controllers\ConfirmedPasswordStatusController;
+use Laravel\Fortify\RoutePath;
+
+/* @end-chisel-user-management */
 
 final class FortifyServiceProvider extends ServiceProvider
 {
@@ -24,7 +33,35 @@ final class FortifyServiceProvider extends ServiceProvider
     {
         $this->bootFortifyDefaults();
         $this->bootRateLimitingDefaults();
+        /* @chisel-user-management */
+        if (config('fortify.limiters.login') === null) {
+            $this->bootPasswordConfirmationRoutes();
+        }
+
+        /* @end-chisel-user-management */
     }
+
+    /* @chisel-user-management */
+    private function bootPasswordConfirmationRoutes(): void
+    {
+        $authMiddleware = config()->string('fortify.auth_middleware', 'auth').':'.config()->string('fortify.guard', 'web');
+
+        Route::group(['middleware' => config('fortify.middleware', ['web'])], function () use ($authMiddleware): void {
+            Route::get(RoutePath::for('password.confirm', '/user/confirm-password'), [ConfirmablePasswordController::class, 'show'])
+                ->middleware([$authMiddleware])
+                ->name('password.confirm');
+
+            Route::get(RoutePath::for('password.confirmation', '/user/confirmed-password-status'), [ConfirmedPasswordStatusController::class, 'show'])
+                ->middleware([$authMiddleware])
+                ->name('password.confirmation');
+
+            Route::post(RoutePath::for('password.confirm', '/user/confirm-password'), [ConfirmablePasswordController::class, 'store'])
+                ->middleware([$authMiddleware])
+                ->name('password.confirm.store');
+        });
+    }
+
+    /* @end-chisel-user-management */
 
     private function bootFortifyDefaults(): void
     {

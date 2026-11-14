@@ -7,6 +7,16 @@ if [[ $# -lt 1 ]]; then
 fi
 
 ANSWERS="$1"
+
+# If passed a batch of combinations (JSON array), process each combination sequentially
+if echo "${ANSWERS}" | jq -e 'type == "array"' >/dev/null 2>&1; then
+    echo "=== [verify-combo] Processing batch of combinations ==="
+    echo "${ANSWERS}" | jq -c '.[]' | while read -r single_combo; do
+        "$0" "${single_combo}"
+    done
+    exit 0
+fi
+
 echo "=== [verify-combo] Verifying combination ==="
 echo "Answers: ${ANSWERS}"
 
@@ -25,7 +35,9 @@ echo "=== [verify-combo] Mirroring repository to temporary directory ==="
 rsync -a \
     --exclude="vendor" \
     --exclude="node_modules" \
-    --exclude=".git" \
+    --exclude=".env" \
+    --exclude=".env.*" \
+    --exclude="bootstrap/cache/*.php" \
     --exclude="database.sqlite" \
     --exclude="database/database.sqlite" \
     --exclude="tmp" \
@@ -34,9 +46,16 @@ rsync -a \
 
 cd "${TEMP_DIR}"
 
-cp -n .env.example .env
+cp .env.example .env
 mkdir -p database
 touch database/database.sqlite
+rm -f bootstrap/cache/*.php
+
+if grep -q "^DB_DATABASE=" .env; then
+    sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${TEMP_DIR}/database/database.sqlite|" .env
+else
+    echo "DB_DATABASE=${TEMP_DIR}/database/database.sqlite" >> .env
+fi
 
 # If source repo already has vendor/node_modules, seed them using copy-on-write reflinks for speed
 if [[ -d "${SOURCE_DIR}/vendor" ]]; then

@@ -134,6 +134,8 @@ final class OptionalModules
                     'routes/web.php',
                     'resources/js/types/index.ts',
                     'resources/js/components/app-sidebar.tsx',
+                    'app/Providers/FortifyServiceProvider.php',
+                    'tests/Unit/Providers/FortifyServiceProviderTest.php',
                     'tests/Feature/Controllers/DeleteAccountControllerTest.php',
                     'tests/Unit/Models/UserTest.php',
                     'tests/Unit/Enums/PermissionTest.php',

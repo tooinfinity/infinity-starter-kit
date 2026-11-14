@@ -69,7 +69,7 @@ jobs:
         id: generate
         run: |
           TIER="${{ steps.tier.outputs.tier }}"
-          MATRIX=$(php scripts/combos.php "${TIER}")
+          MATRIX=$(php scripts/combos.php "${TIER}" | jq -c .)
           echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
 
   verify:
