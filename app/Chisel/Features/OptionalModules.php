@@ -251,6 +251,7 @@ final class OptionalModules
                     'tests/Unit/Rules/CanAssignRolesTest.php',
                     'tests/Unit/Rules/NotLastSuperAdminTest.php',
                     'tests/Unit/Notifications/PasswordChangedTest.php',
+                    'tests/Unit/Notifications/UserStatusNotificationsTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/UpdateUserLocale.php',
@@ -379,6 +380,7 @@ final class OptionalModules
                     'tests/Feature/Notifications/NotificationSecurityTest.php',
                     'tests/Unit/Enums/NotificationTypeTest.php',
                     'tests/Unit/Notifications/PasswordChangedTest.php',
+                    'tests/Unit/Notifications/UserStatusNotificationsTest.php',
                     'tests/Unit/Actions/Notifications/DeleteNotificationTest.php',
                     'tests/Unit/Actions/Notifications/DeleteReadNotificationsTest.php',
                     'tests/Unit/Actions/Notifications/MarkAllNotificationsAsReadTest.php',

@@ -1,6 +1,8 @@
 import { Form, Head } from '@inertiajs/react';
 // Components
+/* @chisel-logout */
 import TextLink from '@/components/text-link';
+/* @end-chisel-logout */
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
