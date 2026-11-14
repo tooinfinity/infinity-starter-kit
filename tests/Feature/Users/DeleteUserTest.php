@@ -12,7 +12,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 
-it('deletes user when authorized', function (): void {
+it('deletes user record and redirects to index when authorized', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersDelete->value));
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersView->value));
@@ -24,7 +24,7 @@ it('deletes user when authorized', function (): void {
 
     $response->assertRedirectToRoute('users.index');
 
-    expect(User::query()->where('id', $target->id)->exists())->toBeFalse();
+    $this->assertModelMissing($target);
 });
 
 it('prevents user from deleting themselves', function (): void {
@@ -37,7 +37,7 @@ it('prevents user from deleting themselves', function (): void {
 
     $response->assertSessionHasErrors(['user']);
 
-    expect(User::query()->where('id', $admin->id)->exists())->toBeTrue();
+    $this->assertModelExists($admin);
 });
 
 it('forbids non-super-admins from deleting a super admin', function (): void {
@@ -54,7 +54,7 @@ it('forbids non-super-admins from deleting a super admin', function (): void {
 
     $response->assertForbidden();
 
-    expect(User::query()->where('id', $superAdmin->id)->exists())->toBeTrue();
+    $this->assertModelExists($superAdmin);
 });
 
 it('forbids unauthorized users from deleting another user', function (): void {
@@ -65,7 +65,7 @@ it('forbids unauthorized users from deleting another user', function (): void {
         ->delete(route('users.destroy', $target))
         ->assertForbidden();
 
-    expect(User::query()->where('id', $target->id)->exists())->toBeTrue();
+    $this->assertModelExists($target);
 });
 
 /* @chisel-notifications */
@@ -84,7 +84,7 @@ it('prunes notifications when user is deleted', function (): void {
         ->delete(route('users.destroy', $target))
         ->assertRedirectToRoute('users.index');
 
-    expect(User::query()->where('id', $target->id)->exists())->toBeFalse();
+    $this->assertModelMissing($target);
 
     expect(DatabaseNotification::query()->where('notifiable_id', $target->id)->count())->toBe(0);
 });
