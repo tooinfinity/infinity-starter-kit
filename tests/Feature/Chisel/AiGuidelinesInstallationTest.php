@@ -87,12 +87,12 @@ test('chisel retains AI tooling files and directories when ai_guidelines is sele
     }
 });
 
-test('retained guideline files in generated app contain no references to Chisel or test:installer while maintainer files remain unchanged', function (): void {
+test('retained guideline files in generated app contain no references to Chisel or combination verification while maintainer files remain unchanged', function (): void {
     foreach (['AGENTS.md', 'CLAUDE.md', 'GEMINI.md'] as $maintainerFile) {
         $content = (string) file_get_contents(base_path($maintainerFile));
         expect($content)->toContain('App/Chisel feature pruning guidelines')
             ->and($content)->toContain(FeatureRegistry::class)
-            ->and($content)->toContain('composer test:installer');
+            ->and($content)->toContain('scripts/verify-combo.sh');
     }
 
     $appDir = sys_get_temp_dir().'/ai_guidelines_regen_test_'.bin2hex(random_bytes(6));
@@ -130,7 +130,7 @@ test('retained guideline files in generated app contain no references to Chisel 
             'Chisel',
             'FeatureRegistry',
             'install:features',
-            'composer test:installer',
+            'scripts/verify-combo.sh',
         ];
 
         foreach (['AGENTS.md', 'CLAUDE.md', 'GEMINI.md'] as $file) {

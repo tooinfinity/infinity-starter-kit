@@ -53,12 +53,13 @@ jobs:
 
       - name: Determine Test Tier
         id: tier
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TIER: ${{ inputs.tier }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TIER="${{ inputs.tier }}"
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
-            TIER="pairwise"
-          elif [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TIER="$INPUT_TIER"
+          elif [ "$EVENT_NAME" = "schedule" ] || [ "$EVENT_NAME" = "push" ]; then
             TIER="pairwise"
           else
             TIER="fast"
@@ -67,9 +68,10 @@ jobs:
 
       - name: Generate Matrix
         id: generate
+        env:
+          TIER: ${{ steps.tier.outputs.tier }}
         run: |
-          TIER="${{ steps.tier.outputs.tier }}"
-          MATRIX=$(php scripts/combos.php "${TIER}" | jq -c .)
+          MATRIX=$(php scripts/combos.php "$TIER" | jq -c .)
           echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
 
   verify:

@@ -13,7 +13,7 @@ Apply these rules when an agent or developer prepares, opens, or updates a pull 
 2. Isolate work in a branch or worktree, keeping unrelated changes clean.
 3. Follow the repository's architecture, staging, and verification rules.
 @if (file_exists(base_path('chisel.php')))
-4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and `composer test:installer` (if feature-related).
+4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and verify feature combinations with `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'` (if feature-related).
 @else
 4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `composer test:unit`.
 @endif

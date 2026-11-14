@@ -76,7 +76,7 @@ final readonly class UpdatePostStatus
 
 - Chisel supports dry-run mode: `php artisan install:features --dry-run`.
 - Dry-run mode resolves features, validates dependencies, and previews planned mutations with **zero filesystem or database side effects**.
-- Always run `composer test:installer` when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
+- Always verify feature combinations (e.g. `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'`) when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
 
 === .ai/app.http.controllers rules ===
 
@@ -315,7 +315,7 @@ Assume the database has already been leaked. Every column, row, cache entry, log
 
 - After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `bun run test:unit`.
 - Run the full test suite or relevant unit/feature suites: `composer test:unit` and `composer test:database`.
-- When modifying features affected by the feature installer, run `composer test:installer`.
+- When modifying features affected by the feature installer, verify feature combinations with `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'`.
 - Fix failures introduced by the changes. Never lower coverage thresholds or exclude code just to pass. Report pre-existing failures or environment blockers explicitly; do not claim a check passed when it failed or could not run.
 
 ## Open source
@@ -338,7 +338,7 @@ Apply these rules when an agent or developer prepares, opens, or updates a pull 
 1. Confirm the task, repository guidelines, and intended base and head branches.
 2. Isolate work in a branch or worktree, keeping unrelated changes clean.
 3. Follow the repository's architecture, staging, and verification rules.
-4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and `composer test:installer` (if feature-related).
+4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and verify feature combinations with `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'` (if feature-related).
 5. For user-visible changes, follow frontend stability rules (CLS = 0) and verify across multiple viewports and themes.
 
 ## Title and conventional commits

@@ -76,7 +76,7 @@ final readonly class UpdatePostStatus
 
 - Chisel supports dry-run mode: `php artisan install:features --dry-run`.
 - Dry-run mode resolves features, validates dependencies, and previews planned mutations with **zero filesystem or database side effects**.
-- Always run `composer test:installer` when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
+- Always verify feature combinations (e.g. `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'`) when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
 
 === .ai/app.http.controllers rules ===
 
@@ -315,7 +315,7 @@ Assume the database has already been leaked. Every column, row, cache entry, log
 
 - After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `bun run test:unit`.
 - Run the full test suite or relevant unit/feature suites: `composer test:unit` and `composer test:database`.
-- When modifying features affected by the feature installer, run `composer test:installer`.
+- When modifying features affected by the feature installer, verify feature combinations with `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'`.
 - Fix failures introduced by the changes. Never lower coverage thresholds or exclude code just to pass. Report pre-existing failures or environment blockers explicitly; do not claim a check passed when it failed or could not run.
 
 ## Open source
@@ -338,7 +338,7 @@ Apply these rules when an agent or developer prepares, opens, or updates a pull 
 1. Confirm the task, repository guidelines, and intended base and head branches.
 2. Isolate work in a branch or worktree, keeping unrelated changes clean.
 3. Follow the repository's architecture, staging, and verification rules.
-4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and `composer test:installer` (if feature-related).
+4. Run all required checks: `composer test:lint`, `composer test:types`, `composer test:type-coverage`, `composer test:unit`, and verify feature combinations with `bash scripts/verify-combo.sh '{"auth":["login","logout"]}'` (if feature-related).
 5. For user-visible changes, follow frontend stability rules (CLS = 0) and verify across multiple viewports and themes.
 
 ## Title and conventional commits
@@ -440,10 +440,6 @@ Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
 - JS packages: check `package.json` for the installed versions.
 
-## Skills Activation
-
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
-
 ## Conventions
 
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
@@ -525,7 +521,16 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 # Deployment
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-- Activate the `deploying-to-cloud` skill whenever deploying to Laravel Cloud, configuring Cloud environments or resources, using the Cloud CLI, or troubleshooting Cloud deployments.
+
+=== tests rules ===
+
+# Test Enforcement
+
+- Add or update tests for behavior and logic changes when a test provides meaningful regression coverage.
+- Pure copy, styling, and layout-only changes do not require new or updated tests.
+- When test coverage applies, run the affected tests and ensure they pass.
+- Test the changed behavior and its important failure modes, but do not add tests beyond them.
+- Read the `testing-best-practices` skill before writing tests.
 
 === inertia-laravel/core rules ===
 
@@ -603,7 +608,6 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - Run the narrowest set of tests that covers the change. Pass a file path or `--filter=testName` to `php artisan test --compact`.
 - Rerun a test after each change to it.
 - Run `vendor/bin/pest` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
-- After the feature tests pass, ask the user to run the complete suite with `php artisan test --compact`.
 
 === inertia-react/core rules ===
 

@@ -20,38 +20,28 @@ The test suite is structured into three distinct layers:
    - Command orchestration and filesystem sandboxes.
    - Covers `install:features` interactive prompts, JSON answers, CLI options, pairwise feature combinations (`FeatureCombinationTest`), feature contract compliance (`FeatureContractTest`), and documentation sync.
 
-3. **Installer E2E (`tests/Feature/Chisel/GeneratedProjectLifecycleTest.php`)**
-   - Real generated application lifecycle against an isolated temporary project.
-   - Executes the real `chisel.php` script, real filesystem pruning, Composer manifest modification, Bun lockfile update, database migrations, admin setup, frontend asset compilation, PHPStan static analysis, and smoke HTTP request verification without mocks across representative scenarios (`full`, `minimal`, `dependency-heavy`, `db-early-migration-fresh`, `admin-no-credentials`, `failure-post-chisel-resume`).
-   - Tagged with `@group installer-e2e`.
+3. **Feature Combination Verification (`scripts/verify-combo.sh` & `scripts/combos.php`)**
+   - Real generated application lifecycle in isolated temporary workspaces.
+   - Executes real feature pruning, migrations, frontend compilation, static analysis, and test suites across representative combinations (minimal, default, full, and pairwise matrices).
 
 ---
 
 ## Running Scenarios Locally
 
-### Canonical Installer E2E Suite
-Run the canonical installer E2E suite:
+### Feature Combination Verification
+Run a verification check for a single feature combination by providing its answers JSON:
 ```bash
-composer test:installer
+# Verify minimal auth combination
+bash scripts/verify-combo.sh '{"auth":["login","logout"]}'
+
+# Verify full combination with all optional modules
+bash scripts/verify-combo.sh '{"auth":["login","logout","registration","password-reset","email-verification","user-profile","user-password","two-factor"],"features":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}'
 ```
 
-### Generated Application Smoke Suite
-Run the smoke validation pipeline across representative profiles (minimal, default, full):
+### Fast Matrix Combinations
+Generate and verify all fast-tier matrix combinations:
 ```bash
-composer test:smoke
-```
-
-### Run a Specific Scenario
-You can target a specific scenario or profile using Pest's `--filter` option:
-```bash
-# Run a specific scenario in E2E lifecycle
-vendor/bin/pest tests/Feature/Chisel/GeneratedProjectLifecycleTest.php --filter="minimal"
-
-# Run by scenario ID
-vendor/bin/pest --group=installer-e2e --filter="full"
-
-# Run smoke tests for a single profile
-composer test:smoke -- --filter="minimal"
+php scripts/combos.php fast | jq -c '[.include[].combination]' | xargs -0 -I {} bash scripts/verify-combo.sh '{}'
 ```
 
 ### Run Scenario Matrix Integrity Checks
@@ -61,7 +51,7 @@ vendor/bin/pest tests/Unit/Chisel/InstallerScenarioMatrixTest.php
 ```
 
 ### Run Fast Feature Combination Sandboxes
-Run the 40+ pairwise feature combination tests:
+Run the pairwise feature combination tests:
 ```bash
 vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 ```
@@ -72,12 +62,12 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 
 | Scenario ID | Name | Category | Auth Features | Optional Modules | Configuration / Environment | Expected Result | Test Level |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `minimal` | Minimal Profile | Profile | `login`, `logout` | _(none)_ | Default | Success (Exit 0), all optional modules pruned | E2E / Smoke |
-| `default` | Default Profile | Profile | Standard auth (6 features) | `authorization`, `settings`, `user-management`, `notifications` | Admin credentials provided | Success (Exit 0), admin created, secret redacted | E2E / Smoke |
-| `full` | Full Profile | Profile | All auth (incl. `two-factor`) | All optional modules (7 modules) | Admin credentials provided | Success (Exit 0), full stack verified | E2E / Smoke |
-| `auth-minimal` | Auth-Minimal Profile | Profile | `login`, `logout` | All optional modules (7 modules) | Default | Success (Exit 0), modules work with minimal auth | Feature / E2E |
-| `no-modules` | No Optional Modules | Profile | All auth (incl. `two-factor`) | _(none)_ | Default | Success (Exit 0), clean auth-only application | Feature / E2E |
-| `dependency-heavy` | Dependency-Heavy | Profile | `login`, `logout` | `authorization`, `user-management`, `audit-trails`, `reporting` | Chained dependency resolution | Success (Exit 0), all transitives retained | E2E / Feature |
+| `minimal` | Minimal Profile | Profile | `login`, `logout` | _(none)_ | Default | Success (Exit 0), all optional modules pruned | Combination |
+| `default` | Default Profile | Profile | Standard auth (6 features) | `authorization`, `settings`, `user-management`, `notifications` | Admin credentials provided | Success (Exit 0), admin created, secret redacted | Combination |
+| `full` | Full Profile | Profile | All auth (incl. `two-factor`) | All optional modules (7 modules) | Admin credentials provided | Success (Exit 0), full stack verified | Combination |
+| `auth-minimal` | Auth-Minimal Profile | Profile | `login`, `logout` | All optional modules (7 modules) | Default | Success (Exit 0), modules work with minimal auth | Feature / Combination |
+| `no-modules` | No Optional Modules | Profile | All auth (incl. `two-factor`) | _(none)_ | Default | Success (Exit 0), clean auth-only application | Feature / Combination |
+| `dependency-heavy` | Dependency-Heavy | Profile | `login`, `logout` | `authorization`, `user-management`, `audit-trails`, `reporting` | Chained dependency resolution | Success (Exit 0), all transitives retained | Feature / Combination |
 | `module-authorization` | Authorization Alone | Module | `login`, `logout` | `authorization` | Standalone module | Success (Exit 0), roles & permissions retained | Feature / Integration |
 | `module-settings` | Settings Module | Module | `login`, `logout` | `authorization`, `settings` | Required dependency `authorization` | Success (Exit 0), settings schema & UI retained | Feature / Integration |
 | `module-user-management`| User Management Module | Module | `login`, `logout` | `authorization`, `user-management` | Required dependency `authorization` | Success (Exit 0), user directory retained | Feature / Integration |
@@ -90,10 +80,10 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 | `auth-no-password-reset` | Password Reset Disabled | Auth | All except `password-reset` | `authorization` | Managed passwords only | Success (Exit 0), reset routes pruned | Feature / Integration |
 | `auth-no-two-factor` | Two-Factor Disabled | Auth | All except `two-factor` | `authorization` | Single-factor auth | Success (Exit 0), 2FA secret columns pruned | Feature / Integration |
 | `auth-invalid-dependency` | Invalid Auth Dependency | Auth | `registration` only (no `login`) | _(none)_ | Missing required dependency | Failure (Exit 1), rejected before mutation | Unit / Feature |
-| `db-empty` | Empty Database | Database | `login`, `logout` | `authorization` | Clean unmigrated DB | Success (Exit 0), clean schema migration | Feature / E2E |
-| `db-migrated` | Migrated Database | Database | `login`, `logout` | `authorization` | Pre-existing schema | Success (Exit 0), data preserved, force migrate | Feature / E2E |
-| `db-early-migration-fresh` | Early Migration + Fresh | Database | `login`, `logout` | `authorization` | `--fresh` flag passed | Success (Exit 0), pruned tables cleanly dropped | E2E / Feature |
-| `admin-valid-credentials` | Admin Valid Credentials | Admin | `login`, `logout` | `authorization` | Valid admin options | Success (Exit 0), user created, password redacted | E2E / Feature |
+| `db-empty` | Empty Database | Database | `login`, `logout` | `authorization` | Clean unmigrated DB | Success (Exit 0), clean schema migration | Feature / Integration |
+| `db-migrated` | Migrated Database | Database | `login`, `logout` | `authorization` | Pre-existing schema | Success (Exit 0), data preserved, force migrate | Feature / Integration |
+| `db-early-migration-fresh` | Early Migration + Fresh | Database | `login`, `logout` | `authorization` | `--fresh` flag passed | Success (Exit 0), pruned tables cleanly dropped | Feature / Integration |
+| `admin-valid-credentials` | Admin Valid Credentials | Admin | `login`, `logout` | `authorization` | Valid admin options | Success (Exit 0), user created, password redacted | Feature / Integration |
 | `admin-no-credentials` | Auth Without Admin | Admin | `login`, `logout` | `authorization` | Zero admin credentials | Success (Exit 0), roles created, 0 users | E2E / Feature |
 | `admin-cli-options` | Admin via CLI Flags | Admin | `login`, `logout` | `authorization` | `--admin-*` flags | Success (Exit 0), options parsed properly | Feature / Integration |
 | `admin-answers-payload` | Admin via Answers JSON | Admin | `login`, `logout` | `authorization` | `admin` key in JSON | Success (Exit 0), payload parsed properly | Feature / Integration |
@@ -145,13 +135,13 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 - Deferred hooks: Covered in `env-deferred-hooks` and `InstallerContextResolverTest`.
 
 ### 5. Fresh Project & Real Filesystem Lifecycle
-- Tested in `GeneratedProjectLifecycleTest`.
+- Tested in `scripts/verify-combo.sh` and `FeatureCombinationTest`.
 - Reflink-based copy of real repository including lockfiles and dependencies.
 - Real execution of `chisel.php` and `chisel-paths.php`.
 - Complete verification of installer overhead cleanup (`assertCleanOfInstallerArtifacts`).
 
 ### 6. Dependency Integrity
-- Verified in `GeneratedProjectLifecycleTest` and `ComposerLockSynchronizerTest`:
+- Verified in `scripts/verify-combo.sh` and `ComposerLockSynchronizerTest`:
   - `composer.json` contains only required dependencies;
   - `package.json` contains only required dependencies;
   - Lockfile synchronization keeps lockfiles clean;
@@ -159,18 +149,17 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
   - `bun install` / `bun run build` succeeds from generated state.
 
 ### 7. Generated Application Validation
-- Handled by `GeneratedApplicationSmokePipeline`:
-  - `validateApplicationBoot`: `artisan about` executes cleanly;
-  - `validateDatabase`: `migrate:status` shows zero pending migrations;
-  - `validateRoutesAndConfig`: `route:list` and `config:show` succeed;
-  - `validateFrontend`: production asset manifest and bundle verified;
-  - `validateTypeScript`: `tsc` / `test:types` passes without type errors;
-  - `validateHttpRequests`: in-process Inertia request returns HTTP 200 with X-Inertia headers;
-  - `validatePerformanceBudgets`: bundle sizes and database query counts stay within defined budgets.
+- Handled by `scripts/verify-combo.sh`:
+  - Application boot: `artisan about` executes cleanly;
+  - Database schema: `migrate:status` shows zero pending migrations;
+  - Routes and configuration: `route:list` and `config:show` succeed;
+  - Frontend assets: production asset manifest and bundle verified;
+  - TypeScript types: `tsc` / `test:types` passes without type errors;
+  - Tests: full test suite passes on the generated codebase.
 
 ### 8. Database Lifecycle
 - Fresh database: Tested in standard fixture runs.
-- Existing migrated database: Tested in `GeneratedProjectLifecycleTest`.
+- Existing migrated database: Tested in `scripts/verify-combo.sh`.
 - Early migration with `--fresh`: Tested in `db-early-migration-fresh` to prevent orphaned pruned tables.
 
 ### 9. Administrator Setup
@@ -181,14 +170,14 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 ### 10. Failure and Recovery Paths
 - Preflight failure: Tested in `failure-preflight`.
 - Dependency validation failure: Tested in `failure-dependency-validation`.
-- Post-chisel failure & recovery: Checkpoint saved without secrets; resume succeeds and cleans up state (tested in `failure-post-chisel-resume` in `GeneratedProjectLifecycleTest`).
+- Post-chisel failure & recovery: Checkpoint saved without secrets; resume succeeds and cleans up state (tested in `failure-post-chisel-resume`).
 - Post-migration failure: Checkpoint saved after database migrations; tested in `failure-post-migration`.
 - Cleanup phase failure: Error recorded during final cleanup; tested in `failure-cleanup`.
 - Conflicting retry: Conflicting answers on resume are rejected with detailed diff (tested in `failure-conflicting-retry`).
 
 ### 11. Environment Modes
 - Normal mode: Full compilation and linting.
-- `LARAVEL_INSTALLER_NO_NODE=true`: Tested in `env-no-node` (`GeneratedProjectLifecycleTest`).
+- `LARAVEL_INSTALLER_NO_NODE=true`: Tested in `env-no-node` via `scripts/verify-combo.sh`.
 - `LARAVEL_INSTALLER_DEFER_HOOKS=true`: Tested in `env-deferred-hooks`.
 - Missing chisel files: Graceful exit tested in `env-missing-chisel`.
 
