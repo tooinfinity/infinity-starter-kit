@@ -91,7 +91,8 @@ it('allows super admin to access settings page', function (): void {
         ->fromRoute('dashboard')
         ->get(route('settings.edit'));
 
-    $response->assertOk();
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page->component('settings/application/edit'));
 });
 
 it('redirects unauthenticated user to login', function (): void {
