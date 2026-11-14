@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 
-it('may create a new user password', function (): void {
+it('resets user password with valid token and dispatches password reset event', function (): void {
     Event::fake([PasswordReset::class]);
 
     $user = User::factory()->create([
@@ -33,35 +33,27 @@ it('may create a new user password', function (): void {
     Event::assertDispatched(PasswordReset::class);
 });
 
-it('returns invalid token status for incorrect token', function (): void {
+it('fails password reset with error status for invalid credentials', function (array $overridePayload, string $expectedStatus): void {
     $user = User::factory()->create([
         'email' => 'test@example.com',
     ]);
 
     $action = resolve(CreateUserPassword::class);
 
-    $status = $action->handle([
+    $payload = array_merge([
         'email' => $user->email,
-        'token' => 'invalid-token',
+        'token' => Password::createToken($user),
         'password' => 'new-password',
         'password_confirmation' => 'new-password',
-    ], 'new-password');
+    ], $overridePayload);
 
-    expect($status)->toBe(Password::INVALID_TOKEN);
-});
+    $status = $action->handle($payload, 'new-password');
 
-it('returns invalid user status for non-existent email', function (): void {
-    $action = resolve(CreateUserPassword::class);
-
-    $status = $action->handle([
-        'email' => 'nonexistent@example.com',
-        'token' => 'some-token',
-        'password' => 'new-password',
-        'password_confirmation' => 'new-password',
-    ], 'new-password');
-
-    expect($status)->toBe(Password::INVALID_USER);
-});
+    expect($status)->toBe($expectedStatus);
+})->with([
+    'invalid token' => [['token' => 'invalid-token'], Password::INVALID_TOKEN],
+    'invalid user' => [['email' => 'nonexistent@example.com'], Password::INVALID_USER],
+]);
 
 it('updates remember token when resetting password', function (): void {
     $user = User::factory()->create([
