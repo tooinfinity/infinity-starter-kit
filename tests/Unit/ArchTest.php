@@ -222,6 +222,7 @@ arch('settings does not depend on reporting or user management')
 arch('notifications does not depend on reporting, audit trails, or settings')
     ->expect([
         'App\Actions\Notifications',
+        'App\Console\Commands\PruneNotificationsCommand',
         'App\Http\Controllers\NotificationController',
         'App\Http\Controllers\NotificationPreferenceController',
         'App\Http\Controllers\MarkAllNotificationsAsReadController',
