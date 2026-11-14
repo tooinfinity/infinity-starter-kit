@@ -18,8 +18,6 @@ test('composer manifest defines all required test commands and scripts', functio
         ->and($scripts)->toHaveKey('test:browser')
         ->and($scripts)->toHaveKey('test:coverage')
         ->and($scripts)->toHaveKey('test:quick')
-        ->and($scripts)->toHaveKey('test:installer')
-        ->and($scripts)->toHaveKey('test:smoke')
         ->and($scripts)->toHaveKey('test:dependencies')
         ->and($scripts)->toHaveKey('test:quality')
         ->and($scripts)->toHaveKey('test');
@@ -95,37 +93,14 @@ test('tests workflow defines decoupled application quality, dependencies, databa
     expect($content)->toContain('composer test:browser');
 });
 
-test('installer workflow defines dedicated installer-e2e and installer-smoke jobs', function (): void {
-    $installerWorkflowPath = base_path('.github/workflows/installer.yml');
-    expect(file_exists($installerWorkflowPath))->toBeTrue();
-
-    $content = (string) file_get_contents($installerWorkflowPath);
-
-    expect($content)->toContain('name: installer')
-        ->and($content)->toContain('permissions:')
-        ->and($content)->toContain('contents: read')
-        ->and($content)->toContain('  installer-e2e:')
-        ->and($content)->toContain('  installer-smoke:');
-
-    // Installer E2E runs docs check and installer suite
-    expect($content)->toContain('php artisan chisel:docs --check')
-        ->and($content)->toContain('composer test:installer');
-
-    // Installer Smoke runs smoke suite for representative profiles
-    expect($content)->toContain('profile: [minimal, default, full]')
-        ->and($content)->toContain('composer test:smoke');
-});
-
 test('cleanup files list registers starter kit workflows, tests, and guidelines for removal in new projects', function (): void {
     $cleanupFiles = Cleanup::files();
 
-    expect($cleanupFiles)->toContain('.github/workflows/installer.yml')
-        ->and($cleanupFiles)->toContain('.github/workflows/combos.yml')
+    expect($cleanupFiles)->toContain('.github/workflows/combos.yml')
         ->and($cleanupFiles)->toContain('scripts/verify-combo.sh')
         ->and($cleanupFiles)->toContain('scripts/combos.php')
         ->and($cleanupFiles)->toContain('tests/Unit/CiWorkflowIntegrityTest.php')
         ->and($cleanupFiles)->toContain('.ai/guidelines/app.chisel.blade.php');
-
 });
 
 test('phpunit configuration registers browser, unit, and feature testsuites', function (): void {

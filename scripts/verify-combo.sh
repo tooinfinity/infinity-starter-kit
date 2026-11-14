@@ -35,8 +35,7 @@ echo "=== [verify-combo] Mirroring repository to temporary directory ==="
 rsync -a \
     --exclude="vendor" \
     --exclude="node_modules" \
-    --exclude=".env" \
-    --exclude=".env.*" \
+    --exclude="/.env" \
     --exclude="bootstrap/cache/*.php" \
     --exclude="database.sqlite" \
     --exclude="database/database.sqlite" \
