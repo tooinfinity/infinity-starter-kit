@@ -91,6 +91,7 @@ final class Cleanup
             '.github/workflows/combos.yml',
             'scripts/verify-combo.sh',
             'scripts/combos.php',
+            'tests/Unit/CombosPairwiseTest.php',
             'tests/Unit/CiWorkflowIntegrityTest.php',
             '.ai/guidelines/app.chisel.blade.php',
         ];
