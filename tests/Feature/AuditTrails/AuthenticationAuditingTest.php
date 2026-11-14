@@ -4,20 +4,27 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AuditTrails;
 
+/* @chisel-login */
 use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+/* @end-chisel-login */
+/* @chisel-password-reset */
 use Illuminate\Support\Facades\Password;
+/* @end-chisel-password-reset */
+/* @chisel-two-factor */
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
 use PragmaRX\Google2FA\Google2FA;
 
+/* @end-chisel-two-factor */
+
+/* @chisel-login */
 test('successful login records auth.login audit trail with IP and user agent', function (): void {
-    $user = User::factory()->create([
+    $user = User::factory()/* @chisel-two-factor */ ->withoutTwoFactor()/* @end-chisel-two-factor */ ->create([
         'email' => 'login-audit@example.com',
         'password' => Hash::make('password123'),
-        'two_factor_secret' => null,
     ]);
 
     $response = $this->withServerVariables([
@@ -133,7 +140,9 @@ test('lockout records auth.lockout audit trail', function (): void {
         ->and($audit->new_values['throttled'])->toBeTrue()
         ->and($audit->tags)->toBe(['auth', 'lockout']);
 });
+/* @end-chisel-login */
 
+/* @chisel-logout */
 test('logout records auth.logout audit trail', function (): void {
     $user = User::factory()->create();
 
@@ -156,7 +165,9 @@ test('logout records auth.logout audit trail', function (): void {
         ->and($audit->ip_address)->toBe('198.51.100.77')
         ->and($audit->tags)->toBe(['auth', 'logout']);
 });
+/* @end-chisel-logout */
 
+/* @chisel-password-reset */
 test('password reset via emailed link records auth.password_reset without sensitive values', function (): void {
     $user = User::factory()->create(['email' => 'reset-flow@example.com']);
     $token = Password::broker()->createToken($user);
@@ -181,7 +192,9 @@ test('password reset via emailed link records auth.password_reset without sensit
         ->and(json_encode($audit->new_values))->not->toContain('NewSecurePassword123!')
         ->and(json_encode($audit->new_values))->not->toContain($token);
 });
+/* @end-chisel-password-reset */
 
+/* @chisel-two-factor */
 test('two-factor confirmation records auth.two_factor_enabled', function (): void {
     $engine = new Google2FA;
     $secret = $engine->generateSecretKey();
@@ -242,3 +255,4 @@ test('recovery code usage records auth.recovery_codes_used without storing code'
         ->and(json_encode($audit->old_values))->not->toContain($usedRecoveryCode)
         ->and(json_encode($audit->new_values))->not->toContain($usedRecoveryCode);
 });
+/* @end-chisel-two-factor */

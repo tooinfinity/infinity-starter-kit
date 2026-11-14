@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Actions\DeleteUser;
 use App\Actions\UpdateUser;
+/* @chisel-password-update */
 use App\Actions\UpdateUserPassword;
+/* @end-chisel-password-update */
 use App\Actions\Users\CreateUser as AdminCreateUser;
 use App\Actions\Users\DeleteUser as AdminDeleteUser;
 use App\Actions\Users\UpdateUser as AdminUpdateUser;
@@ -206,6 +208,7 @@ test('UpdateUser self-service action records user.updated audit trail (OBS-001)'
         ->and($audit->old_values['roles'])->toBe([]);
 });
 
+/* @chisel-password-update */
 test('UpdateUserPassword self-service action records user.password_changed audit trail (OBS-001)', function (): void {
     $user = User::factory()->create();
     $this->actingAs($user);
@@ -223,6 +226,7 @@ test('UpdateUserPassword self-service action records user.password_changed audit
         ->and($audit->new_values['password'])->toBe('[REDACTED]')
         ->and(json_encode($audit->new_values))->not->toContain('new_secret_pass_123');
 });
+/* @end-chisel-password-update */
 
 test('DeleteUser self-service action records user.deleted audit trail and anonymizes actor PII (OBS-001)', function (): void {
     $user = User::factory()->create([

@@ -9,7 +9,7 @@ use Inertia\Inertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guest has unreadCount 0 and empty recent in shared props', function (): void {
-    $this->get(route('login'))
+    $this->get(route('home'))
         ->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page
             ->where('notifications.unreadCount', 0)

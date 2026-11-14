@@ -53,30 +53,40 @@ final readonly class UpdateSettings
 
                 if ($existing !== null) {
                     $existing->update(['value' => $value]);
+                    /* @chisel-audit-trails */
                     $setting = $existing;
+                    /* @end-chisel-audit-trails */
                     $shouldInvalidateCache = true;
                 } else {
-                    $setting = Setting::query()->createOrFirst(
+                    $createdSetting = Setting::query()->createOrFirst(
                         ['key' => $key],
                         ['value' => $value],
                     );
 
+                    /* @chisel-audit-trails */
+                    $setting = $createdSetting;
+                    /* @end-chisel-audit-trails */
+
                     $shouldInvalidateCache = true;
 
-                    if (! $setting->wasRecentlyCreated) {
-                        $setting = Setting::query()
+                    if (! $createdSetting->wasRecentlyCreated) {
+                        $reloadedSetting = Setting::query()
                             ->lockForUpdate()
-                            ->findOrFail($setting->id);
+                            ->findOrFail($createdSetting->id);
 
-                        if ($setting->value === $value) {
+                        if ($reloadedSetting->value === $value) {
                             continue;
                         }
 
                         /* @chisel-audit-trails */
-                        $oldValue = $setting->value;
+                        $oldValue = $reloadedSetting->value;
                         /* @end-chisel-audit-trails */
 
-                        $setting->update(['value' => $value]);
+                        $reloadedSetting->update(['value' => $value]);
+
+                        /* @chisel-audit-trails */
+                        $setting = $reloadedSetting;
+                        /* @end-chisel-audit-trails */
                     }
                 }
 

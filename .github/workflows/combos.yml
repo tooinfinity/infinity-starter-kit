@@ -1,0 +1,95 @@
+name: Feature Combinations
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Test matrix tier (fast, pairwise, full)'
+        required: true
+        default: 'fast'
+        type: choice
+        options:
+          - fast
+          - pairwise
+          - full
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+      tier: ${{ steps.tier.outputs.tier }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: ./.github/actions/setup-php
+        with:
+          php-version: "8.5"
+          coverage: none
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Determine Test Tier
+        id: tier
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TIER="${{ inputs.tier }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            TIER="pairwise"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            TIER="pairwise"
+          else
+            TIER="fast"
+          fi
+          echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Matrix
+        id: generate
+        run: |
+          TIER="${{ steps.tier.outputs.tier }}"
+          MATRIX=$(php scripts/combos.php "${TIER}" | jq -c .)
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          coverage: pcov
+
+      - name: Verify Combination (${{ matrix.name }})
+        run: ./scripts/verify-combo.sh '${{ matrix.answers }}'

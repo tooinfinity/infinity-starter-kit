@@ -12,7 +12,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+/* @chisel-email-verification */
 use Laravel\Fortify\Features;
+/* @end-chisel-email-verification */
 use Spatie\Permission\Models\Role as RoleModel;
 use Symfony\Component\Console\Input\Input;
 
@@ -163,9 +165,12 @@ final class CreateAdminCommand extends Command
                 'password' => $inputPassword,
             ]);
 
+            /* @chisel-email-verification */
             if (Features::enabled(Features::emailVerification())) {
                 $user->markEmailAsVerified();
             }
+
+            /* @end-chisel-email-verification */
 
             $user->assignRole(Role::SuperAdmin->value);
         });

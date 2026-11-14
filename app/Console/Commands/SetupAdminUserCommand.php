@@ -11,7 +11,10 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+/* @chisel-email-verification */
 use Laravel\Fortify\Features;
+
+/* @end-chisel-email-verification */
 
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\text;
@@ -115,9 +118,12 @@ final class SetupAdminUserCommand extends Command
             'password' => $inputPassword,
         ]);
 
+        /* @chisel-email-verification */
         if (Features::enabled(Features::emailVerification())) {
             $user->markEmailAsVerified();
         }
+
+        /* @end-chisel-email-verification */
 
         $user->assignRole(Role::SuperAdmin->value);
 

@@ -39,14 +39,6 @@ final class CreateUserRequest extends FormRequest
         ];
     }
 
-    /* @chisel-localization */
-    public function locale(): ?Locale
-    {
-        $locale = $this->cookie('locale');
-
-        return is_string($locale) ? Locale::tryFrom($locale) : null;
-    }
-
     public function prepareForValidation(): void
     {
         if (is_string($this->input('email'))) {
@@ -54,6 +46,14 @@ final class CreateUserRequest extends FormRequest
                 'email' => $this->string('email')->trim()->lower()->value(),
             ]);
         }
+    }
+
+    /* @chisel-localization */
+    public function locale(): ?Locale
+    {
+        $locale = $this->cookie('locale');
+
+        return is_string($locale) ? Locale::tryFrom($locale) : null;
     }
 
     /* @end-chisel-localization */

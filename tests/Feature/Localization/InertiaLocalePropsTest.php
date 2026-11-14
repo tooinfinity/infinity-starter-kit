@@ -72,14 +72,14 @@ test('LTR direction for French locale', function (): void {
 });
 
 test('advertises lang as a once prop keyed by locale', function (): void {
-    $response = $this->get(route('login'))->assertOk();
+    $response = $this->get(route('home'))->assertOk();
 
     $page = $response->viewData('page');
     expect($page['onceProps'] ?? [])->toHaveKey('lang.en');
 });
 
 test('second Inertia visit in the same locale does not include lang', function (): void {
-    $initial = $this->get(route('login'))->assertOk();
+    $initial = $this->get(route('home'))->assertOk();
 
     $initial->assertInertia(fn (Assert $page): Assert => $page
         ->has('lang')
@@ -93,7 +93,7 @@ test('second Inertia visit in the same locale does not include lang', function (
         'X-Inertia-Version' => $version,
         'X-Inertia-Except-Once-Props' => 'lang.en',
         'X-Requested-With' => 'XMLHttpRequest',
-    ])->get(route('login'))->assertOk();
+    ])->get(route('home'))->assertOk();
 
     expect($second->json('props'))->not->toHaveKey('lang')
         ->and($second->json('onceProps'))->toHaveKey('lang.en');
@@ -102,7 +102,7 @@ test('second Inertia visit in the same locale does not include lang', function (
 test('switching locale returns the new dictionary', function (): void {
     $user = User::factory()->withLocale(Locale::French)->create();
 
-    $initial = $this->get(route('login'))->assertOk();
+    $initial = $this->get(route('home'))->assertOk();
     $version = $initial->viewData('page')['version'] ?? (string) Inertia::getVersion();
 
     $response = $this->actingAs($user)
@@ -129,10 +129,10 @@ test('only one file read per locale per process', function (): void {
         ->once()
         ->passthru();
 
-    $this->get(route('login'))->assertOk();
+    $this->get(route('home'))->assertOk();
 
     $middleware = new HandleInertiaRequests();
-    $request = Request::create(route('login'), 'GET');
+    $request = Request::create(route('home'), 'GET');
     $shared = $middleware->share($request);
 
     expect($shared['lang']())->toBeArray();
