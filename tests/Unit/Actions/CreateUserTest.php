@@ -6,8 +6,9 @@ use App\Actions\CreateUser;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
 
-it('may create a user', function (): void {
+it('creates a user and dispatches registered event', function (): void {
     Event::fake([Registered::class]);
 
     $action = resolve(CreateUser::class);
@@ -20,7 +21,7 @@ it('may create a user', function (): void {
     expect($user)->toBeInstanceOf(User::class)
         ->and($user->name)->toBe('Test User')
         ->and($user->email)->toBe('example@email.com')
-        ->and($user->password)->not->toBe('password');
+        ->and(Hash::check('password', $user->password))->toBeTrue();
 
     Event::assertDispatched(Registered::class);
 });

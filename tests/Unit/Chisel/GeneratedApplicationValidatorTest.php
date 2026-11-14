@@ -94,8 +94,8 @@ test('validatePostCleanup returns early when cleanedUp is false', function (): v
     try {
         $context = makeContext();
         // Should succeed without running post-cleanup checks
-        GeneratedApplicationValidator::validatePostCleanup($context, false, $tempDir);
-        expect(true)->toBeTrue();
+        expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, false, $tempDir))
+            ->not->toThrow(Throwable::class);
     } finally {
         File::deleteDirectory($tempDir);
     }
@@ -228,8 +228,8 @@ test('validatePostCleanup checks spatie/laravel-permission removal when authoriz
         File::put($tempDir.'/composer.json', json_encode([
             'require' => ['php' => '^8.2'],
         ]));
-        GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir);
-        expect(true)->toBeTrue();
+        expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir))
+            ->not->toThrow(Throwable::class);
     } finally {
         File::deleteDirectory($tempDir);
     }

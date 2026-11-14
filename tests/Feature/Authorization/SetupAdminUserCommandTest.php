@@ -205,7 +205,9 @@ test('first login of the created admin goes straight to dashboard', function ():
     $response->assertRedirectToRoute('dashboard');
 
     $this->assertAuthenticated();
-    $this->get(route('dashboard'))->assertOk();
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('dashboard'));
 });
 
 test('admin setup normalizes mixed-case and whitespace-padded email', function (): void {

@@ -37,41 +37,20 @@ function inertiaHeaders(): array
     return $headers;
 }
 
-test('403 error on Inertia visit renders errors/show component with status 403', function (): void {
+test('HTTP errors on Inertia visit render errors/show component with matching status', function (string $endpoint, int $status): void {
     $this->withHeaders(inertiaHeaders())
-        ->get('/test-error/403')
-        ->assertStatus(403)
+        ->get($endpoint)
+        ->assertStatus($status)
         ->assertHeader('X-Inertia', 'true')
         ->assertJsonPath('component', 'errors/show')
-        ->assertJsonPath('props.status', 403);
-});
-
-test('404 error on Inertia visit renders errors/show component with status 404', function (): void {
-    $this->withHeaders(inertiaHeaders())
-        ->get('/non-existent-route-404')
-        ->assertStatus(404)
-        ->assertHeader('X-Inertia', 'true')
-        ->assertJsonPath('component', 'errors/show')
-        ->assertJsonPath('props.status', 404);
-});
-
-test('419 token mismatch on Inertia visit renders errors/show component with status 419', function (): void {
-    $this->withHeaders(inertiaHeaders())
-        ->get('/test-error/419-token-mismatch')
-        ->assertStatus(419)
-        ->assertHeader('X-Inertia', 'true')
-        ->assertJsonPath('component', 'errors/show')
-        ->assertJsonPath('props.status', 419);
-});
-
-test('419 abort on Inertia visit renders errors/show component with status 419', function (): void {
-    $this->withHeaders(inertiaHeaders())
-        ->get('/test-error/419-abort')
-        ->assertStatus(419)
-        ->assertHeader('X-Inertia', 'true')
-        ->assertJsonPath('component', 'errors/show')
-        ->assertJsonPath('props.status', 419);
-});
+        ->assertJsonPath('props.status', $status);
+})->with([
+    '403 forbidden' => ['/test-error/403', 403],
+    '404 not found' => ['/non-existent-route-404', 404],
+    '419 token mismatch' => ['/test-error/419-token-mismatch', 419],
+    '419 abort' => ['/test-error/419-abort', 419],
+    '503 service unavailable' => ['/test-error/503', 503],
+]);
 
 test('500 error on Inertia visit renders errors/show component when debug is disabled', function (): void {
     config(['app.debug' => false]);
@@ -95,41 +74,19 @@ test('500 error in debug mode keeps the detailed exception page', function (): v
         ->and($response->getContent())->toContain('Boom');
 });
 
-test('503 error on Inertia visit renders errors/show component with status 503', function (): void {
-    $this->withHeaders(inertiaHeaders())
-        ->get('/test-error/503')
-        ->assertStatus(503)
-        ->assertHeader('X-Inertia', 'true')
-        ->assertJsonPath('component', 'errors/show')
-        ->assertJsonPath('props.status', 503);
-});
-
-test('direct HTML request to 404 renders errors/show inside root template', function (): void {
-    $this->get('/non-existent-route-404')
-        ->assertStatus(404)
+test('direct HTML request to error endpoint renders errors/show inside root template', function (string $endpoint, int $status): void {
+    $this->get($endpoint)
+        ->assertStatus($status)
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('errors/show')
-            ->where('status', 404)
+            ->where('status', $status)
         );
-});
-
-test('direct HTML request to 403 renders errors/show inside root template', function (): void {
-    $this->get('/test-error/403')
-        ->assertStatus(403)
-        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-            ->component('errors/show')
-            ->where('status', 403)
-        );
-});
-
-test('direct HTML request to 419 renders errors/show inside root template', function (): void {
-    $this->get('/test-error/419-abort')
-        ->assertStatus(419)
-        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-            ->component('errors/show')
-            ->where('status', 419)
-        );
-});
+})->with([
+    '404 not found' => ['/non-existent-route-404', 404],
+    '403 forbidden' => ['/test-error/403', 403],
+    '419 token mismatch / abort' => ['/test-error/419-abort', 419],
+    '503 service unavailable' => ['/test-error/503', 503],
+]);
 
 test('direct HTML request to 500 when debug is disabled renders errors/show inside root template', function (): void {
     config(['app.debug' => false]);
@@ -139,15 +96,6 @@ test('direct HTML request to 500 when debug is disabled renders errors/show insi
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('errors/show')
             ->where('status', 500)
-        );
-});
-
-test('direct HTML request to 503 renders errors/show inside root template', function (): void {
-    $this->get('/test-error/503')
-        ->assertStatus(503)
-        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-            ->component('errors/show')
-            ->where('status', 503)
         );
 });
 

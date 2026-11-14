@@ -33,39 +33,28 @@ test('user cannot delete another users notification via IDOR', function (): void
         ->delete(route('notifications.destroy', ['notification' => $notificationB->id]))
         ->assertForbidden();
 
-    expect($notificationB->fresh())->not->toBeNull();
+    $this->assertModelExists($notificationB);
 });
 
-test('non-existent notification id returns 403 on mark read', function (): void {
+test('non-existent notification id returns 403', function (string $method, string $route): void {
     $user = User::factory()->create();
     $randomUuid = (string) Str::uuid();
 
     $this->actingAs($user)
-        ->patch(route('notifications.mark-read', ['notification' => $randomUuid]))
+        ->{$method}(route($route, ['notification' => $randomUuid]))
         ->assertForbidden();
-});
+})->with([
+    'mark read' => ['patch', 'notifications.mark-read'],
+    'delete' => ['delete', 'notifications.destroy'],
+]);
 
-test('non-existent notification id returns 403 on delete', function (): void {
-    $user = User::factory()->create();
-    $randomUuid = (string) Str::uuid();
-
-    $this->actingAs($user)
-        ->delete(route('notifications.destroy', ['notification' => $randomUuid]))
-        ->assertForbidden();
-});
-
-test('invalid uuid format returns 403 on mark read', function (): void {
+test('invalid uuid format returns 403', function (string $method, string $route): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->patch(route('notifications.mark-read', ['notification' => 'not-a-uuid']))
+        ->{$method}(route($route, ['notification' => 'not-a-uuid']))
         ->assertForbidden();
-});
-
-test('invalid uuid format returns 403 on delete', function (): void {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
-        ->delete(route('notifications.destroy', ['notification' => 'not-a-uuid']))
-        ->assertForbidden();
-});
+})->with([
+    'mark read' => ['patch', 'notifications.mark-read'],
+    'delete' => ['delete', 'notifications.destroy'],
+]);

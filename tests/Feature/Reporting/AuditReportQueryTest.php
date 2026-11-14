@@ -210,23 +210,17 @@ it('buckets report days in the configured display timezone', function (): void {
     expect($series->firstWhere('date', '2026-10-18')->value)->toBe(1);
 });
 
-it('exports audit report stream using fallback timezone when display_timezone is not set', function (): void {
-    config(['app.display_timezone' => null]);
+it('exports audit report stream with display timezone configurations', function (?string $displayTimezone): void {
+    config(['app.display_timezone' => $displayTimezone]);
 
     $stream = resolve(ExportAuditReportStream::class);
     $response = $stream->handle();
 
     expect($response)->toBeInstanceOf(StreamedResponse::class);
-});
-
-it('exports audit report stream using configured display timezone', function (): void {
-    config(['app.display_timezone' => 'Africa/Algiers']);
-
-    $stream = resolve(ExportAuditReportStream::class);
-    $response = $stream->handle();
-
-    expect($response)->toBeInstanceOf(StreamedResponse::class);
-});
+})->with([
+    'fallback when display_timezone is not set' => null,
+    'configured display timezone' => 'Africa/Algiers',
+]);
 
 it('does not load every row to build the time series', function (): void {
     AuditTrail::factory()->count(50)->create();

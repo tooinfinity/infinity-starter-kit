@@ -26,7 +26,8 @@ test('user with audit.view permission can access audit trails', function (): voi
 
     $this->actingAs($user)
         ->get(route('audit-trails.index'))
-        ->assertOk();
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('audit-trails/index'));
 });
 
 test('no create update or delete endpoints exist for audit trails', function (): void {

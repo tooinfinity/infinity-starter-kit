@@ -99,42 +99,63 @@ it('registers user with null locale when guest locale cookie is missing', functi
 
 /* @end-chisel-localization */
 
-it('requires name', function (): void {
+it('validates registration input fields', function (array $payload, string $errorField): void {
     $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
+        ->post(route('register.store'), $payload);
+
+    $response->assertRedirectToRoute('register')
+        ->assertSessionHasErrors($errorField);
+})->with([
+    'missing name' => [
+        [
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('name');
-});
-
-it('requires email', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
+        ],
+        'name',
+    ],
+    'missing email' => [
+        [
             'name' => 'Test User',
             'password' => 'password',
             'password_confirmation' => 'password',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires valid email', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
+        ],
+        'email',
+    ],
+    'invalid email' => [
+        [
             'name' => 'Test User',
             'email' => 'not-an-email',
             'password' => 'password',
             'password_confirmation' => 'password',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('email');
-});
+        ],
+        'email',
+    ],
+    'missing password' => [
+        [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+        ],
+        'password',
+    ],
+    'missing password confirmation' => [
+        [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password',
+        ],
+        'password',
+    ],
+    'unmatched password confirmation' => [
+        [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'different-password',
+        ],
+        'password',
+    ],
+]);
 
 it('requires unique email', function (): void {
     User::factory()->create(['email' => 'test@example.com']);
@@ -149,42 +170,6 @@ it('requires unique email', function (): void {
 
     $response->assertRedirectToRoute('register')
         ->assertSessionHasErrors('email');
-});
-
-it('requires password', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('password');
-});
-
-it('requires password confirmation', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('password');
-});
-
-it('requires matching password confirmation', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'different-password',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('password');
 });
 
 it('redirects authenticated users away from registration', function (): void {

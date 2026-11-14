@@ -34,12 +34,12 @@ it('resolves client ip and secure status via trusted proxy wildcard in config', 
         ->and($isSecure)->toBeTrue();
 });
 
-it('resolves client ip via specific trusted proxy ip in config', function (): void {
-    config(['security.trusted_proxies' => '10.0.0.1']);
+it('resolves client ip via trusted proxy configuration', function (string|array $proxies, string $remoteAddr): void {
+    config(['security.trusted_proxies' => $proxies]);
 
     $middleware = new TrustProxies();
     $request = Request::create('/', 'GET', server: [
-        'REMOTE_ADDR' => '10.0.0.1',
+        'REMOTE_ADDR' => $remoteAddr,
         'HTTP_X_FORWARDED_FOR' => '203.0.113.9',
     ]);
 
@@ -51,26 +51,10 @@ it('resolves client ip via specific trusted proxy ip in config', function (): vo
     });
 
     expect($clientIp)->toBe('203.0.113.9');
-});
-
-it('resolves client ip via array of trusted proxy ips in config', function (): void {
-    config(['security.trusted_proxies' => ['10.0.0.1', '10.0.0.2']]);
-
-    $middleware = new TrustProxies();
-    $request = Request::create('/', 'GET', server: [
-        'REMOTE_ADDR' => '10.0.0.2',
-        'HTTP_X_FORWARDED_FOR' => '203.0.113.9',
-    ]);
-
-    $clientIp = null;
-    $middleware->handle($request, function (Request $req) use (&$clientIp): Response {
-        $clientIp = $req->ip();
-
-        return response('OK');
-    });
-
-    expect($clientIp)->toBe('203.0.113.9');
-});
+})->with([
+    'specific trusted proxy ip string' => ['10.0.0.1', '10.0.0.1'],
+    'array of trusted proxy ips' => [['10.0.0.1', '10.0.0.2'], '10.0.0.2'],
+]);
 
 it('ignores forwarded headers from untrusted proxies in config', function (): void {
     config(['security.trusted_proxies' => '10.0.0.2']);

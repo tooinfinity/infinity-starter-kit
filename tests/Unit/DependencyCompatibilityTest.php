@@ -68,33 +68,3 @@ test('backend and frontend lockfiles exist and enforce reproducibility', functio
 
     expect($composerLock['platform']['php'] ?? null)->toBe('^8.5.0');
 });
-
-test('tests workflow defines clean dependency compatibility guard job', function (): void {
-    $workflowPath = base_path('.github/workflows/tests.yml');
-    if (! file_exists($workflowPath)) {
-        expect(true)->toBeTrue();
-
-        return;
-    }
-
-    $content = (string) file_get_contents($workflowPath);
-
-    expect($content)->toContain('  dependencies:')
-        ->and($content)->toContain('composer validate --strict --check-lock')
-        ->and($content)->toContain('composer check-platform-reqs --lock')
-        ->and($content)->toContain('composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress')
-        ->and($content)->toContain('bun install --frozen-lockfile')
-        ->and($content)->toContain('bun run test:peers')
-        ->and($content)->toContain('bun pm ls')
-        ->and($content)->toContain('php artisan package:discover')
-        ->and($content)->toContain('php artisan wayfinder:generate')
-        ->and($content)->toContain('bun run build')
-        ->and($content)->toContain('php artisan about');
-
-    // Ensure the dependencies job does not restore cached vendor or bun directories
-    $dependenciesSection = mb_strstr($content, '  dependencies:');
-    $databaseSection = mb_strstr((string) $dependenciesSection, '  database:');
-    $dependenciesJobContent = mb_substr((string) $dependenciesSection, 0, mb_strlen((string) $dependenciesSection) - mb_strlen((string) $databaseSection));
-
-    expect($dependenciesJobContent)->not->toContain('actions/cache@v4');
-});

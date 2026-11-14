@@ -91,7 +91,8 @@ it('allows super admin to access settings page', function (): void {
         ->fromRoute('dashboard')
         ->get(route('settings.edit'));
 
-    $response->assertOk();
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page->component('settings/application/edit'));
 });
 
 it('redirects unauthenticated user to login', function (): void {
@@ -184,7 +185,7 @@ it('forbids update for user without permission', function (): void {
     $response->assertForbidden();
 });
 
-it('validates application name is required', function (): void {
+it('validates settings input fields', function (array $settingsPayload, string $expectedErrorKey): void {
     $user = User::factory()->create();
     $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
     $user->givePermissionTo($permission);
@@ -192,48 +193,17 @@ it('validates application name is required', function (): void {
     $response = $this->actingAs($user)
         ->from(route('settings.edit'))
         ->put(route('settings.update'), [
-            'settings' => [
-                'application.name' => '',
-            ],
+            'settings' => $settingsPayload,
         ]);
 
     $response->assertRedirect(route('settings.edit'))
-        ->assertSessionHasErrors();
-});
-
-it('validates application name max length', function (): void {
-    $user = User::factory()->create();
-    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
-    $user->givePermissionTo($permission);
-
-    $response = $this->actingAs($user)
-        ->from(route('settings.edit'))
-        ->put(route('settings.update'), [
-            'settings' => [
-                'application.name' => str_repeat('a', 256),
-            ],
-        ]);
-
-    $response->assertRedirect(route('settings.edit'))
-        ->assertSessionHasErrors();
-});
-
-it('validates timezone is a valid timezone', function (): void {
-    $user = User::factory()->create();
-    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
-    $user->givePermissionTo($permission);
-
-    $response = $this->actingAs($user)
-        ->from(route('settings.edit'))
-        ->put(route('settings.update'), [
-            'settings' => [
-                'application.timezone' => 'Invalid/Timezone',
-            ],
-        ]);
-
-    $response->assertRedirect(route('settings.edit'))
-        ->assertSessionHasErrors();
-});
+        ->assertSessionHasErrors($expectedErrorKey);
+})->with([
+    'application name is required' => [['application.name' => ''], 'settings.application.name'],
+    'application name max length' => [['application.name' => str_repeat('a', 256)], 'settings.application.name'],
+    'timezone must be valid' => [['application.timezone' => 'Invalid/Timezone'], 'settings.application.timezone'],
+    'rejects unknown setting keys' => [['unknown.key' => 'value'], 'settings.unknown.key'],
+]);
 
 it('allows partial update of settings', function (): void {
     $user = User::factory()->create();
@@ -255,23 +225,6 @@ it('allows partial update of settings', function (): void {
     expect($name)->not->toBeNull()
         ->and($name->value)->toBe('Only Name Update')
         ->and(Setting::query()->where('key', SettingKey::ApplicationTimezone->value)->first())->toBeNull();
-});
-
-it('rejects unknown setting keys', function (): void {
-    $user = User::factory()->create();
-    $permission = PermissionModel::findOrCreate(Permission::SettingsManage->value);
-    $user->givePermissionTo($permission);
-
-    $response = $this->actingAs($user)
-        ->from(route('settings.edit'))
-        ->put(route('settings.update'), [
-            'settings' => [
-                'unknown.key' => 'value',
-            ],
-        ]);
-
-    $response->assertRedirect(route('settings.edit'))
-        ->assertSessionHasErrors();
 });
 
 it('does not touch cache when saving unchanged settings', function (): void {

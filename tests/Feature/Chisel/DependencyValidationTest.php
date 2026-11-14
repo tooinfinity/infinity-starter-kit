@@ -25,59 +25,39 @@ test('dependency map is properly defined and has expected structure', function (
         ->and($this->dependencies['settings'])->toContain('authorization');
 });
 
-test('chiselValidateDependencies rejects reporting without audit-trails', function (): void {
+test('chiselValidateDependencies rejects missing required dependencies', function (array $modules, string $expectedMessage): void {
     $answers = [
-        'optional_modules' => ['reporting', 'user-management', 'authorization'],
+        'optional_modules' => $modules,
     ];
 
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): audit-trails.');
-});
-
-test('chiselValidateDependencies rejects reporting without user-management', function (): void {
-    $answers = [
-        'optional_modules' => ['reporting', 'audit-trails', 'authorization'],
-    ];
-
-    expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): user-management.');
-});
-
-test('chiselValidateDependencies rejects reporting without authorization', function (): void {
-    $answers = [
-        'optional_modules' => ['reporting', 'audit-trails', 'user-management'],
-    ];
-
-    expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): authorization.');
-});
-
-test('chiselValidateDependencies rejects audit-trails without authorization', function (): void {
-    $answers = [
-        'optional_modules' => ['audit-trails'],
-    ];
-
-    expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "audit-trails" feature requires the following feature(s): authorization.');
-});
-
-test('chiselValidateDependencies rejects user-management without authorization', function (): void {
-    $answers = [
-        'optional_modules' => ['user-management'],
-    ];
-
-    expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "user-management" feature requires the following feature(s): authorization.');
-});
-
-test('chiselValidateDependencies rejects settings without authorization', function (): void {
-    $answers = [
-        'optional_modules' => ['settings'],
-    ];
-
-    expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
-        ->toThrow(RuntimeException::class, 'The "settings" feature requires the following feature(s): authorization.');
-});
+        ->toThrow(RuntimeException::class, $expectedMessage);
+})->with([
+    'reporting without audit-trails' => [
+        ['reporting', 'user-management', 'authorization'],
+        'The "reporting" feature requires the following feature(s): audit-trails.',
+    ],
+    'reporting without user-management' => [
+        ['reporting', 'audit-trails', 'authorization'],
+        'The "reporting" feature requires the following feature(s): user-management.',
+    ],
+    'reporting without authorization' => [
+        ['reporting', 'audit-trails', 'user-management'],
+        'The "reporting" feature requires the following feature(s): authorization.',
+    ],
+    'audit-trails without authorization' => [
+        ['audit-trails'],
+        'The "audit-trails" feature requires the following feature(s): authorization.',
+    ],
+    'user-management without authorization' => [
+        ['user-management'],
+        'The "user-management" feature requires the following feature(s): authorization.',
+    ],
+    'settings without authorization' => [
+        ['settings'],
+        'The "settings" feature requires the following feature(s): authorization.',
+    ],
+]);
 
 test('chiselValidateDependencies accepts valid combinations', function (array $modules): void {
     $answers = [

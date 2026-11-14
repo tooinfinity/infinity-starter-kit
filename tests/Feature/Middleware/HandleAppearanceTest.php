@@ -7,58 +7,35 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\View;
 
-it('shares appearance cookie value with views', function (): void {
-    $middleware = new HandleAppearance();
+it('shares valid appearance mode from cookie with views', function (string $appearance): void {
+    $middleware = new HandleAppearance;
 
     $request = Request::create('/', 'GET');
-    $request->cookies->set('appearance', 'dark');
+    $request->cookies->set('appearance', $appearance);
 
     $response = $middleware->handle($request, fn ($req): Response => response('OK'));
 
-    expect(View::shared('appearance'))->toBe('dark')
+    expect(View::shared('appearance'))->toBe($appearance)
         ->and($response->getContent())->toBe('OK');
-});
+})->with([
+    'dark mode' => 'dark',
+    'light mode' => 'light',
+    'system mode' => 'system',
+]);
 
-it('defaults to system when appearance cookie not present', function (): void {
-    $middleware = new HandleAppearance();
+it('falls back to system appearance when cookie is missing or invalid', function (?string $cookieValue): void {
+    $middleware = new HandleAppearance;
 
     $request = Request::create('/', 'GET');
+    if ($cookieValue !== null) {
+        $request->cookies->set('appearance', $cookieValue);
+    }
 
     $response = $middleware->handle($request, fn ($req): Response => response('OK'));
 
     expect(View::shared('appearance'))->toBe('system')
         ->and($response->getContent())->toBe('OK');
-});
-
-it('handles light appearance', function (): void {
-    $middleware = new HandleAppearance();
-
-    $request = Request::create('/', 'GET');
-    $request->cookies->set('appearance', 'light');
-
-    $middleware->handle($request, fn ($req): Response => response('OK'));
-
-    expect(View::shared('appearance'))->toBe('light');
-});
-
-it('handles system appearance', function (): void {
-    $middleware = new HandleAppearance();
-
-    $request = Request::create('/', 'GET');
-    $request->cookies->set('appearance', 'system');
-
-    $middleware->handle($request, fn ($req): Response => response('OK'));
-
-    expect(View::shared('appearance'))->toBe('system');
-});
-
-it('defaults to system when appearance cookie has invalid value', function (): void {
-    $middleware = new HandleAppearance();
-
-    $request = Request::create('/', 'GET');
-    $request->cookies->set('appearance', 'malicious-or-unknown');
-
-    $middleware->handle($request, fn ($req): Response => response('OK'));
-
-    expect(View::shared('appearance'))->toBe('system');
-});
+})->with([
+    'missing cookie' => null,
+    'invalid cookie value' => 'malicious-or-unknown',
+]);
