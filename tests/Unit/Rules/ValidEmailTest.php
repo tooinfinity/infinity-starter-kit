@@ -18,7 +18,7 @@ function failClosure(bool &$failed): Closure
     };
 }
 
-it('works with valid email', function (string $email): void {
+it('passes validation for valid email address formats', function (string $email): void {
     $rule = new ValidEmail;
 
     $failed = false;
@@ -78,7 +78,7 @@ it('works with valid email', function (string $email): void {
     'team@startup.tech',
 ]);
 
-it('fails with invalid email', function (string $email): void {
+it('fails validation for malformed email addresses', function (string $email): void {
     $rule = new ValidEmail;
 
     $failed = false;
@@ -133,7 +133,7 @@ it('fails with invalid email', function (string $email): void {
     'prefix user@example.com suffix',
 ]);
 
-it('fails with non-string values', function (mixed $value): void {
+it('fails validation when email value is not a string', function (mixed $value): void {
     $rule = new ValidEmail;
 
     $failed = false;
