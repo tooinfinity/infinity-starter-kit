@@ -250,7 +250,7 @@ test('NotLastSuperAdmin validateRequest adds error when only one active super ad
     SuperAdminRestrictionOperation::RemoveRole,
 ]);
 
-test('NotLastSuperAdmin translates error messages in French and Arabic', function (string $locale, string $deactivateMsg, string $deleteMsg, string $removeRoleMsg): void {
+test('NotLastSuperAdmin translates error messages according to active locale', function (string $locale, string $deactivateMsg, string $deleteMsg, string $removeRoleMsg): void {
     app()->setLocale($locale);
 
     $role = RoleModel::findOrCreate(Role::SuperAdmin->value);
@@ -279,6 +279,8 @@ test('NotLastSuperAdmin translates error messages in French and Arabic', functio
     expect($removeMsgActual)->toBe($removeRoleMsg);
 })->with([
     ['en', 'Cannot deactivate the last Super Admin.', 'Cannot delete the last Super Admin.', 'Cannot remove the Super Admin role from the last Super Admin.'],
+    /* @chisel-localization */
     ['fr', 'Impossible de désactiver le dernier super administrateur.', 'Impossible de supprimer le dernier super administrateur.', 'Impossible de retirer le rôle de super administrateur au dernier super administrateur.'],
     ['ar', 'لا يمكن إلغاء تفعيل آخر مسؤول متميز.', 'لا يمكن حذف آخر مسؤول متميز.', 'لا يمكن إزالة دور المسؤول المتميز عن آخر مسؤول متميز.'],
+    /* @end-chisel-localization */
 ]);

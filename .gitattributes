@@ -5,3 +5,8 @@
 *.html diff=html
 *.md diff=markdown
 *.php diff=php
+
+scripts/verify-combo.sh export-ignore
+scripts/combos.php export-ignore
+.github/workflows/combos.yml export-ignore
+

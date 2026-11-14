@@ -27,13 +27,13 @@ final readonly class UpdateUserRoles
     /**
      * @param  list<string>  $roles
      */
-    public function handle(User $user, array $roles, bool $recordAuditTrail = true): User
+    public function handle(User $user, array $roles/* @chisel-audit-trails */, bool $recordAuditTrail = true/* @end-chisel-audit-trails */): User
     {
         if (! trait_exists(HasRoles::class) || ! $user->exists) {
             return $user;
         }
 
-        return DB::transaction(function () use ($user, $roles, $recordAuditTrail): User {
+        return DB::transaction(function () use ($user, $roles/* @chisel-audit-trails */, $recordAuditTrail/* @end-chisel-audit-trails */): User {
             if (enum_exists(Role::class) && ! in_array(Role::SuperAdmin->value, $roles, true)) {
                 NotLastSuperAdmin::check(
                     $user,

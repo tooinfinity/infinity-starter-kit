@@ -246,6 +246,9 @@ final class OptionalModules
                     'tests/Feature/Controllers/RegisterControllerTest.php',
                     'tests/Unit/ArchTest.php',
                     'tests/Unit/Rules/ValidEmailTest.php',
+                    'tests/Unit/Rules/CanAssignRolesTest.php',
+                    'tests/Unit/Rules/NotLastSuperAdminTest.php',
+                    'tests/Unit/Notifications/PasswordChangedTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/UpdateUserLocale.php',
@@ -427,6 +430,7 @@ final class OptionalModules
                     'tests/Feature/Controllers/DeleteAccountControllerTest.php',
                     'tests/Feature/Controllers/SettingControllerTest.php',
                     'tests/Feature/Users/ChangePasswordTest.php',
+                    'tests/Unit/Actions/Users/UpdateUserRolesTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
                     'tests/Unit/ArchTest.php',
                 ],

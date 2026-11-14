@@ -120,8 +120,12 @@ test('cleanup files list registers starter kit workflows, tests, and guidelines 
     $cleanupFiles = Cleanup::files();
 
     expect($cleanupFiles)->toContain('.github/workflows/installer.yml')
+        ->and($cleanupFiles)->toContain('.github/workflows/combos.yml')
+        ->and($cleanupFiles)->toContain('scripts/verify-combo.sh')
+        ->and($cleanupFiles)->toContain('scripts/combos.php')
         ->and($cleanupFiles)->toContain('tests/Unit/CiWorkflowIntegrityTest.php')
         ->and($cleanupFiles)->toContain('.ai/guidelines/app.chisel.blade.php');
+
 });
 
 test('phpunit configuration registers browser, unit, and feature testsuites', function (): void {

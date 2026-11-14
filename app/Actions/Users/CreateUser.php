@@ -36,7 +36,7 @@ final readonly class CreateUser
             ]);
 
             if ($data->roles !== []) {
-                $this->updateUserRoles->handle($user, $data->roles, recordAuditTrail: false);
+                $this->updateUserRoles->handle($user, $data->roles/* @chisel-audit-trails */, recordAuditTrail: false/* @end-chisel-audit-trails */);
             }
 
             event(new Registered($user));

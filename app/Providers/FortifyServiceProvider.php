@@ -15,7 +15,9 @@ final class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        if (config('fortify.limiters.login') === null) {
+            Fortify::ignoreRoutes();
+        }
     }
 
     public function boot(): void

@@ -467,6 +467,19 @@ composer test:installer
 composer test:smoke
 ```
 
+### Feature Combination Verification
+
+To guarantee that generated applications pass `composer test` with 100% type and code coverage across feature combinations:
+
+```bash
+# Verify a specific feature combination in an isolated temporary environment
+bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":["authorization"]}'
+
+# Generate matrix configurations for CI or local runs (tiers: fast, pairwise, full)
+php scripts/combos.php fast
+php scripts/combos.php pairwise
+```
+
 ### Performance Budgets for Generated Applications
 
 Lightweight, deterministic performance budgets are established and continuously verified for representative generated application profiles (`minimal`, `default`, `full`):

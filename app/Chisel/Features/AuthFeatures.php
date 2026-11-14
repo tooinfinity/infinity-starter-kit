@@ -31,6 +31,8 @@ final class AuthFeatures
                     'resources/js/pages/welcome.tsx',
                     'resources/js/pages/user/create.tsx',
                     'tests/Feature/Middleware/AuthenticateSessionTest.php',
+                    'tests/Feature/AuditTrails/AuthenticationAuditingTest.php',
+                    'tests/Feature/Users/InactiveUserAuthTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Http/Controllers/LoginController.php',
@@ -53,6 +55,7 @@ final class AuthFeatures
                     'routes/web.php',
                     'resources/js/components/user-menu-content.tsx',
                     'resources/js/pages/user-email-verification-notification/create.tsx',
+                    'tests/Feature/AuditTrails/AuthenticationAuditingTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Http/Controllers/LogoutController.php',
@@ -112,6 +115,8 @@ final class AuthFeatures
                     'tests/Unit/Actions/UpdateUserTest.php',
                     'tests/Feature/Controllers/UserProfileControllerTest.php',
                     'tests/Feature/Users/UpdateUserTest.php',
+                    'app/Console/Commands/CreateAdminCommand.php',
+                    'app/Console/Commands/SetupAdminUserCommand.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/CreateUserEmailVerificationNotification.php',
@@ -140,6 +145,7 @@ final class AuthFeatures
                     'app/Providers/FortifyServiceProvider.php',
                     'app/Http/Controllers/UserPasswordController.php',
                     'resources/js/pages/session/create.tsx',
+                    'tests/Feature/AuditTrails/AuthenticationAuditingTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/CreateUserEmailResetNotification.php',
@@ -170,6 +176,7 @@ final class AuthFeatures
                     'app/Http/Controllers/UserPasswordController.php',
                     'resources/js/layouts/settings/layout.tsx',
                     'tests/Feature/Middleware/AuthenticateSessionTest.php',
+                    'tests/Feature/AuditTrails/UserAuditingTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/UpdateUserPassword.php',
@@ -201,6 +208,7 @@ final class AuthFeatures
                     'tests/Feature/Controllers/LoginControllerTest.php',
                     'tests/Feature/Users/InactiveUserAuthTest.php',
                     'tests/Unit/Actions/AuditTrails/RecordAuditTrailTest.php',
+                    'tests/Feature/AuditTrails/AuthenticationAuditingTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Http/Controllers/UserTwoFactorAuthenticationController.php',

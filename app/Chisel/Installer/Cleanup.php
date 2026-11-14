@@ -91,9 +91,13 @@ final class Cleanup
             'tests/Unit/Chisel/InstallerScenarioMatrixTest.php',
             'docs/installer-matrix.md',
             '.github/workflows/installer.yml',
+            '.github/workflows/combos.yml',
+            'scripts/verify-combo.sh',
+            'scripts/combos.php',
             'tests/Unit/CiWorkflowIntegrityTest.php',
             '.ai/guidelines/app.chisel.blade.php',
         ];
+
     }
 
     /**

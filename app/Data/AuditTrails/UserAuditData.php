@@ -29,8 +29,9 @@ final class UserAuditData extends Data
         /** @var list<string> $roles */
         $roles = $explicitRoles ?? (in_array(HasRoles::class, class_uses_recursive($user), true) ? array_values($user->getRoleNames()->all()) : []);
 
-        $isActive = array_key_exists('is_active', $user->getAttributes())
-            ? (bool) $user->is_active
+        $attributes = $user->getAttributes();
+        $isActive = array_key_exists('is_active', $attributes)
+            ? (bool) $attributes['is_active']
             : new Optional();
 
         return new self(
