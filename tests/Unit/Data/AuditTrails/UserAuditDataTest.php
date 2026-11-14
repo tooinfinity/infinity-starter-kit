@@ -35,7 +35,7 @@ it('creates user audit data from model using assigned roles', function (): void 
 });
 
 it('creates user audit data from model with explicit roles', function (): void {
-    $user = User::factory()->create([
+    $user = User::factory()->make([
         'name' => 'Jane Doe',
         'email' => 'jane@example.com',
     ]);
