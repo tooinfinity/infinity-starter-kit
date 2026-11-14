@@ -16,5 +16,6 @@ test('MarkAllNotificationsAsRead marks all unread notifications as read', functi
     $action = resolve(MarkAllNotificationsAsRead::class);
     $action->handle($user);
 
-    expect($user->unreadNotifications()->count())->toBe(0);
+    expect($user->unreadNotifications()->count())->toBe(0)
+        ->and($user->readNotifications()->count())->toBe(2);
 });
