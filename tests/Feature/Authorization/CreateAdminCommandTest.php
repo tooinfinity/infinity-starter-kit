@@ -254,7 +254,9 @@ test('first login of the created admin via authorization:create-admin reaches da
     $response->assertRedirectToRoute('dashboard');
 
     $this->assertAuthenticated();
-    $this->get(route('dashboard'))->assertOk();
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('dashboard'));
 });
 
 test('create admin command rejects invalid email address', function (): void {
