@@ -438,6 +438,7 @@ final class OptionalModules
                     'tests/Feature/Controllers/DeleteAccountControllerTest.php',
                     'tests/Feature/Controllers/SettingControllerTest.php',
                     'tests/Feature/Users/ChangePasswordTest.php',
+                    'tests/Feature/Users/SuperAdminProtectionTest.php',
                     'tests/Unit/Actions/Users/UpdateUserRolesTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
                     'tests/Unit/ArchTest.php',

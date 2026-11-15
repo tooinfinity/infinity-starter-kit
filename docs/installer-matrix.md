@@ -32,16 +32,16 @@ The test suite is structured into three distinct layers:
 Run a verification check for a single feature combination by providing its answers JSON:
 ```bash
 # Verify minimal auth combination
-bash scripts/verify-combo.sh '{"auth":["login","logout"]}'
+bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":[]}'
 
 # Verify full combination with all optional modules
-bash scripts/verify-combo.sh '{"auth":["login","logout","registration","password-reset","email-verification","user-profile","user-password","two-factor"],"features":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}'
+bash scripts/verify-combo.sh '{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}'
 ```
 
 ### Fast Matrix Combinations
 Generate and verify all fast-tier matrix combinations:
 ```bash
-php scripts/combos.php fast | jq -c '[.include[].combination]' | xargs -0 -I {} bash scripts/verify-combo.sh '{}'
+php scripts/combos.php fast | jq -c '[.include[].answers | fromjson]' | xargs -0 -I {} bash scripts/verify-combo.sh '{}'
 ```
 
 ### Run Scenario Matrix Integrity Checks
