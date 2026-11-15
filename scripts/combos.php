@@ -20,6 +20,14 @@ $allModules = array_keys(FeatureRegistry::optionalModules());
  */
 function isValidCombination(array $answers): bool
 {
+    $auth = $answers['auth_features'] ?? [];
+    $modules = $answers['optional_modules'] ?? [];
+    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails', 'reporting'];
+
+    if (! in_array('login', $auth, true) && array_intersect($modules, $modulesRequiringLogin) !== []) {
+        return false;
+    }
+
     try {
         DependencyValidator::validate($answers);
 
@@ -38,8 +46,9 @@ function isValidCombination(array $answers): bool
  */
 function resolveDependencies(array $auth, array $modules): array
 {
-    // If any auth feature is chosen, login is required
-    if ($auth !== [] && ! in_array('login', $auth, true)) {
+    // If any auth feature is chosen, or any module requiring authentication, login is required
+    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails', 'reporting'];
+    if (($auth !== [] || array_intersect($modules, $modulesRequiringLogin) !== []) && ! in_array('login', $auth, true)) {
         $auth[] = 'login';
     }
 
@@ -224,6 +233,15 @@ function getPairwiseCombinations(array $allAuth, array $allModules): array
                         continue;
                     }
                     if ($valB === 1 && $featB === 'reporting' && in_array($featA, ['audit-trails', 'user-management'], true) && $valA === 0) {
+                        continue;
+                    }
+
+                    // e.g. module requiring login = 1, but login = 0
+                    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails', 'reporting'];
+                    if ($valA === 1 && in_array($featA, $modulesRequiringLogin, true) && $featB === 'login' && $valB === 0) {
+                        continue;
+                    }
+                    if ($valB === 1 && in_array($featB, $modulesRequiringLogin, true) && $featA === 'login' && $valA === 0) {
                         continue;
                     }
 
