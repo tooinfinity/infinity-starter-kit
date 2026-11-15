@@ -269,7 +269,7 @@ it('rejects removing super-admin role when actor is not super-admin (SEC-001)', 
 
 it('rejects assigning a role that grants permissions the actor lacks', function (): void {
     $ops = RoleModel::findOrCreate('ops');
-    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $actor = User::factory()->create();
     foreach ([Permission::UsersView, Permission::UsersUpdate, Permission::UsersManageRoles] as $p) {
@@ -309,7 +309,7 @@ it('allows super admin to assign roles with any permissions', function (): void 
     $superAdmin->assignRole($superAdminRole);
 
     $ops = RoleModel::findOrCreate('ops');
-    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $target = User::factory()->create();
 
@@ -322,7 +322,7 @@ it('allows super admin to assign roles with any permissions', function (): void 
 
 it('allows updating a user while retaining existing roles even if actor lacks their permissions', function (): void {
     $ops = RoleModel::findOrCreate('ops');
-    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $target = User::factory()->create();
     $target->assignRole('ops');

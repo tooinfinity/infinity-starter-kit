@@ -15,8 +15,11 @@ final class ExportReportRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ! enum_exists(Permission::class) || (($this->user()?->can(Permission::ReportsView->value) ?? false)
-            && $this->user()->can(Permission::ReportsExport->value));
+        $user = $this->user();
+
+        return $user !== null
+            && $user->can(Permission::ReportsView->value)
+            && $user->can(Permission::ReportsExport->value);
     }
 
     /**

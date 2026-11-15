@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Permission;
+use App\Http\Requests\AuditTrails\AuditTrailIndexRequest;
 use App\Models\AuditTrail;
 use App\Models\User;
 use Spatie\Permission\Models\Permission as PermissionModel;
@@ -65,4 +66,11 @@ test('audit trail records cannot be individually deleted via model', function ()
 
     expect(fn () => $record->delete())
         ->toThrow(RuntimeException::class, 'Audit trail records cannot be individually deleted.');
+});
+
+test('audit trail index request denies authorization when unauthenticated', function (): void {
+    $request = new AuditTrailIndexRequest;
+    $request->setUserResolver(fn (): null => null);
+
+    expect($request->authorize())->toBeFalse();
 });

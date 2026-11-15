@@ -151,7 +151,7 @@ it('UpdateUserRoles updates roles without recording audit trail when disabled', 
 
     $action = resolve(UpdateUserRoles::class);
 
-    $result = $action->handle($user, ['manager'], recordAuditTrail: false);
+    $result = $action->handle($user, ['manager']/* @chisel-audit-trails */, recordAuditTrail: false/* @end-chisel-audit-trails */);
 
     expect($result->id)->toBe($user->id)
         ->and($user->fresh()->hasRole('manager'))->toBeTrue()

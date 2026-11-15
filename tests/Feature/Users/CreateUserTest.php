@@ -122,7 +122,7 @@ it('rejects assigning super-admin role when creator is not super-admin', functio
 
 it('rejects assigning a role that grants permissions creator lacks', function (): void {
     $ops = RoleModel::findOrCreate('ops');
-    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $creator = User::factory()->create();
     foreach ([Permission::UsersView, Permission::UsersCreate, Permission::UsersManageRoles] as $p) {
@@ -172,7 +172,7 @@ it('allows super admin to assign any role when creating user', function (): void
     $superAdmin->assignRole($superAdminRole);
 
     $ops = RoleModel::findOrCreate('ops');
-    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $ops->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $response = $this->actingAs($superAdmin)
         ->post(route('users.store'), [

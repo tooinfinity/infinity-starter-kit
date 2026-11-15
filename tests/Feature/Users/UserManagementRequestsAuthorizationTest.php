@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use App\Enums\Permission;
 use App\Http\Requests\Users\ActivateUserRequest;
+use App\Http\Requests\Users\CreateUserRequest;
 use App\Http\Requests\Users\DeactivateUserRequest;
 use App\Http\Requests\Users\DeleteUserRequest;
 use App\Http\Requests\Users\EditUserRequest;
+use App\Http\Requests\Users\ListUsersRequest;
+use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserPasswordRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
@@ -31,6 +34,18 @@ it('denies authorization when actor is not an authenticated User instance', func
 
     expect($request->authorize())->toBeFalse();
 })->with('user-management-requests');
+
+it('denies authorization when actor is not an authenticated User instance for collection requests', function (string $requestClass): void {
+    /** @var FormRequest $request */
+    $request = new $requestClass;
+    $request->setUserResolver(fn (): null => null);
+
+    expect($request->authorize())->toBeFalse();
+})->with([
+    'list users' => [ListUsersRequest::class],
+    'create user' => [CreateUserRequest::class],
+    'store user' => [StoreUserRequest::class],
+]);
 
 it('resolves string target ID and allows authorized user', function (string $requestClass, Permission $permission, string $method, string $uri): void {
     $actor = User::factory()->create();

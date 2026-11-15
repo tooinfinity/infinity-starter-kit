@@ -441,7 +441,7 @@ it('handles audit-trails ON with reporting OFF', function (): void {
             ->and(file_exists($dir.'/app/Queries/Reporting/AuditReportQuery.php'))->toBeFalse();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
-        expect(isset($composer['require']['spatie/laravel-data']))->toBeFalse();
+        expect(isset($composer['require']['spatie/laravel-data']))->toBeTrue();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

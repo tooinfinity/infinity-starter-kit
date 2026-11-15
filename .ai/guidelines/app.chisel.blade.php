@@ -15,4 +15,4 @@
 
 - Chisel supports dry-run mode: `php artisan install:features --dry-run`.
 - Dry-run mode resolves features, validates dependencies, and previews planned mutations with **zero filesystem or database side effects**.
-- Always run `composer test:installer` when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
+- Always verify feature combinations (e.g. `bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":[]}'`) when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.

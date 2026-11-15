@@ -58,6 +58,7 @@ it('updates roles and records audit trail by default', function (): void {
         ->and($user->fresh()->hasRole('editor'))->toBeFalse();
 });
 
+/* @chisel-audit-trails */
 it('updates roles without recording audit trail when disabled', function (): void {
     RoleModel::findOrCreate('editor');
     RoleModel::findOrCreate('manager');
@@ -73,6 +74,7 @@ it('updates roles without recording audit trail when disabled', function (): voi
         ->and($user->fresh()->hasRole('manager'))->toBeTrue()
         ->and($user->fresh()->hasRole('editor'))->toBeFalse();
 });
+/* @end-chisel-audit-trails */
 
 it('allows assigning super admin role', function (): void {
     RoleModel::findOrCreate(Role::SuperAdmin->value);

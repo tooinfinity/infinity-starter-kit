@@ -67,6 +67,6 @@ enum ReportType: string
 
     public function permission(): string
     {
-        return enum_exists(Permission::class) ? Permission::ReportsView->value : 'reports.view';
+        return Permission::ReportsView->value;
     }
 }

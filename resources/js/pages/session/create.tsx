@@ -22,7 +22,7 @@ type Props = {
     canResetPassword: boolean;
 };
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login(props: Props) {
     const { __ } = useTranslation();
 
     return (
@@ -63,7 +63,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                         {__('Password')}
                                     </Label>
                                     {/* @chisel-password-reset */}
-                                    {canResetPassword && (
+                                    {props.canResetPassword && (
                                         <TextLink
                                             href={request()}
                                             className="ms-auto text-sm"
@@ -120,9 +120,9 @@ export default function Login({ status, canResetPassword }: Props) {
                 )}
             </Form>
 
-            {status && (
+            {props.status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
+                    {props.status}
                 </div>
             )}
         </AuthLayout>

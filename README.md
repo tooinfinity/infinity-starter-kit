@@ -459,12 +459,19 @@ composer test:browser
 
 # Full suite code coverage verification (100% required)
 composer test:coverage
+```
 
-# Installer end-to-end scaffolding tests
-composer test:installer
+### Feature Combination Verification
 
-# Generated application smoke & performance budget verification
-composer test:smoke
+To guarantee that generated applications pass `composer test` with 100% type and code coverage across feature combinations:
+
+```bash
+# Verify a specific feature combination in an isolated temporary environment
+bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":["authorization"]}'
+
+# Generate matrix configurations for CI or local runs (tiers: fast, pairwise, full)
+php scripts/combos.php fast
+php scripts/combos.php pairwise
 ```
 
 ### Performance Budgets for Generated Applications
@@ -484,8 +491,7 @@ Continuous Integration separates database-independent invariant checks from the 
 2. **`dependencies`** (runs once): Verifies clean backend and frontend dependency resolution, strict lockfile reproducibility, supported PHP/toolchain constraints, and critical framework integration compatibility (package discovery, Wayfinder routes, asset compilation) without relying on pre-cached vendor or package stores.
 3. **`database`** (matrix: SQLite, MySQL, PostgreSQL): Exercises database-sensitive feature and query behavior across supported database engines without repeating frontend, lint, or static-analysis overhead.
 4. **`browser`** (runs once): Executes browser end-to-end tests on the canonical test database with Playwright.
-5. **`installer-e2e`** (runs once): Validates Chisel scaffolding and project lifecycle generation.
-6. **`installer-smoke`** (matrix: `minimal`, `default`, `full`): Generates and verifies real application lifecycles, database schema, frontend builds, TypeScript types, and lightweight performance budgets.
+5. **`combos`** (matrix: tiered combinations): Verifies generated projects across optional feature combinations.
 
 ### Architecture Constraints (Pest Arch)
 

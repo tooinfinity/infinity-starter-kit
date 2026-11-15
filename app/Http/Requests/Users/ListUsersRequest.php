@@ -11,7 +11,7 @@ final class ListUsersRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersView->value) ?? false);
+        return $this->user()?->can(Permission::UsersView->value) ?? false;
     }
 
     /**

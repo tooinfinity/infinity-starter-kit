@@ -35,6 +35,7 @@ test('PasswordChanged notification has correct database payload structure', func
         ->and($data['icon'])->toBe('shield');
 });
 
+/* @chisel-localization */
 test('PasswordChanged notification translates title and body according to app locale', function (): void {
     $user = User::factory()->make();
     $notification = new PasswordChanged;
@@ -50,3 +51,4 @@ test('PasswordChanged notification translates title and body according to app lo
 
     app()->setLocale('en');
 });
+/* @end-chisel-localization */

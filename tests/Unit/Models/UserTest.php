@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+/* @chisel-localization */
+use App\Enums\Locale;
+/* @end-chisel-localization */
 use App\Models\User;
 use Spatie\Permission\Models\Role;
 
@@ -60,3 +63,13 @@ test('canManage returns false if target is super admin and actor is not super ad
     expect($actor->canManage($target))->toBeFalse();
 });
 /* @end-chisel-user-management */
+
+/* @chisel-localization */
+test('preferredLocale returns locale value or null', function (): void {
+    $userWithLocale = User::factory()->create(['locale' => Locale::French]);
+    expect($userWithLocale->preferredLocale())->toBe('fr');
+
+    $userWithoutLocale = User::factory()->create(['locale' => null]);
+    expect($userWithoutLocale->preferredLocale())->toBeNull();
+});
+/* @end-chisel-localization */

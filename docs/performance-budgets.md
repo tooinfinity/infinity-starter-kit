@@ -64,24 +64,14 @@ Performance budgets are verified automatically in multiple layers:
 - Unit Test: `tests/Unit/Chisel/PerformanceBudgetTest.php`
 - Verifies budget specifications, canonical requests, metric definitions, threshold assertions, manifest calculation, and query script generation with 100% test coverage.
 
-### 2. Generated Application Smoke Pipeline
-
-- Pipeline: `Tests\Support\GeneratedApplicationSmokePipeline::validatePerformanceBudgets`
-- Smoke Test: `tests/Feature/Chisel/GeneratedApplicationSmokeTest.php`
-- Run via:
-  ```bash
-  composer test:smoke -- --filter="minimal"
-  composer test:smoke -- --filter="default"
-  composer test:smoke -- --filter="full"
-  ```
-- Generates a real, isolated application, prunes features according to the specified profile, migrates the database, builds production assets, and asserts:
-  1. Frontend bundle sizes remain strictly within budget.
-  2. Canonical request query counts remain within budget.
-
-### 3. Dedicated Performance Test Suite
+### 2. Dedicated Performance Test Suite
 
 - Feature Test: `tests/Feature/Chisel/GeneratedApplicationPerformanceTest.php`
-- Verifies the root application's frontend production bundle and canonical request query counts against full-profile budgets, including intentional regression detection. (Representative generated profiles `minimal`, `default`, and `full` are validated end-to-end by the smoke pipeline).
+- Run via:
+  ```bash
+  bun run build && vendor/bin/pest tests/Feature/Chisel/GeneratedApplicationPerformanceTest.php
+  ```
+- Verifies the root application's frontend production bundle and canonical request query counts against full-profile budgets, including intentional regression detection.
 
 ---
 

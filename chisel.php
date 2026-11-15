@@ -497,14 +497,24 @@ return $script
         },
     )
     ->selectedAny(
+        'auth_features',
+        ['registration', 'password-reset'],
+        then: null,
+        else: function (Chisel $chisel): void {
+            $chisel->file('resources/js/pages/session/create.tsx')
+                ->removeLinesContaining("import TextLink from '@/components/text-link';");
+        },
+    )
+    ->selectedAny(
         'optional_modules',
-        ['user-management', 'reporting'],
+        ['user-management', 'reporting', 'audit-trails'],
         then: null,
         else: function (Chisel $chisel) use ($directory): void {
             $chisel->file('config/data.php')->delete();
             chiselRemoveComposerPackages($directory, 'spatie/laravel-data');
         },
     )
+
     ->apply(function () use ($directory, $paths): void {
         chiselSyncComposerLock($directory, $paths);
     });

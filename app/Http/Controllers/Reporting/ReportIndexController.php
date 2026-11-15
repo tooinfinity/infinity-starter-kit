@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Reporting;
 
 use App\Data\Reporting\ReportMetadataData;
-use App\Enums\Permission;
 use App\Enums\ReportType;
 use App\Http\Requests\Reporting\ReportIndexRequest;
 use Inertia\Inertia;
@@ -30,9 +29,7 @@ final readonly class ReportIndexController
                 ),
                 ReportType::availableCases(),
             ),
-            fn (ReportMetadataData $report): bool => enum_exists(Permission::class)
-                ? ($user?->can($report->permission) ?? false)
-                : $user !== null,
+            fn (ReportMetadataData $report): bool => $user?->can($report->permission) ?? false,
         ));
 
         return Inertia::render('reports/index', [

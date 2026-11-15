@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+/* @chisel-login */
 use App\Models\User;
 
 it('denies authentication for inactive users', function (): void {
@@ -46,3 +47,4 @@ it('logs out logged-in user when account becomes inactive', function (): void {
     $response->assertRedirect(route('login'));
     $this->assertGuest();
 });
+/* @end-chisel-login */

@@ -13,3 +13,7 @@ test('role enum is string-backed', function (): void {
         expect($case->value)->toBeString();
     }
 });
+
+test('Role::values() returns all role values', function (): void {
+    expect(Role::values())->toBe([Role::SuperAdmin->value]);
+});

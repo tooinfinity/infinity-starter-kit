@@ -15,7 +15,7 @@ test('CanAssignRoles allows super admin to assign any role', function (): void {
     $actor->assignRole($superAdminRole);
 
     $opsRole = RoleModel::findOrCreate('ops');
-    $opsRole->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $opsRole->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $rule = new CanAssignRoles($actor);
 
@@ -29,7 +29,7 @@ test('CanAssignRoles allows super admin to assign any role', function (): void {
 
 test('CanAssignRoles rejects role with permissions actor lacks', function (): void {
     $opsRole = RoleModel::findOrCreate('ops');
-    $opsRole->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $opsRole->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $actor = User::factory()->create();
     $actor->givePermissionTo(PermissionModel::findOrCreate(Permission::UsersManageRoles->value));
@@ -64,7 +64,7 @@ test('CanAssignRoles allows role whose permissions are a subset of actor permiss
 
 test('CanAssignRoles allows keeping existing role on target even if actor lacks its permissions', function (): void {
     $billingRole = RoleModel::findOrCreate('billing');
-    $billingRole->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $billingRole->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $target = User::factory()->create();
     $target->assignRole($billingRole);
@@ -170,7 +170,7 @@ test('CanAssignRoles handles non-array value gracefully', function (): void {
     expect($failed)->toBeFalse();
 });
 
-test('CanAssignRoles translates error messages in French and Arabic', function (string $locale, string $expectedAssignMsg, string $expectedRemoveMsg, string $expectedPermMsg): void {
+test('CanAssignRoles translates error messages according to active locale', function (string $locale, string $expectedAssignMsg, string $expectedRemoveMsg, string $expectedPermMsg): void {
     app()->setLocale($locale);
 
     RoleModel::findOrCreate(Role::SuperAdmin->value);
@@ -195,7 +195,7 @@ test('CanAssignRoles translates error messages in French and Arabic', function (
     expect($removeFailedMessage)->toBe($expectedRemoveMsg);
 
     $opsRole = RoleModel::findOrCreate('ops');
-    $opsRole->givePermissionTo(PermissionModel::findOrCreate(Permission::SettingsManage->value));
+    $opsRole->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
 
     $permRule = new CanAssignRoles($actor);
     $permFailedMessage = null;
@@ -205,6 +205,8 @@ test('CanAssignRoles translates error messages in French and Arabic', function (
     expect($permFailedMessage)->toBe($expectedPermMsg);
 })->with([
     ['en', 'Only Super Admins can assign the Super Admin role.', 'Only Super Admins can remove the Super Admin role.', 'You cannot assign a role with permissions you do not have.'],
+    /* @chisel-localization */
     ['fr', 'Seuls les super administrateurs peuvent attribuer le rôle de super administrateur.', 'Seuls les super administrateurs peuvent retirer le rôle de super administrateur.', 'Vous ne pouvez pas attribuer un rôle avec des autorisations que vous ne possédez pas.'],
     ['ar', 'يمكن للمسؤولين المتميزين فقط تعيين دور المسؤول المتميز.', 'يمكن للمسؤولين المتميزين فقط إزالة دور المسؤول المتميز.', 'لا يمكنك تعيين دور بصلاحيات لا تملكها.'],
+    /* @end-chisel-localization */
 ]);

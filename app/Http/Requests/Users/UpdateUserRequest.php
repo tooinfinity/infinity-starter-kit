@@ -26,8 +26,8 @@ final class UpdateUserRequest extends FormRequest
             return false;
         }
 
-        $canUpdate = ! enum_exists(Permission::class) || ($actor->can(Permission::UsersView->value)
-            && $actor->can(Permission::UsersUpdate->value));
+        $canUpdate = $actor->can(Permission::UsersView->value)
+            && $actor->can(Permission::UsersUpdate->value);
 
         return $canUpdate && $actor->canManage($target);
     }
@@ -77,7 +77,7 @@ final class UpdateUserRequest extends FormRequest
         /** @var array{name: string, email: string, roles?: list<string>} $validated */
         $validated = $this->validated();
 
-        $canManageRoles = ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersManageRoles->value) ?? false);
+        $canManageRoles = $this->user()?->can(Permission::UsersManageRoles->value) ?? false;
 
         return new UpdateUserData(
             name: $validated['name'],

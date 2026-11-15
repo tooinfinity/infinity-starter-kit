@@ -11,7 +11,7 @@ final class CreateUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ! enum_exists(Permission::class) || ($this->user()?->can(Permission::UsersCreate->value) ?? false);
+        return $this->user()?->can(Permission::UsersCreate->value) ?? false;
     }
 
     /**
