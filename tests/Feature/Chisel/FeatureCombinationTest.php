@@ -629,8 +629,10 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
         $registrationController = (string) file_get_contents($dir.'/app/Http/Controllers/RegisterController.php');
         $registrationTests = (string) file_get_contents($dir.'/tests/Feature/Controllers/RegisterControllerTest.php');
 
-        expect($registrationRequest)->not->toContain('Locale')
-            ->and($registrationRequest)->not->toContain('function locale(')
+        expect($registrationRequest)
+            ->not->toContain('Locale')
+            ->not->toContain('locale')
+            ->toContain('function prepareForValidation(')
             ->and($registrationController)->not->toContain('Locale')
             ->and($registrationController)->not->toContain('$request->locale()')
             ->and($registrationTests)->toContain('may register a new user')
@@ -1008,6 +1010,14 @@ it('verifies individual optional module removal preserves other modules and clea
 
         foreach ($selectedModules as $retained) {
             assertFeatureRetained($dir, FeatureRegistry::get($retained), $selectedModules);
+        }
+
+        if ($removedModule === 'localization') {
+            $registrationRequest = (string) file_get_contents($dir.'/app/Http/Requests/CreateUserRequest.php');
+            expect($registrationRequest)
+                ->toContain('function prepareForValidation(')
+                ->not->toContain('Locale')
+                ->not->toContain('locale');
         }
 
         assertNoOrphanedMarkersInSandbox($dir);
