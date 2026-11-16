@@ -70,10 +70,10 @@ final class HandleInertiaRequests extends Middleware
                 'user' => $user,
                 /* @chisel-roles-permissions */
                 'permissions' => $user instanceof User
-                    ? once(fn (): array => $user->getAllPermissions()->pluck('name')->toArray())
+                    ? fn (): array => $user->getAllPermissions()->pluck('name')->toArray()
                     : [],
                 'roles' => $user instanceof User
-                    ? once(fn (): array => $user->getRoleNames()->toArray())
+                    ? fn (): array => $user->getRoleNames()->toArray()
                     : [],
                 /* @end-chisel-roles-permissions */
             ],
