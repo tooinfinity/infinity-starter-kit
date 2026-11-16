@@ -142,6 +142,7 @@ arch('runtime application code does not depend on chisel or installer internals'
         /* @end-chisel-notifications */
         'App\Data',
         'App\Providers',
+        'App\Support',
         /* @chisel-audit-trails */
         'App\Listeners',
         /* @end-chisel-audit-trails */

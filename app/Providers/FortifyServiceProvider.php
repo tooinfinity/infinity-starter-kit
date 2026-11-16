@@ -86,9 +86,6 @@ final class FortifyServiceProvider extends ServiceProvider
 
     private function bootRateLimitingDefaults(): void
     {
-        /* @chisel-login */
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by($request->string('email')->value().$request->ip()));
-        /* @end-chisel-login */
         /* @chisel-two-factor */
         RateLimiter::for('two-factor', fn (Request $request) => Limit::perMinute(5)->by($request->session()->get('login.id')));
         /* @end-chisel-two-factor */

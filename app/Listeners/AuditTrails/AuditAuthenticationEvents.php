@@ -7,6 +7,7 @@ namespace App\Listeners\AuditTrails;
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 use App\Models\User;
+use App\Support\LoginThrottle;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Login;
@@ -53,11 +54,11 @@ final readonly class AuditAuthenticationEvents
 
         if (app()->bound('request')) {
             $request = request();
-            $email = $request->string('email')->trim()->lower()->transliterate()->value();
+            $email = $request->string('email')->value();
 
-            if ($email !== '') {
-                $throttleKey = $email.'|'.$request->ip();
-                $newValues['throttled'] = RateLimiter::tooManyAttempts($throttleKey, 5);
+            if (mb_trim($email) !== '') {
+                $throttleKey = LoginThrottle::throttleKeyFor($email, $request->ip());
+                $newValues['throttled'] = RateLimiter::tooManyAttempts($throttleKey, LoginThrottle::maxAttempts());
                 $newValues['attempts'] = RateLimiter::attempts($throttleKey);
             }
         }
