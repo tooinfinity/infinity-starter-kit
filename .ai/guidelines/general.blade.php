@@ -19,7 +19,7 @@
 
 ## Required verification
 
-- After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `bun run test:unit`.
+- After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, and `composer test:type-coverage`.
 - Run the full test suite or relevant unit/feature suites: `composer test:unit` and `composer test:database`.
 @if (file_exists(base_path('chisel.php')))
 - When modifying features affected by the feature installer, verify feature combinations with `bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":[]}'`.
