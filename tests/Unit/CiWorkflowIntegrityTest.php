@@ -144,7 +144,7 @@ test('guidelines and agent instructions reference only valid composer and bun sc
         expect(file_exists($file))->toBeTrue("Expected [{$file}] to exist.");
         $content = (string) file_get_contents($file);
 
-        if (preg_match_all('/bun run ([a-zA-Z0-9:_-]+)/', $content, $bunMatches)) {
+        if (preg_match_all('/bun run\s+([^\s`"\'\(\)\[\],;]+)/', $content, $bunMatches)) {
             foreach ($bunMatches[1] as $script) {
                 expect(in_array($script, $packageScripts, true))->toBeTrue(
                     "File [{$file}] references missing bun run script [{$script}]."
@@ -152,13 +152,85 @@ test('guidelines and agent instructions reference only valid composer and bun sc
             }
         }
 
-        if (preg_match_all('/composer (?:run )?([a-zA-Z0-9:_-]+)/', $content, $composerMatches)) {
-            foreach ($composerMatches[1] as $script) {
-                $isValid = in_array($script, $composerScripts, true) || in_array($script, $builtInComposerCommands, true);
-                expect($isValid)->toBeTrue(
-                    "File [{$file}] references missing composer script [{$script}]."
-                );
+        if (preg_match_all('/composer\s+([^\s`"\'\(\)\[\],;]+)(?:\s+([^\s`"\'\(\)\[\],;]+))?/', $content, $composerMatches, PREG_SET_ORDER)) {
+            foreach ($composerMatches as $match) {
+                $command = $match[1];
+                $argument = $match[2] ?? null;
+
+                if (in_array($command, ['run', 'run-script'], true)) {
+                    expect($argument !== null && in_array($argument, $composerScripts, true))->toBeTrue(
+                        "File [{$file}] references missing composer script [".($argument ?? '')."] via explicit {$command}."
+                    );
+                } else {
+                    $isValid = in_array($command, $composerScripts, true) || in_array($command, $builtInComposerCommands, true);
+                    expect($isValid)->toBeTrue(
+                        "File [{$file}] references missing composer command or script [{$command}]."
+                    );
+                }
             }
         }
     }
+});
+
+test('guidelines script integrity validation rejects invalid suffixes, missing scripts, and invalid run-script invocations', function (): void {
+    /** @var array{scripts?: array<string, mixed>} $packageJson */
+    $packageJson = json_decode((string) file_get_contents(base_path('package.json')), true, 512, JSON_THROW_ON_ERROR);
+    $packageScripts = array_keys($packageJson['scripts'] ?? []);
+
+    /** @var array{scripts?: array<string, mixed>} $composerJson */
+    $composerJson = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
+    $composerScripts = array_keys($composerJson['scripts'] ?? []);
+
+    $builtInComposerCommands = [
+        'install', 'update', 'require', 'remove', 'dump-autoload', 'dumpautoload',
+        'exec', 'run-script', 'run', 'show', 'validate', 'check-platform-reqs',
+        'fund', 'diagnose', 'help', 'list', 'clear-cache', 'create-project', 'config', 'init',
+    ];
+
+    $validate = function (string $content) use ($packageScripts, $composerScripts, $builtInComposerCommands): array {
+        $errors = [];
+
+        if (preg_match_all('/bun run\s+([^\s`"\'\(\)\[\],;]+)/', $content, $bunMatches)) {
+            foreach ($bunMatches[1] as $script) {
+                if (! in_array($script, $packageScripts, true)) {
+                    $errors[] = "missing bun script: {$script}";
+                }
+            }
+        }
+
+        if (preg_match_all('/composer\s+([^\s`"\'\(\)\[\],;]+)(?:\s+([^\s`"\'\(\)\[\],;]+))?/', $content, $composerMatches, PREG_SET_ORDER)) {
+            foreach ($composerMatches as $match) {
+                $command = $match[1];
+                $argument = $match[2] ?? null;
+
+                if (in_array($command, ['run', 'run-script'], true)) {
+                    if ($argument === null || ! in_array($argument, $composerScripts, true)) {
+                        $errors[] = 'missing explicit composer script: '.($argument ?? '');
+                    }
+                } else {
+                    $isValid = in_array($command, $composerScripts, true) || in_array($command, $builtInComposerCommands, true);
+                    if (! $isValid) {
+                        $errors[] = "missing direct composer command: {$command}";
+                    }
+                }
+            }
+        }
+
+        return $errors;
+    };
+
+    // Valid commands pass
+    expect($validate('run `bun run build` and `composer test:lint` and `composer run dev`'))->toBeEmpty();
+
+    // Suffix .missing on an existing bun script is captured completely and rejected
+    expect($validate('run `bun run build.missing`'))->toBe(['missing bun script: build.missing']);
+
+    // Suffix .missing on an existing composer script is captured completely and rejected
+    expect($validate('run `composer test:lint.missing`'))->toBe(['missing direct composer command: test:lint.missing']);
+
+    // Explicit run-script with missing script is rejected
+    expect($validate('run `composer run-script missing-script`'))->toBe(['missing explicit composer script: missing-script']);
+
+    // Explicit run with built-in command is rejected as it must be a defined composer script
+    expect($validate('run `composer run install`'))->toBe(['missing explicit composer script: install']);
 });
