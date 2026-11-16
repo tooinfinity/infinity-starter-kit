@@ -313,7 +313,7 @@ Assume the database has already been leaked. Every column, row, cache entry, log
 
 ## Required verification
 
-- After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, `composer test:type-coverage`, and `bun run test:unit`.
+- After changes, before reporting completion or pushing, run `composer test:lint`, `composer test:types`, and `composer test:type-coverage`.
 - Run the full test suite or relevant unit/feature suites: `composer test:unit` and `composer test:database`.
 - When modifying features affected by the feature installer, verify feature combinations with `bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":[]}'`.
 - Fix failures introduced by the changes. Never lower coverage thresholds or exclude code just to pass. Report pre-existing failures or environment blockers explicitly; do not claim a check passed when it failed or could not run.

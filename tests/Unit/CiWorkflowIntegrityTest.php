@@ -117,3 +117,48 @@ test('phpunit configuration registers browser, unit, and feature testsuites', fu
         ->and($content)->toContain('<testsuite name="Feature">')
         ->and($content)->toContain('<directory>tests/Feature</directory>');
 });
+
+test('guidelines and agent instructions reference only valid composer and bun scripts', function (): void {
+    /** @var array{scripts?: array<string, mixed>} $packageJson */
+    $packageJson = json_decode((string) file_get_contents(base_path('package.json')), true, 512, JSON_THROW_ON_ERROR);
+    $packageScripts = array_keys($packageJson['scripts'] ?? []);
+
+    /** @var array{scripts?: array<string, mixed>} $composerJson */
+    $composerJson = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
+    $composerScripts = array_keys($composerJson['scripts'] ?? []);
+
+    $builtInComposerCommands = [
+        'install', 'update', 'require', 'remove', 'dump-autoload', 'dumpautoload',
+        'exec', 'run-script', 'run', 'show', 'validate', 'check-platform-reqs',
+        'fund', 'diagnose', 'help', 'list', 'clear-cache', 'create-project', 'config', 'init',
+    ];
+
+    $guidelineFiles = array_merge(
+        glob(base_path('.ai/guidelines/*.blade.php')) ?: [],
+        [base_path('AGENTS.md'), base_path('CLAUDE.md'), base_path('GEMINI.md')],
+    );
+
+    expect($guidelineFiles)->not->toBeEmpty();
+
+    foreach ($guidelineFiles as $file) {
+        expect(file_exists($file))->toBeTrue("Expected [{$file}] to exist.");
+        $content = (string) file_get_contents($file);
+
+        if (preg_match_all('/bun run ([a-zA-Z0-9:_-]+)/', $content, $bunMatches)) {
+            foreach ($bunMatches[1] as $script) {
+                expect(in_array($script, $packageScripts, true))->toBeTrue(
+                    "File [{$file}] references missing bun run script [{$script}]."
+                );
+            }
+        }
+
+        if (preg_match_all('/composer (?:run )?([a-zA-Z0-9:_-]+)/', $content, $composerMatches)) {
+            foreach ($composerMatches[1] as $script) {
+                $isValid = in_array($script, $composerScripts, true) || in_array($script, $builtInComposerCommands, true);
+                expect($isValid)->toBeTrue(
+                    "File [{$file}] references missing composer script [{$script}]."
+                );
+            }
+        }
+    }
+});
