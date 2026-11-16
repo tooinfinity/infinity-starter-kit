@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\Cleanup;
+use Symfony\Component\Process\Process;
 
 if (! function_exists('runChiselSandbox')) {
     /**
@@ -83,6 +84,30 @@ if (! function_exists('assertPhpSyntaxValid')) {
         }
 
         expect($syntaxErrors)->toBeEmpty('Found PHP syntax errors in sandbox: '.implode("\n", $syntaxErrors));
+    }
+}
+
+if (! function_exists('assertRegistrationEmailNormalizedInSandbox')) {
+    /**
+     * Asserts that CreateUserRequest in the sandbox normalizes mixed-case and whitespace-padded email.
+     */
+    function assertRegistrationEmailNormalizedInSandbox(string $directory): void
+    {
+        $script = <<<'PHP'
+require 'vendor/autoload.php';
+require 'app/Http/Requests/CreateUserRequest.php';
+$request = \App\Http\Requests\CreateUserRequest::create('/register', 'POST', [
+    'email' => '  Jane@Example.COM  ',
+]);
+$request->prepareForValidation();
+echo $request->input('email');
+PHP;
+
+        $process = new Process([PHP_BINARY, '-r', $script], $directory);
+        $process->run();
+
+        expect($process->isSuccessful())->toBeTrue($process->getErrorOutput())
+            ->and($process->getOutput())->toBe('jane@example.com');
     }
 }
 
@@ -276,6 +301,7 @@ it('handles all features enabled', function (): void {
             ->and(isset($composer['scripts']['test:installer']))->toBeFalse()
             ->and(isset($composer['scripts']['test:smoke']))->toBeFalse();
 
+        assertRegistrationEmailNormalizedInSandbox($dir);
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);
     } finally {
@@ -629,13 +655,16 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
         $registrationController = (string) file_get_contents($dir.'/app/Http/Controllers/RegisterController.php');
         $registrationTests = (string) file_get_contents($dir.'/tests/Feature/Controllers/RegisterControllerTest.php');
 
-        expect($registrationRequest)->not->toContain('Locale')
-            ->and($registrationRequest)->not->toContain('function locale(')
+        expect($registrationRequest)
+            ->not->toContain('Locale')
+            ->not->toContain('locale')
+            ->toContain('function prepareForValidation(')
             ->and($registrationController)->not->toContain('Locale')
             ->and($registrationController)->not->toContain('$request->locale()')
             ->and($registrationTests)->toContain('may register a new user')
             ->and($registrationTests)->not->toContain('guest locale cookie');
 
+        assertRegistrationEmailNormalizedInSandbox($dir);
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);
     } finally {
@@ -1008,6 +1037,16 @@ it('verifies individual optional module removal preserves other modules and clea
 
         foreach ($selectedModules as $retained) {
             assertFeatureRetained($dir, FeatureRegistry::get($retained), $selectedModules);
+        }
+
+        if ($removedModule === 'localization') {
+            $registrationRequest = (string) file_get_contents($dir.'/app/Http/Requests/CreateUserRequest.php');
+            expect($registrationRequest)
+                ->toContain('function prepareForValidation(')
+                ->not->toContain('Locale')
+                ->not->toContain('locale');
+
+            assertRegistrationEmailNormalizedInSandbox($dir);
         }
 
         assertNoOrphanedMarkersInSandbox($dir);
