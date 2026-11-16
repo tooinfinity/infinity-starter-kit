@@ -7,7 +7,9 @@ use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Inertia\Inertia;
 use Spatie\Permission\Exceptions\RoleDoesNotExist;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -175,4 +177,65 @@ test('stores the UUID user id as the pivot model_id', function (): void {
 
     expect(DB::table('model_has_roles')->value('model_id'))->toBe($user->id)
         ->and(DB::table('model_has_permissions')->value('model_id'))->toBe($user->id);
+});
+
+test('shared inertia props include roles for authenticated user', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(RoleModel::findOrCreate(Role::SuperAdmin->value));
+
+    $response = $this->actingAs($user)
+        ->get(route('dashboard'));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('auth.roles')
+            ->where('auth.roles', [Role::SuperAdmin->value])
+        );
+});
+
+test('does not load roles or permissions for a redirect response', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(RoleModel::findOrCreate(Role::SuperAdmin->value));
+    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
+
+    DB::enableQueryLog();
+    $this->actingAs($user->fresh())->get('/settings')->assertRedirect(route('user-profile.edit'));
+
+    $queries = collect(DB::getQueryLog())->pluck('query');
+    expect($queries->filter(fn (string $q): bool => str_contains($q, 'model_has_roles') || str_contains($q, 'model_has_permissions')))->toBeEmpty();
+
+    if (Route::has('logout')) {
+        DB::flushQueryLog();
+        $this->actingAs($user->fresh())->post(route('logout'))->assertRedirect();
+
+        $logoutQueries = collect(DB::getQueryLog())->pluck('query');
+        expect($logoutQueries->filter(fn (string $q): bool => str_contains($q, 'model_has_roles') || str_contains($q, 'model_has_permissions')))->toBeEmpty();
+    }
+});
+
+test('does not load roles or permissions on Inertia partial reload excluding auth', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(RoleModel::findOrCreate(Role::SuperAdmin->value));
+    $user->givePermissionTo(PermissionModel::findOrCreate(Permission::AuthorizationManage->value));
+
+    $initial = $this->actingAs($user)->get(route('dashboard'))->assertOk();
+    $page = $initial->viewData('page');
+    $version = $page['version'] ?? (string) Inertia::getVersion();
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    $this->actingAs($user->fresh())
+        ->withHeaders([
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => $version,
+            'X-Inertia-Partial-Component' => 'dashboard',
+            'X-Inertia-Partial-Data' => 'name',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->get(route('dashboard'))
+        ->assertOk();
+
+    $queries = collect(DB::getQueryLog())->pluck('query');
+    expect($queries->filter(fn (string $q): bool => str_contains($q, 'model_has_roles') || str_contains($q, 'model_has_permissions')))->toBeEmpty();
 });
