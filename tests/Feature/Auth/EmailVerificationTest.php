@@ -9,6 +9,26 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 
+it('redirects guests attempting to access email verification routes to login', function (): void {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create();
+
+    $verificationUrl = (new VerifyEmail)->toMail($user)->actionUrl;
+
+    $this->get(route('verification.notice'))
+        ->assertRedirectToRoute('login');
+
+    $this->post(route('verification.send'))
+        ->assertRedirectToRoute('login');
+
+    $this->get($verificationUrl)
+        ->assertRedirectToRoute('login');
+
+    Notification::assertNothingSent();
+    expect($user->refresh()->hasVerifiedEmail())->toBeFalse();
+});
+
 it('redirects unverified users to the verification notice route', function (): void {
     $user = User::factory()->unverified()->create();
 
@@ -112,6 +132,23 @@ it('requires valid signature for verification link', function (): void {
     ]);
 
     $response = $this->actingAs($user)->get($invalidUrl);
+
+    $response->assertForbidden();
+
+    expect($user->refresh()->hasVerifiedEmail())->toBeFalse();
+});
+
+it('does not allow verification with stale hash after email changes', function (): void {
+    $user = User::factory()->unverified()->create([
+        'email' => 'original@example.com',
+    ]);
+
+    $url = (new VerifyEmail)->toMail($user)->actionUrl;
+
+    $user->email = 'changed@example.com';
+    $user->save();
+
+    $response = $this->actingAs($user)->get($url);
 
     $response->assertForbidden();
 
