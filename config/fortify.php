@@ -121,9 +121,6 @@ return [
     */
 
     'limiters' => [
-        /* @chisel-login */
-        'login' => 'login',
-        /* @end-chisel-login */
         /* @chisel-two-factor */
         'two-factor' => 'two-factor',
         /* @end-chisel-two-factor */
@@ -147,6 +144,9 @@ return [
     */
 
     'rate_limits' => [
+        /* @chisel-login */
+        'login' => (int) env('RATE_LIMIT_LOGIN', 5),
+        /* @end-chisel-login */
         /* @chisel-registration */
         'register' => (int) env('RATE_LIMIT_REGISTER', 5),
         /* @end-chisel-registration */

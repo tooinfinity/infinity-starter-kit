@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Requests\CreateSessionRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Event;
@@ -241,4 +242,46 @@ it('shares throttle bucket regardless of email case or whitespace', function ():
 
     $errors = session('errors');
     expect($errors->get('email')[0])->toContain('Too many login attempts');
+});
+
+it('locks out on the 4th attempt when RATE_LIMIT_LOGIN is 3', function (): void {
+    config()->set('fortify.rate_limits.login', 3);
+
+    User::factory()->create([
+        'email' => 'custom-limit@example.com',
+        'password' => Hash::make('password'),
+    ]);
+
+    for ($i = 0; $i < 3; $i++) {
+        $this->fromRoute('login')
+            ->post(route('login.store'), [
+                'email' => 'custom-limit@example.com',
+                'password' => 'wrong-password',
+            ]);
+    }
+
+    $response = $this->fromRoute('login')
+        ->post(route('login.store'), [
+            'email' => 'custom-limit@example.com',
+            'password' => 'wrong-password',
+        ]);
+
+    $response->assertRedirectToRoute('login')
+        ->assertSessionHasErrors('email');
+
+    $errors = session('errors');
+    expect($errors->get('email')[0])->toContain('Too many login attempts');
+});
+
+it('derives normalized throttle key for given email and ip', function (): void {
+    expect(CreateSessionRequest::throttleKeyFor('  User@Example.COM  ', '192.0.2.1'))
+        ->toBe('user@example.com|192.0.2.1');
+});
+
+it('resolves configured max login attempts', function (): void {
+    config()->set('fortify.rate_limits.login', 10);
+    expect(CreateSessionRequest::maxAttempts())->toBe(10);
+
+    config()->set('fortify.rate_limits.login', 5);
+    expect(CreateSessionRequest::maxAttempts())->toBe(5);
 });

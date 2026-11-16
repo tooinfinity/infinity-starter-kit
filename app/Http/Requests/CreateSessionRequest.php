@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Support\LoginThrottle;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +15,22 @@ use Illuminate\Validation\ValidationException;
 
 final class CreateSessionRequest extends FormRequest
 {
+    /**
+     * Get the maximum number of login attempts allowed per minute.
+     */
+    public static function maxAttempts(): int
+    {
+        return LoginThrottle::maxAttempts();
+    }
+
+    /**
+     * Get the rate-limiting throttle key for the given email and IP.
+     */
+    public static function throttleKeyFor(string $email, ?string $ip): string
+    {
+        return LoginThrottle::throttleKeyFor($email, $ip);
+    }
+
     /**
      * @return array<string, array<int, string>>
      */
@@ -55,12 +72,7 @@ final class CreateSessionRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return $this->string('email')
-            ->trim()
-            ->lower()
-            ->append('|'.$this->ip())
-            ->transliterate()
-            ->value();
+        return self::throttleKeyFor($this->string('email')->value(), $this->ip());
     }
 
     public function prepareForValidation(): void
@@ -77,7 +89,7 @@ final class CreateSessionRequest extends FormRequest
      */
     private function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), self::maxAttempts())) {
             return;
         }
 

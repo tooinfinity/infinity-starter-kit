@@ -27,7 +27,6 @@ final class AuthFeatures
                 markerFiles: [
                     'config/fortify.php',
                     'routes/web.php',
-                    'app/Providers/FortifyServiceProvider.php',
                     'resources/js/pages/welcome.tsx',
                     'resources/js/pages/user/create.tsx',
                     'tests/Feature/Middleware/AuthenticateSessionTest.php',

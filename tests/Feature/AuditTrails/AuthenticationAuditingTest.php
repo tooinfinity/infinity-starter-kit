@@ -140,6 +140,36 @@ test('lockout records auth.lockout audit trail', function (): void {
         ->and($audit->new_values['throttled'])->toBeTrue()
         ->and($audit->tags)->toBe(['auth', 'lockout']);
 });
+
+test('failed login audit trail throttled flag respects configured rate limit', function (): void {
+    config()->set('fortify.rate_limits.login', 3);
+
+    $user = User::factory()->create([
+        'email' => 'custom-throttle@example.com',
+        'password' => Hash::make('password'),
+    ]);
+
+    for ($i = 0; $i < 3; $i++) {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '198.51.100.123',
+        ])->post(route('login.store'), [
+            'email' => 'custom-throttle@example.com',
+            'password' => 'wrong',
+        ]);
+    }
+
+    $audits = AuditTrail::query()
+        ->where('event', AuditEvent::AuthLoginFailed)
+        ->where('actor_email', 'custom-throttle@example.com')
+        ->orderBy('id')
+        ->get();
+
+    expect($audits)->toHaveCount(3)
+        ->and($audits[0]->new_values['throttled'])->toBeFalse()
+        ->and($audits[1]->new_values['throttled'])->toBeFalse()
+        ->and($audits[2]->new_values['throttled'])->toBeTrue()
+        ->and($audits[2]->new_values['attempts'])->toBe(3);
+});
 /* @end-chisel-login */
 
 /* @chisel-logout */

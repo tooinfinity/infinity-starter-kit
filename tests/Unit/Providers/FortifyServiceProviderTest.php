@@ -25,14 +25,13 @@ test('FortifyServiceProvider ignores routes when fortify.routes is false', funct
     }
 });
 
-test('FortifyServiceProvider preserves route registration when login limiter is null but fortify.routes is true', function (): void {
+test('FortifyServiceProvider preserves route registration when fortify.routes is true', function (): void {
     $reflection = new ReflectionProperty(Fortify::class, 'registersRoutes');
     $original = $reflection->getValue();
     $reflection->setValue(null, true);
 
     try {
         config()->set('fortify.routes', true);
-        config()->set('fortify.limiters.login');
 
         $provider = new FortifyServiceProvider(app());
         $provider->register();
@@ -40,7 +39,6 @@ test('FortifyServiceProvider preserves route registration when login limiter is 
         expect($reflection->getValue())->toBeTrue();
     } finally {
         $reflection->setValue(null, $original);
-        config()->set('fortify.limiters.login', 'login');
     }
 });
 

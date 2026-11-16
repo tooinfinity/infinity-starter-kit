@@ -86,6 +86,32 @@ it('records auth.login_failed with known user and throttle outcome without crede
     RateLimiter::clear($throttleKey);
 });
 
+it('uses configured rate limit when determining throttled state on failed login', function (): void {
+    config()->set('fortify.rate_limits.login', 3);
+
+    $user = User::factory()->create(['email' => 'custom-audit@example.com']);
+    $request = Request::create('/login', 'POST', ['email' => 'custom-audit@example.com']);
+    app()->instance('request', $request);
+
+    $throttleKey = 'custom-audit@example.com|127.0.0.1';
+    RateLimiter::hit($throttleKey);
+    RateLimiter::hit($throttleKey);
+    RateLimiter::hit($throttleKey);
+
+    $event = new Failed('web', $user, ['email' => 'custom-audit@example.com', 'password' => 'secret123']);
+
+    $listener = resolve(AuditAuthenticationEvents::class);
+    $listener->onFailed($event);
+
+    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+
+    expect($audit)->not->toBeNull()
+        ->and($audit->new_values['throttled'])->toBeTrue()
+        ->and($audit->new_values['attempts'])->toBe(3);
+
+    RateLimiter::clear($throttleKey);
+});
+
 it('records auth.login_failed with unknown user without storing submitted email address', function (): void {
     $request = Request::create('/login', 'POST', ['email' => 'attacker-probe@unknown.com']);
     app()->instance('request', $request);
