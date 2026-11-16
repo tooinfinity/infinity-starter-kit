@@ -119,14 +119,8 @@ final class AuthFeatures
                     'app/Console/Commands/SetupAdminUserCommand.php',
                 ],
                 exclusiveFiles: [
-                    'app/Actions/CreateUserEmailVerificationNotification.php',
-                    'app/Http/Controllers/UserEmailVerificationController.php',
-                    'app/Http/Controllers/UserEmailVerificationNotificationController.php',
-                    'app/Http/Requests/UpdateEmailVerificationRequest.php',
                     'resources/js/pages/user-email-verification-notification/create.tsx',
-                    'tests/Feature/Controllers/UserEmailVerificationNotificationControllerTest.php',
-                    'tests/Feature/Controllers/UserEmailVerificationControllerTest.php',
-                    'tests/Unit/Actions/CreateUserEmailVerificationNotificationTest.php',
+                    'tests/Feature/Auth/EmailVerificationTest.php',
                 ],
                 emptyDirectories: [
                     'resources/js/pages/user-email-verification-notification',

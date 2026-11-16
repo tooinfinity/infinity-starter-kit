@@ -271,7 +271,7 @@ it('handles all features enabled', function (): void {
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeTrue();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
@@ -326,7 +326,7 @@ it('handles all optional modules disabled and all auth features disabled', funct
             ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
@@ -618,7 +618,7 @@ it('handles auth combinations: registration OFF, email-verification ON, two-fact
             ->and(file_exists($dir.'/tests/Feature/Controllers/RegisterControllerTest.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeTrue();
 
         assertNoOrphanedMarkersInSandbox($dir);
@@ -644,7 +644,7 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
             ->and(file_exists($dir.'/app/Enums/Locale.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
 
         $userModel = (string) file_get_contents($dir.'/app/Models/User.php');
@@ -685,7 +685,7 @@ it('handles minimal authentication: login and logout only', function (): void {
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
+            ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
 
         assertNoOrphanedMarkersInSandbox($dir);
@@ -943,9 +943,7 @@ it('tests individual feature removal from full auth configuration', function (st
                 ->and($routesContent)->not->toContain("Route::get('register'")
                 ->and($routesContent)->toContain("Route::get('login'"),
 
-            'email-verification' => expect(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeFalse()
-                ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationNotificationController.php'))->toBeFalse()
-                ->and($routesContent)->not->toContain("Route::get('verify-email'")
+            'email-verification' => expect(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeFalse()
                 ->and($routesContent)->not->toContain("'verified'"),
 
             'password-reset' => expect(file_exists($dir.'/app/Actions/CreateUserEmailResetNotification.php'))->toBeFalse()
@@ -994,7 +992,7 @@ it('handles registration and email-verification: login, logout, registration, em
         expect(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LogoutController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/UserEmailVerificationController.php'))->toBeTrue()
+            ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/UserPasswordController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
 
@@ -1002,7 +1000,7 @@ it('handles registration and email-verification: login, logout, registration, em
         expect($routesContent)->toContain("Route::get('login'")
             ->and($routesContent)->toContain("Route::post('logout'")
             ->and($routesContent)->toContain("Route::get('register'")
-            ->and($routesContent)->toContain("Route::get('verify-email'")
+            ->and($routesContent)->toContain("'verified'")
             ->and($routesContent)->not->toContain("Route::get('settings/two-factor'")
             ->and($routesContent)->not->toContain("Route::get('forgot-password'");
 
