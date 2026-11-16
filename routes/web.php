@@ -36,10 +36,6 @@ use App\Http\Controllers\SettingController;
 /* @chisel-password-reset */
 use App\Http\Controllers\UserEmailResetNotificationController;
 /* @end-chisel-password-reset */
-/* @chisel-email-verification */
-use App\Http\Controllers\UserEmailVerificationController;
-use App\Http\Controllers\UserEmailVerificationNotificationController;
-/* @end-chisel-email-verification */
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 /* @chisel-user-management */
@@ -186,20 +182,6 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-    /* @chisel-email-verification */
-    // User Email Verification...
-    Route::get('verify-email', [UserEmailVerificationNotificationController::class, 'create'])
-        ->name('user.verification.notice');
-    Route::post('email/verification-notification', [UserEmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
-
-    // User Email Verification...
-    Route::get('verify-email/{id}/{hash}', [UserEmailVerificationController::class, 'update'])
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('user.verification.verify');
-    /* @end-chisel-email-verification */
-
     /* @chisel-logout */
     // Logout...
     Route::post('logout', LogoutController::class)
