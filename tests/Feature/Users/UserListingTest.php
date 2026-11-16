@@ -34,7 +34,7 @@ it('forbids user listing for unauthorized user', function (): void {
 });
 
 it('filters users by search query', function (): void {
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['name' => 'Admin User', 'email' => 'admin@example.com']);
     $permission = PermissionModel::findOrCreate(Permission::UsersView->value);
     $admin->givePermissionTo($permission);
 
@@ -50,7 +50,7 @@ it('filters users by search query', function (): void {
 });
 
 it('filters users by inactive status', function (): void {
-    $admin = User::factory()->create();
+    $admin = User::factory()->active()->create(['name' => 'Admin User', 'email' => 'admin@example.com']);
     $permission = PermissionModel::findOrCreate(Permission::UsersView->value);
     $admin->givePermissionTo($permission);
 
