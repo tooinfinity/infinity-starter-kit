@@ -24,7 +24,7 @@ Designed for speed and cleanliness: choose your features during `composer create
 
 | Component | Supported Version / Constraint | Notes |
 | :--- | :--- | :--- |
-| **PHP** | `^8.5.0` (8.5+) | Required extensions: `pdo`, `pdo_sqlite`, `pdo_mysql`, `pdo_pgsql`, `pcov`, `mbstring`, `openssl`, `tokenizer`, `xml` |
+| **PHP** | `^8.5.0` (8.5+) | Required baseline extensions: `pdo`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `filter`, `openssl`. Plus the PDO driver for your configured database (see below). |
 | **Composer** | `v2.x` | Strictly reproducible installs with `composer.lock` |
 | **Bun** | `^1.2` / `^1.3` (1.2+) | Fast package manager, scripts, and runtime |
 | **Node.js** | `>= 24.x` | Used by Vite+ toolchain and Playwright |
@@ -34,6 +34,30 @@ Designed for speed and cleanliness: choose your features during `composer create
 | **TypeScript** | `^7.0.2` | Typed frontend codebase and Wayfinder routes |
 | **Tailwind CSS** | `^4.3.3` (Tailwind 4) | CSS compiler & styling |
 | **Database Engines** | SQLite 3.35+, MySQL 8.0+, PostgreSQL 16+ | Tested continuously across all 3 engines |
+
+### PHP Extension Requirements
+
+The installer's preflight check requires the **baseline runtime extensions** on every installation:
+
+`pdo`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `filter`, `openssl`
+
+In addition, the **PDO driver for the database you configure** must be installed. Only the driver matching your `DB_CONNECTION` is required — you do not need all of them:
+
+| Database Engine | Supported Version | Required PDO Extension |
+| :--- | :--- | :--- |
+| SQLite | 3.35+ | `pdo_sqlite` |
+| MySQL / MariaDB | MySQL 8.0+ | `pdo_mysql` |
+| PostgreSQL | 16+ | `pdo_pgsql` |
+
+### Development & CI Only Extensions
+
+Coverage drivers such as `pcov` (or Xdebug) are **optional** and are only needed when you want to measure code coverage:
+
+```bash
+composer test:coverage
+```
+
+They are **not** part of the generated application's runtime requirements, are **not** installed by `composer create-project`, and are **not** checked by the installer preflight. CI enables `pcov` explicitly when running coverage jobs.
 
 ---
 
