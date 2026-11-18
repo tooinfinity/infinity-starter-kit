@@ -48,6 +48,7 @@ In addition, the **PDO driver for the database you configure** must be installed
 | SQLite | 3.35+ | `pdo_sqlite` |
 | MySQL / MariaDB | MySQL 8.0+ | `pdo_mysql` |
 | PostgreSQL | 16+ | `pdo_pgsql` |
+| SQL Server | Not specified | `pdo_sqlsrv` |
 
 ### Development & CI Only Extensions
 
