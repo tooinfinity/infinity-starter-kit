@@ -129,6 +129,34 @@ describe('TwoFactorPage', () => {
                 props.title === 'Two-factor authentication',
         );
         assert.equal(heading, null);
+
+        const enableBtn = find(
+            tree,
+            (props: GenericProps) =>
+                props.children === 'Enable 2FA' && props.type === 'submit',
+        );
+        assert.equal(enableBtn, null);
+
+        const disableBtn = find(
+            tree,
+            (props: GenericProps) =>
+                props.children === 'Disable 2FA' && props.type === 'submit',
+        );
+        assert.equal(disableBtn, null);
+
+        const modal = find(
+            tree,
+            (props: GenericProps) => typeof props.isOpen === 'boolean',
+        );
+        assert.equal(modal, null);
+
+        const recoverySection = find(
+            tree,
+            (props: GenericProps) =>
+                'recoveryCodesList' in props &&
+                typeof props.onConfirmPassword === 'function',
+        );
+        assert.equal(recoverySection, null);
     });
 
     it('renders Enable 2FA button when twoFactorEnabled is false and hasSetupData is false', () => {

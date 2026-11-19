@@ -63,9 +63,30 @@ test('tests workflow defines decoupled application quality, dependencies, databa
         ->and($content)->toContain('composer test:types')
         ->and($content)->toContain('composer test:type-coverage')
         ->and($content)->toContain('composer test:unit')
-        ->and($content)->toContain('bun run test:unit')
         ->and($content)->toContain('composer test:coverage')
         ->and($content)->not->toContain('php artisan chisel:docs');
+
+    // Parse quality job steps to verify bun run test:unit is present and enabled
+    $qualitySection = mb_strstr($content, '  quality:');
+    $dependenciesSection = mb_strstr((string) $qualitySection, '  dependencies:');
+    $qualityJob = mb_substr((string) $qualitySection, 0, mb_strlen((string) $qualitySection) - mb_strlen((string) $dependenciesSection));
+
+    preg_match_all('/^[ ]{6}-[ ]+name:[ ]*(?<name>[^\n]+)\n(?<properties>(?:[ ]{8}[^\n]+\n)*)/m', $qualityJob, $stepMatches, PREG_SET_ORDER);
+    $qualitySteps = array_map(function (array $match): array {
+        $name = mb_trim($match['name'], " '\"");
+        $properties = [];
+        if (preg_match_all('/^[ ]{8}(?<key>[a-zA-Z0-9_-]+):[ ]*(?<val>[^\n]+)/m', $match['properties'], $propMatches, PREG_SET_ORDER)) {
+            foreach ($propMatches as $prop) {
+                $properties[$prop['key']] = mb_trim($prop['val'], " '\"");
+            }
+        }
+
+        return ['name' => $name, 'properties' => $properties];
+    }, $stepMatches);
+
+    $frontendTestStep = collect($qualitySteps)->first(fn (array $step): bool => ($step['properties']['run'] ?? null) === 'bun run test:unit');
+    expect($frontendTestStep)->not->toBeNull()
+        ->and($frontendTestStep['properties'])->not->toHaveKey('if', 'false');
 
     // Dependencies job acts as clean compatibility guard without cache
     $dependenciesSection = mb_strstr($content, '  dependencies:');

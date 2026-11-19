@@ -74,8 +74,21 @@ test('regression #46 / #28: rendering notification bell or dropdown does not tri
     }
     assert.equal(routerReload.mock.calls.length, 0);
 
-    // Rendering dropdown directly also does not trigger reload
+    // Rendering dropdown directly also does not trigger reload (populated case)
     harness.render(NotificationDropdown, {});
+    assert.equal(routerReload.mock.calls.length, 0);
+
+    // Rendering and re-rendering dropdown with notifications.recent omitted does not trigger reload
+    pageProps = {
+        auth: { user: { id: 1, name: 'Alice' } },
+        notifications: {
+            unreadCount: 0,
+        },
+    };
+    harness.render(NotificationDropdown, {});
+    assert.equal(routerReload.mock.calls.length, 0);
+
+    harness.rerender();
     assert.equal(routerReload.mock.calls.length, 0);
 });
 

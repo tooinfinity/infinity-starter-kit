@@ -193,3 +193,56 @@ test('no retry loop on failure: setup attempts abort superseded requests without
     assert.equal(fetchCount, 2); // 1 for qrCode + 1 for secretKey
     assert.ok(hookResult().errors.length > 0);
 });
+
+test('superseded setup attempts do not overwrite newer setup data', async () => {
+    let resolveFirstAttempt: (data: unknown) => void = () => {};
+    let resolveSecondAttempt: (data: unknown) => void = () => {};
+
+    const firstPromise = new Promise((resolve) => {
+        resolveFirstAttempt = resolve;
+    });
+    const secondPromise = new Promise((resolve) => {
+        resolveSecondAttempt = resolve;
+    });
+
+    let callCount = 0;
+    vi.stubGlobal('fetch', async (url: string) => {
+        callCount++;
+        if (callCount <= 2) {
+            await firstPromise;
+            if (url.includes('/user/two-factor-qr-code')) {
+                return Response.json({ svg: '<svg id="old"></svg>' });
+            }
+            return Response.json({ secretKey: 'OLD-KEY' });
+        }
+
+        await secondPromise;
+        if (url.includes('/user/two-factor-qr-code')) {
+            return Response.json({ svg: '<svg id="new"></svg>' });
+        }
+        return Response.json({ secretKey: 'NEW-KEY' });
+    });
+
+    // Start first attempt (pending)
+    const firstAttempt = hookResult().fetchSetupData();
+
+    // Start second attempt (pending)
+    const secondAttempt = hookResult().fetchSetupData();
+
+    // Resolve newer attempt first
+    resolveSecondAttempt(null);
+    await secondAttempt;
+    harness.rerender();
+
+    assert.equal(hookResult().qrCodeSvg, '<svg id="new"></svg>');
+    assert.equal(hookResult().manualSetupKey, 'NEW-KEY');
+
+    // Resolve older attempt later
+    resolveFirstAttempt(null);
+    await firstAttempt;
+    harness.rerender();
+
+    // Older completion must NOT replace newer setup data
+    assert.equal(hookResult().qrCodeSvg, '<svg id="new"></svg>');
+    assert.equal(hookResult().manualSetupKey, 'NEW-KEY');
+});

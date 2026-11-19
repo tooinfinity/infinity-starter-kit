@@ -9,28 +9,46 @@ import type { ReactElement, ReactNode } from 'react';
 export function hookHarness() {
     let slots: unknown[] = [];
     let slot = 0;
+    let generation = 0;
+    let pendingEffects: Array<() => void> = [];
     let rerender: (() => void) | null = null;
 
     const next = () => slot++;
+
+    const flushEffects = () => {
+        const effectsToRun = pendingEffects;
+        pendingEffects = [];
+        for (const run of effectsToRun) {
+            run();
+        }
+    };
 
     const react = {
         ...React,
         useState: (initial: unknown) => {
             const at = next();
+            const currentGeneration = generation;
+            const currentSlots = slots;
 
-            if (!(at in slots)) {
-                slots[at] =
+            if (!(at in currentSlots)) {
+                currentSlots[at] =
                     typeof initial === 'function'
                         ? (initial as () => unknown)()
                         : initial;
             }
 
             return [
-                slots[at],
+                currentSlots[at],
                 (value: unknown) => {
-                    slots[at] =
+                    if (generation !== currentGeneration) {
+                        return;
+                    }
+
+                    currentSlots[at] =
                         typeof value === 'function'
-                            ? (value as (current: unknown) => unknown)(slots[at])
+                            ? (value as (current: unknown) => unknown)(
+                                  currentSlots[at],
+                              )
                             : value;
                 },
             ];
@@ -58,11 +76,13 @@ export function hookHarness() {
                     (dep, index) => !Object.is(dep, previous.deps?.[index]),
                 )
             ) {
-                if (typeof previous?.cleanup === 'function') {
-                    previous.cleanup();
-                }
+                pendingEffects.push(() => {
+                    if (typeof previous?.cleanup === 'function') {
+                        previous.cleanup();
+                    }
 
-                slots[at] = { deps, cleanup: effect() };
+                    slots[at] = { deps, cleanup: effect() };
+                });
             }
         },
         useLayoutEffect: () => {
@@ -105,15 +125,20 @@ export function hookHarness() {
         ): ReactElement<Record<string, unknown>> | null {
             slot = 0;
             const tree = component(props);
+            flushEffects();
+
             rerender = () => {
                 slot = 0;
                 void component(props);
+                flushEffects();
             };
 
             return tree as ReactElement<Record<string, unknown>> | null;
         },
         rerender: () => rerender?.(),
         unmount: () => {
+            generation++;
+            pendingEffects = [];
             slots.forEach((value) => {
                 const cleanup = (value as { cleanup?: unknown } | undefined)
                     ?.cleanup;
@@ -129,7 +154,10 @@ export function hookHarness() {
 
 export function find(
     node: ReactNode,
-    matches: (props: Record<string, unknown>) => boolean,
+    matches: (
+        props: Record<string, unknown>,
+        element?: ReactElement<Record<string, unknown>>,
+    ) => boolean,
 ): ReactElement<Record<string, unknown>> | null {
     if (Array.isArray(node)) {
         for (const child of node) {
@@ -147,21 +175,20 @@ export function find(
         return null;
     }
 
-    if (matches(node.props)) {
+    if (matches(node.props, node)) {
         return node;
     }
 
     if (typeof node.props.children === 'function') {
-        try {
-            const rendered = (node.props.children as (arg: unknown) => ReactNode)({
-                processing: false,
-            });
-            const found = find(rendered, matches);
-            if (found) {
-                return found;
-            }
-        } catch {
-            // Render prop may require specific arguments
+        const renderProp = node.props.children as (
+            arg: Record<string, unknown>,
+        ) => ReactNode;
+        const rendered = renderProp({
+            processing: false,
+        });
+        const found = find(rendered, matches);
+        if (found) {
+            return found;
         }
     }
 
@@ -170,7 +197,10 @@ export function find(
 
 export function findAll(
     node: ReactNode,
-    matches: (props: Record<string, unknown>) => boolean,
+    matches: (
+        props: Record<string, unknown>,
+        element?: ReactElement<Record<string, unknown>>,
+    ) => boolean,
 ): Array<ReactElement<Record<string, unknown>>> {
     const results: Array<ReactElement<Record<string, unknown>>> = [];
 
@@ -186,19 +216,16 @@ export function findAll(
             return;
         }
 
-        if (matches(childNode.props)) {
+        if (matches(childNode.props, childNode)) {
             results.push(childNode);
         }
 
         if (typeof childNode.props.children === 'function') {
-            try {
-                const rendered = (
-                    childNode.props.children as (arg: unknown) => ReactNode
-                )({ processing: false });
-                walk(rendered);
-            } catch {
-                // Render prop may require specific arguments
-            }
+            const renderProp = childNode.props.children as (
+                arg: Record<string, unknown>,
+            ) => ReactNode;
+            const rendered = renderProp({ processing: false });
+            walk(rendered);
         }
 
         walk(childNode.props.children as ReactNode);

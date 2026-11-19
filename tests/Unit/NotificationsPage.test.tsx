@@ -64,6 +64,8 @@ vi.doMock('@/hooks/use-translation', () => ({
 
 const { default: NotificationsPage } =
     await import('../../resources/js/pages/notifications/index');
+const { NotificationEmptyState } =
+    await import('../../resources/js/components/notifications/notification-empty-state');
 
 function makeNotification(
     id: string,
@@ -105,6 +107,13 @@ describe('NotificationsPage', () => {
         const tree = harness.render(NotificationsPage, {
             notifications: paginated,
         });
+
+        // Positively assert that NotificationEmptyState is present
+        const emptyState = find(
+            tree,
+            (_props, node) => node?.type === NotificationEmptyState,
+        );
+        assert.notEqual(emptyState, null);
 
         const items = findAll(
             tree,
