@@ -52,6 +52,9 @@ export default defineConfig({
             'resources/js/wayfinder/*',
         ],
     },
+    test: {
+        include: ['tests/Unit/**/*.test.{ts,tsx}'],
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],

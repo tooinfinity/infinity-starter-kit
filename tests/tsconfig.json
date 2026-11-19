@@ -1,0 +1,13 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "types": ["node"]
+    },
+    "include": [
+        "Unit/**/*.test.ts",
+        "Unit/**/*.test.tsx",
+        "Unit/**/*.ts",
+        "Unit/**/*.tsx",
+        "../resources/js/types/*.d.ts"
+    ]
+}
