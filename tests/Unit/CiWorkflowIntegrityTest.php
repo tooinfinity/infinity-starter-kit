@@ -93,6 +93,28 @@ test('tests workflow defines decoupled application quality, dependencies, databa
     expect($content)->toContain('composer test:browser');
 });
 
+test('security workflow audits locked dev dependencies and fails on high-severity bun advisories', function (): void {
+    $workflowPath = base_path('.github/workflows/security.yml');
+    expect(file_exists($workflowPath))->toBeTrue();
+
+    $content = (string) file_get_contents($workflowPath);
+
+    // Scheduled workflow retains least-privilege permissions and pinned actions
+    expect($content)->toContain('permissions:')
+        ->and($content)->toContain('  contents: read')
+        ->and($content)->toContain('actions/checkout@')
+        ->and($content)->toContain('shivammathur/setup-php@')
+        ->and($content)->toContain('oven-sh/setup-bun@');
+
+    // Composer audit evaluates the complete locked dependency graph, including development dependencies
+    expect($content)->toContain('composer audit --locked')
+        ->and($content)->not->toContain('composer audit --locked --no-dev');
+
+    // Bun audit fails on high-severity advisories, not only critical ones
+    expect($content)->toContain('bun audit --audit-level=high')
+        ->and($content)->not->toContain('bun audit --audit-level=critical');
+});
+
 test('cleanup files list registers starter kit workflows, tests, and guidelines for removal in new projects', function (): void {
     $cleanupFiles = Cleanup::files();
 
