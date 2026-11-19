@@ -36,7 +36,7 @@ jobs:
           coverage: none
 
       - name: Audit Composer Dependencies
-        run: composer audit --locked --no-dev
+        run: composer audit --locked --abandoned=report
 
   bun-audit:
     runs-on: ubuntu-latest
@@ -55,4 +55,23 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Audit Bun Dependencies
-        run: bun audit --audit-level=critical
+        # bun audit --audit-level=high surfaces 12 high-severity advisories in
+        # transitive frontend dependencies (launch-editor, nanoid, postcss,
+        # source-map-js, devalue, browserslist). `bun update` (respecting
+        # semver ranges) does not resolve them: patched versions require
+        # breaking changes outside current ranges. Ignores are explicit,
+        # scoped, and time-bounded; revisit when patches can be applied.
+        # Ignore expiry: 2027-05-19.
+        run: >
+          bun audit --audit-level=high
+          --ignore=GHSA-587h-7wmj-h5pm
+          --ignore=GHSA-28wg-ghj8-5hjv
+          --ignore=GHSA-2v37-7h3g-55p8
+          --ignore=GHSA-r28c-9q8g-f849
+          --ignore=GHSA-68fv-2mgg-jv7q
+          --ignore=GHSA-r9w8-h9r3-54w4
+          --ignore=GHSA-j22f-vq7h-c4qm
+          --ignore=GHSA-mcm9-63f2-9j32
+          --ignore=GHSA-x5rw-q4pp-hg5g
+          --ignore=GHSA-c83g-rgw3-j3cx
+          --ignore=GHSA-73wf-gq98-2v4g

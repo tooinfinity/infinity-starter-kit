@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Chisel\Installer\Cleanup;
+use Symfony\Component\Yaml\Yaml;
 
 test('composer manifest defines all required test commands and scripts', function (): void {
     /** @var array{scripts?: array<string, mixed>} $composer */
@@ -91,6 +92,55 @@ test('tests workflow defines decoupled application quality, dependencies, databa
 
     // Browser tests run browser suite
     expect($content)->toContain('composer test:browser');
+});
+
+test('security workflow audits locked dev dependencies and fails on high-severity bun advisories', function (): void {
+    $workflowPath = base_path('.github/workflows/security.yml');
+    expect(file_exists($workflowPath))->toBeTrue();
+
+    $workflow = Yaml::parse((string) file_get_contents($workflowPath));
+    expect($workflow)->toBeArray();
+
+    // Scheduled workflow retains least-privilege permissions: read only, no write
+    $permissions = $workflow['permissions'] ?? [];
+    expect($permissions)->toBeArray()
+        ->and($permissions)->toHaveKey('contents')
+        ->and($permissions['contents'])->toBe('read')
+        ->and($permissions)->not->toHaveKey('write');
+
+    // Every action reference is pinned to a full 40-character commit SHA
+    $actionRefs = collect($workflow['jobs'] ?? [])
+        ->flatMap(fn (array $job): array => collect($job['steps'] ?? [])
+            ->filter(fn (array $step): bool => isset($step['uses']))
+            ->map(fn (array $step): string => $step['uses'])
+            ->all())
+        ->filter(fn (string $ref): bool => str_contains($ref, '@'))
+        ->all();
+
+    expect($actionRefs)->not->toBeEmpty();
+    foreach ($actionRefs as $ref) {
+        $sha = explode('@', $ref)[1] ?? '';
+        expect($sha)->toMatch('/^[0-9a-f]{40}$/');
+    }
+
+    // Composer audit evaluates the complete locked graph including dev dependencies
+    $findRun = fn (string $command): ?string => collect($workflow['jobs'] ?? [])
+        ->flatMap(fn (array $job): array => collect($job['steps'] ?? [])
+            ->filter(fn (array $step): bool => isset($step['run']) && str_starts_with($step['run'], $command))
+            ->map(fn (array $step): string => $step['run'])
+            ->all())
+        ->first();
+
+    $composerAuditCommand = $findRun('composer audit');
+    expect($composerAuditCommand)->not->toBeNull();
+    $tokens = preg_split('/\s+/', $composerAuditCommand);
+    expect($tokens)->toContain('--locked')
+        ->and($tokens)->not->toContain('--no-dev');
+
+    // Bun audit fails on high-severity advisories (or a more sensitive threshold)
+    $bunAuditCommand = $findRun('bun audit');
+    expect($bunAuditCommand)->not->toBeNull();
+    expect($bunAuditCommand)->toMatch('/--audit-level=(high|moderate|low|info)/');
 });
 
 test('cleanup files list registers starter kit workflows, tests, and guidelines for removal in new projects', function (): void {
