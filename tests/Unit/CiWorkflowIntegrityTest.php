@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Chisel\Installer\Cleanup;
+use Symfony\Component\Yaml\Yaml;
 
 test('composer manifest defines all required test commands and scripts', function (): void {
     /** @var array{scripts?: array<string, mixed>} $composer */
@@ -97,22 +98,49 @@ test('security workflow audits locked dev dependencies and fails on high-severit
     $workflowPath = base_path('.github/workflows/security.yml');
     expect(file_exists($workflowPath))->toBeTrue();
 
-    $content = (string) file_get_contents($workflowPath);
+    $workflow = Yaml::parse((string) file_get_contents($workflowPath));
+    expect($workflow)->toBeArray();
 
-    // Scheduled workflow retains least-privilege permissions and pinned actions
-    expect($content)->toContain('permissions:')
-        ->and($content)->toContain('  contents: read')
-        ->and($content)->toContain('actions/checkout@')
-        ->and($content)->toContain('shivammathur/setup-php@')
-        ->and($content)->toContain('oven-sh/setup-bun@');
+    // Scheduled workflow retains least-privilege permissions: read only, no write
+    $permissions = $workflow['permissions'] ?? [];
+    expect($permissions)->toBeArray()
+        ->and($permissions)->toHaveKey('contents')
+        ->and($permissions['contents'])->toBe('read')
+        ->and($permissions)->not->toHaveKey('write');
 
-    // Composer audit evaluates the complete locked dependency graph, including development dependencies
-    expect($content)->toContain('composer audit --locked')
-        ->and($content)->not->toContain('composer audit --locked --no-dev');
+    // Every action reference is pinned to a full 40-character commit SHA
+    $actionRefs = collect($workflow['jobs'] ?? [])
+        ->flatMap(fn (array $job): array => collect($job['steps'] ?? [])
+            ->filter(fn (array $step): bool => isset($step['uses']))
+            ->map(fn (array $step): string => $step['uses'])
+            ->all())
+        ->filter(fn (string $ref): bool => str_contains($ref, '@'))
+        ->all();
 
-    // Bun audit fails on high-severity advisories, not only critical ones
-    expect($content)->toContain('bun audit --audit-level=high')
-        ->and($content)->not->toContain('bun audit --audit-level=critical');
+    expect($actionRefs)->not->toBeEmpty();
+    foreach ($actionRefs as $ref) {
+        $sha = explode('@', $ref)[1] ?? '';
+        expect($sha)->toMatch('/^[0-9a-f]{40}$/');
+    }
+
+    // Composer audit evaluates the complete locked graph including dev dependencies
+    $findRun = fn (string $command): ?string => collect($workflow['jobs'] ?? [])
+        ->flatMap(fn (array $job): array => collect($job['steps'] ?? [])
+            ->filter(fn (array $step): bool => isset($step['run']) && str_starts_with($step['run'], $command))
+            ->map(fn (array $step): string => $step['run'])
+            ->all())
+        ->first();
+
+    $composerAuditCommand = $findRun('composer audit');
+    expect($composerAuditCommand)->not->toBeNull();
+    $tokens = preg_split('/\s+/', $composerAuditCommand);
+    expect($tokens)->toContain('--locked')
+        ->and($tokens)->not->toContain('--no-dev');
+
+    // Bun audit fails on high-severity advisories (or a more sensitive threshold)
+    $bunAuditCommand = $findRun('bun audit');
+    expect($bunAuditCommand)->not->toBeNull();
+    expect($bunAuditCommand)->toMatch('/--audit-level=(high|moderate|low|info)/');
 });
 
 test('cleanup files list registers starter kit workflows, tests, and guidelines for removal in new projects', function (): void {
