@@ -36,6 +36,7 @@ php artisan key:generate
 - **`RATE_LIMIT_REGISTER=5`**: (Optional) Maximum number of registration attempts allowed per minute per IP address (`register.store`). Defaults to `5`. Configured in `config/fortify.php` (`fortify.rate_limits.register`).
 - **`RATE_LIMIT_FORGOT_PASSWORD=5`**: (Optional) Maximum number of password reset email requests allowed per minute per IP and per email address (`password.email`). Defaults to `5`. Configured in `config/fortify.php` (`fortify.rate_limits.forgot_password`).
 - **`RATE_LIMIT_RESET_PASSWORD=5`**: (Optional) Maximum number of password reset submission attempts allowed per minute per IP address (`password.store`). Defaults to `5`. Configured in `config/fortify.php` (`fortify.rate_limits.reset_password`).
+- **`DB_USERNAME` / `DB_PASSWORD`**: Connect to the database as a dedicated least-privilege user, never as `root`. Create a database user with only the privileges the application needs (e.g. `infinity_app`), set `DB_PASSWORD` to that user's password, and never ship or commit a production `.env` with an empty database password. See `.env.production.example`.
 
 ---
 
