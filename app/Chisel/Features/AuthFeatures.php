@@ -214,6 +214,9 @@ final class AuthFeatures
                     'resources/js/hooks/use-two-factor-auth.ts',
                     'tests/Feature/Controllers/UserTwoFactorAuthenticationControllerTest.php',
                     'tests/Browser/TwoFactorAuthenticationTest.php',
+                    'tests/Unit/UseTwoFactorAuth.test.ts',
+                    'tests/Unit/TwoFactorSetupModal.test.tsx',
+                    'tests/Unit/TwoFactorPage.test.tsx',
                 ],
                 emptyDirectories: [
                     'resources/js/pages/user-password-confirmation',

@@ -63,6 +63,7 @@ test('tests workflow defines decoupled application quality, dependencies, databa
         ->and($content)->toContain('composer test:types')
         ->and($content)->toContain('composer test:type-coverage')
         ->and($content)->toContain('composer test:unit')
+        ->and($content)->toContain('bun run test:unit')
         ->and($content)->toContain('composer test:coverage')
         ->and($content)->not->toContain('php artisan chisel:docs');
 

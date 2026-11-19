@@ -47,6 +47,7 @@ final class OptionalModules
                     'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
                     'tests/Unit/Enums/RoleTest.php',
+                    'tests/Unit/UseAuthorization.test.ts',
                 ],
                 emptyDirectories: [
                     'tests/Feature/Authorization',
@@ -391,6 +392,8 @@ final class OptionalModules
                     'tests/Unit/Actions/Notifications/MarkNotificationAsReadTest.php',
                     'tests/Unit/Actions/Notifications/UpdateNotificationPreferencesTest.php',
                     'tests/Unit/Models/NotificationPreferenceTest.php',
+                    'tests/Unit/NotificationDropdown.test.tsx',
+                    'tests/Unit/NotificationsPage.test.tsx',
                 ],
                 emptyDirectories: [
                     'app/Actions/Notifications',

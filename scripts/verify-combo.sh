@@ -79,4 +79,7 @@ php artisan install:features --no-interaction --answers="${ANSWERS}"
 echo "=== [verify-combo] Running composer test suite ==="
 composer test
 
+echo "=== [verify-combo] Running frontend unit tests ==="
+bun run test:unit
+
 echo "=== [verify-combo] Combination verified successfully! ==="
