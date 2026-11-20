@@ -340,6 +340,7 @@ final class OptionalModules
                     'tests/Feature/Users/DeleteUserTest.php',
                     'tests/Unit/Actions/Users/UpdateUserPasswordTest.php',
                     'tests/Unit/ArchTest.php',
+                    'tests/Unit/Console/ScheduleTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/Notifications/DeleteNotification.php',
@@ -445,6 +446,7 @@ final class OptionalModules
                     'tests/Unit/Actions/Users/UpdateUserRolesTest.php',
                     'tests/Unit/Enums/PermissionTest.php',
                     'tests/Unit/ArchTest.php',
+                    'tests/Unit/Console/ScheduleTest.php',
                 ],
                 exclusiveFiles: [
                     'app/Actions/AuditTrails/DeleteAuditTrails.php',

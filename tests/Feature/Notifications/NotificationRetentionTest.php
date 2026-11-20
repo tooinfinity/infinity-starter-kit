@@ -123,13 +123,16 @@ test('notifications:prune deletes unread notifications when unread retention is 
         ->and(DB::table('notifications')->where('id', $recentUnreadId)->exists())->toBeTrue();
 });
 
-test('notifications:prune command is scheduled daily', function (): void {
+test('notifications:prune command is scheduled daily with withoutOverlapping and onOneServer', function (): void {
     $schedule = resolve(Schedule::class);
 
-    $isScheduled = collect($schedule->events())->contains(fn ($event): bool => str_contains($event->command ?? '', 'notifications:prune')
-        && $event->expression === '0 0 * * *');
+    $event = collect($schedule->events())->first(fn ($event): bool => str_contains($event->command ?? '', 'notifications:prune'));
 
-    expect($isScheduled)->toBeTrue();
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('0 0 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
+        ->and($event->mutex)->not->toBeNull();
 });
 
 test('notifications:prune command prunes read notifications older than specified days', function (): void {
