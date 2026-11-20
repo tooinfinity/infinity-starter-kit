@@ -87,6 +87,7 @@ final class Cleanup
             'tests/Feature/Chisel/GeneratedApplicationPerformanceTest.php',
             'tests/Feature/Authorization/SetupAdminUserCommandTest.php',
             'tests/Unit/Chisel/InstallerScenarioMatrixTest.php',
+            'tests/Unit/PackageStrategyAuditTest.php',
             'docs/installer-matrix.md',
             '.github/workflows/combos.yml',
             'scripts/verify-combo.sh',
