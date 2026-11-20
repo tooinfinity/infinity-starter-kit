@@ -28,7 +28,7 @@ Designed for speed and cleanliness: choose your features during `composer create
 | **Composer** | `v2.x` | Strictly reproducible installs with `composer.lock` |
 | **Bun** | `^1.2` / `^1.3` (1.2+) | Fast package manager, scripts, and runtime |
 | **Node.js** | `>= 24.x` | Used by Vite+ toolchain and Playwright |
-| **Laravel** | `^13.32.0` (Laravel 13) | Core application framework |
+| **Laravel** | `^13.40.0` (Laravel 13) | Core application framework |
 | **Inertia.js** | `^3.0.6` (Laravel) / `^3.7.1` (React) | Full-stack SPA bridge |
 | **React** | `^19.3.0` (React 19) | Frontend UI library |
 | **TypeScript** | `^7.0.2` | Typed frontend codebase and Wayfinder routes |
@@ -181,10 +181,17 @@ useAuthorization() hook / <Can> component ── UI helpers
 ```php
 enum Permission: string
 {
+    case AuthorizationManage = 'authorization.manage';
     case UsersView = 'users.view';
     case UsersCreate = 'users.create';
     case UsersUpdate = 'users.update';
     case UsersDelete = 'users.delete';
+    case UsersManageRoles = 'users.manage-roles';
+    case UsersManagePassword = 'users.manage-password';
+    case SettingsManage = 'settings.manage';
+    case AuditView = 'audit.view';
+    case ReportsView = 'reports.view';
+    case ReportsExport = 'reports.export';
 }
 ```
 

@@ -68,3 +68,35 @@ test('backend and frontend lockfiles exist and enforce reproducibility', functio
 
     expect($composerLock['platform']['php'] ?? null)->toBe('^8.5.0');
 });
+
+test('composer manifest does not contain stale comment fields', function (): void {
+    /** @var array<string, mixed> $composer */
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    expect($composer)->not->toHaveKey('_comment');
+});
+
+test('readme supported runtime and toolchain versions table matches package manifests', function (): void {
+    $readme = (string) file_get_contents(base_path('README.md'));
+
+    /** @var array{require: array<string, string>} $composer */
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    /** @var array{dependencies: array<string, string>, devDependencies: array<string, string>} $package */
+    $package = json_decode((string) file_get_contents(base_path('package.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    $php = $composer['require']['php'];
+    $laravel = $composer['require']['laravel/framework'];
+    $inertiaLaravel = $composer['require']['inertiajs/inertia-laravel'];
+    $inertiaReact = $package['dependencies']['@inertiajs/react'];
+    $react = $package['dependencies']['react'];
+    $typeScript = $package['devDependencies']['typescript'];
+    $tailwind = $package['devDependencies']['tailwindcss'];
+
+    expect($readme)->toMatch('/\|\s*\*\*PHP\*\*\s*\|\s*`'.preg_quote($php, '/').'`/')
+        ->and($readme)->toMatch('/\|\s*\*\*Laravel\*\*\s*\|\s*`'.preg_quote($laravel, '/').'`/')
+        ->and($readme)->toMatch('/\|\s*\*\*Inertia\.js\*\*\s*\|\s*`'.preg_quote($inertiaLaravel, '/').'`\s*\(Laravel\)\s*\/\s*`'.preg_quote($inertiaReact, '/').'`\s*\(React\)/')
+        ->and($readme)->toMatch('/\|\s*\*\*React\*\*\s*\|\s*`'.preg_quote($react, '/').'`/')
+        ->and($readme)->toMatch('/\|\s*\*\*TypeScript\*\*\s*\|\s*`'.preg_quote($typeScript, '/').'`/')
+        ->and($readme)->toMatch('/\|\s*\*\*Tailwind CSS\*\*\s*\|\s*`'.preg_quote($tailwind, '/').'`/');
+});
