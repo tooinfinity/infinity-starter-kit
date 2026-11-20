@@ -58,22 +58,75 @@ final readonly class RecordAuditTrail
         $key = $auditable?->getKey();
         $id = is_string($key) || is_int($key) ? (string) $key : $auditableId;
 
-        /** @var AuditTrail $record */
-        $record = AuditTrail::query()->create([
-            'user_id' => $actor?->id,
-            'actor_name' => $actor?->name,
-            'actor_email' => $actor?->email,
-            'event' => $event,
-            'auditable_type' => $type,
-            'auditable_id' => $id,
-            'old_values' => $redactedOld,
-            'new_values' => $redactedNew,
-            'url' => $url ?? $request?->fullUrl(),
-            'ip_address' => $request?->ip(),
-            'user_agent' => $request?->userAgent(),
-            'tags' => $tags,
-            'created_at' => now(),
-        ]);
+        $properties = [
+            'actor' => [
+                'name' => $actor?->name,
+                'email' => $actor?->email,
+            ],
+            'request' => [
+                'url' => $url ?? $request?->fullUrl(),
+                'ip_address' => $request?->ip(),
+                'user_agent' => $request?->userAgent(),
+            ],
+        ];
+
+        if ($redactedOld !== null) {
+            $properties['old'] = $redactedOld;
+        }
+
+        if ($redactedNew !== null) {
+            $properties['attributes'] = $redactedNew;
+        }
+
+        if ($tags !== null) {
+            $properties['tags'] = $tags;
+        }
+
+        $activityLogger = activity()
+            ->useLog('default')
+            ->event($event->value)
+            ->withProperties($properties);
+
+        if ($actor !== null) {
+            $activityLogger->causedBy($actor);
+        } else {
+            $activityLogger->causedByAnonymous();
+        }
+
+        if ($auditable instanceof Model) {
+            $activityLogger->performedOn($auditable);
+        } elseif ($type !== null || $id !== null) {
+            $activityLogger->tap(function (Model $activity) use ($type, $id): void {
+                if ($type !== null) {
+                    $activity->setAttribute('subject_type', $type);
+                }
+
+                if ($id !== null) {
+                    $activity->setAttribute('subject_id', $id);
+                }
+            });
+        }
+
+        $record = $activityLogger->log($event->label());
+
+        if (! $record instanceof AuditTrail) {
+            /** @var AuditTrail $record */
+            $record = AuditTrail::query()->create([
+                'user_id' => $actor?->id,
+                'actor_name' => $actor?->name,
+                'actor_email' => $actor?->email,
+                'event' => $event,
+                'auditable_type' => $type,
+                'auditable_id' => $id,
+                'old_values' => $redactedOld,
+                'new_values' => $redactedNew,
+                'url' => $url ?? $request?->fullUrl(),
+                'ip_address' => $request?->ip(),
+                'user_agent' => $request?->userAgent(),
+                'tags' => $tags,
+                'created_at' => now(),
+            ]);
+        }
 
         return $record;
     }

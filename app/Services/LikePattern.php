@@ -53,7 +53,12 @@ final readonly class LikePattern
      */
     public static function where(Builder $query, string $column, string $pattern): Builder
     {
-        return $query->whereRaw("{$column} LIKE ? ESCAPE ?", [$pattern, self::ESCAPE_CHARACTER]);
+        /** @var literal-string $wrapped */
+        $wrapped = str_contains($column, '->')
+            ? $query->getQuery()->getGrammar()->wrap($column)
+            : $column;
+
+        return $query->whereRaw("{$wrapped} LIKE ? ESCAPE ?", [$pattern, self::ESCAPE_CHARACTER]);
     }
 
     /**
@@ -67,6 +72,11 @@ final readonly class LikePattern
      */
     public static function orWhere(Builder $query, string $column, string $pattern): Builder
     {
-        return $query->orWhereRaw("{$column} LIKE ? ESCAPE ?", [$pattern, self::ESCAPE_CHARACTER]);
+        /** @var literal-string $wrapped */
+        $wrapped = str_contains($column, '->')
+            ? $query->getQuery()->getGrammar()->wrap($column)
+            : $column;
+
+        return $query->orWhereRaw("{$wrapped} LIKE ? ESCAPE ?", [$pattern, self::ESCAPE_CHARACTER]);
     }
 }

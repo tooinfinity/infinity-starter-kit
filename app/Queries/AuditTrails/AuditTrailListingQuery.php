@@ -27,10 +27,10 @@ final readonly class AuditTrailListingQuery
             $contains = LikePattern::contains($search);
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
-                LikePattern::where($q, 'ip_address', $prefix);
-                LikePattern::orWhere($q, 'auditable_id', $prefix);
-                LikePattern::orWhere($q, 'actor_name', $contains);
-                LikePattern::orWhere($q, 'actor_email', $contains);
+                LikePattern::where($q, 'properties->request->ip_address', $prefix);
+                LikePattern::orWhere($q, 'subject_id', $prefix);
+                LikePattern::orWhere($q, 'properties->actor->name', $contains);
+                LikePattern::orWhere($q, 'properties->actor->email', $contains);
                 $q->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
                     LikePattern::where($userQuery, 'name', $contains);
                     LikePattern::orWhere($userQuery, 'email', $contains);
@@ -43,7 +43,7 @@ final readonly class AuditTrailListingQuery
         }
 
         if (! empty($filters['user_id'])) {
-            $query->where('user_id', $filters['user_id']);
+            $query->where('causer_id', $filters['user_id']);
         }
 
         if (! empty($filters['date_from'])) {

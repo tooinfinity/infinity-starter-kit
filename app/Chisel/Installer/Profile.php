@@ -338,7 +338,7 @@ final readonly class Profile
         }
 
         if ($this->hasAuditTrails()) {
-            $tables[] = 'audit_trails';
+            $tables[] = 'activity_log';
         }
 
         return $tables;
@@ -366,7 +366,7 @@ final readonly class Profile
         }
 
         if (! $this->hasAuditTrails()) {
-            $tables[] = 'audit_trails';
+            $tables[] = 'activity_log';
         }
 
         return $tables;

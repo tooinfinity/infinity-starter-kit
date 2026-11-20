@@ -26,54 +26,78 @@ final readonly class UpdateUserAuditTrails
             'users',
         ]));
 
-        $records = DB::table('audit_trails')
+        $records = DB::table('activity_log')
             ->where(function (Builder $query) use ($userId, $userMorphs): void {
-                $query->where('user_id', $userId)
-                    ->orWhere(function (Builder $sub) use ($userId, $userMorphs): void {
-                        $sub->whereIn('auditable_type', $userMorphs)
-                            ->where('auditable_id', $userId);
+                $query->where(function (Builder $actorQuery) use ($userId, $userMorphs): void {
+                    $actorQuery->whereIn('causer_type', $userMorphs)
+                        ->where('causer_id', $userId);
+                })
+                    ->orWhere(function (Builder $subjectQuery) use ($userId, $userMorphs): void {
+                        $subjectQuery->whereIn('subject_type', $userMorphs)
+                            ->where('subject_id', $userId);
                     });
             })
             ->get();
 
         foreach ($records as $record) {
-            $isActor = ($record->user_id === $userId);
+            $isActor = is_string($record->causer_type)
+                && in_array($record->causer_type, $userMorphs, true)
+                && (is_string($record->causer_id) || is_int($record->causer_id))
+                && (string) $record->causer_id === $userId;
 
-            $updates = [];
+            $isSubject = is_string($record->subject_type)
+                && in_array($record->subject_type, $userMorphs, true)
+                && (is_string($record->subject_id) || is_int($record->subject_id))
+                && (string) $record->subject_id === $userId;
+
+            $rawProperties = is_string($record->properties)
+                ? json_decode($record->properties, true)
+                : (is_array($record->properties) ? $record->properties : []);
+            /** @var array<string, mixed> $properties */
+            $properties = is_array($rawProperties) ? $rawProperties : [];
 
             if ($isActor) {
-                $updates['actor_name'] = null;
-                $updates['actor_email'] = null;
-                $updates['ip_address'] = null;
-                $updates['user_agent'] = null;
+                if (isset($properties['actor']) && is_array($properties['actor'])) {
+                    $properties['actor']['name'] = null;
+                    $properties['actor']['email'] = null;
+                }
+
+                if (isset($properties['request']) && is_array($properties['request'])) {
+                    $properties['request']['ip_address'] = null;
+                    $properties['request']['user_agent'] = null;
+                }
             }
 
-            /** @var array<string, mixed>|null $oldValues */
-            $oldValues = is_string($record->old_values)
-                ? json_decode($record->old_values, true)
-                : null;
+            if ($isSubject || $isActor) {
+                /** @var array<string, mixed>|null $oldValues */
+                $oldValues = isset($properties['old']) && is_array($properties['old'])
+                    ? $properties['old']
+                    : null;
 
-            /** @var array<string, mixed>|null $newValues */
-            $newValues = is_string($record->new_values)
-                ? json_decode($record->new_values, true)
-                : null;
+                /** @var array<string, mixed>|null $newValues */
+                $newValues = isset($properties['attributes']) && is_array($properties['attributes'])
+                    ? $properties['attributes']
+                    : (isset($properties['new']) && is_array($properties['new']) ? $properties['new'] : null);
 
-            $scrubbedOld = $this->scrubValues($oldValues);
-            $scrubbedNew = $this->scrubValues($newValues);
+                $properties['old'] = $this->scrubValues($oldValues);
+                $properties['attributes'] = $this->scrubValues($newValues);
+                if (isset($properties['new'])) {
+                    unset($properties['new']);
+                }
+            }
 
-            $updates['old_values'] = $scrubbedOld !== null ? json_encode($scrubbedOld, JSON_THROW_ON_ERROR) : null;
-            $updates['new_values'] = $scrubbedNew !== null ? json_encode($scrubbedNew, JSON_THROW_ON_ERROR) : null;
-
-            $rawTags = is_string($record->tags) ? json_decode($record->tags, true) : null;
+            $rawTags = $properties['tags'] ?? null;
             /** @var list<string> $tags */
             $tags = is_array($rawTags) ? array_values(array_filter($rawTags, is_string(...))) : [];
             if (! in_array('anonymized', $tags, true)) {
                 $tags[] = 'anonymized';
             }
 
-            $updates['tags'] = json_encode($tags, JSON_THROW_ON_ERROR);
+            $properties['tags'] = $tags;
 
-            DB::table('audit_trails')->where('id', $record->id)->update($updates);
+            DB::table('activity_log')->where('id', $record->id)->update([
+                'properties' => json_encode($properties, JSON_THROW_ON_ERROR),
+            ]);
         }
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Queries\Reporting;
 
 use App\Data\Reporting\ReportDateRange;
+use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
@@ -55,9 +56,11 @@ final readonly class ExportAuditReportStream
                 $actorName = $audit->user->name ?? $audit->actor_name ?? $fallbackActor;
                 $actorEmail = $audit->user->email ?? $audit->actor_email ?? '';
 
+                $eventValue = $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : '');
+
                 fputcsv($handle, [
                     $audit->id,
-                    $this->sanitizeValue($audit->event->value),
+                    $this->sanitizeValue($eventValue),
                     $this->sanitizeValue($actorName),
                     $this->sanitizeValue($actorEmail),
                     $this->sanitizeValue($audit->auditable_type ?? ''),

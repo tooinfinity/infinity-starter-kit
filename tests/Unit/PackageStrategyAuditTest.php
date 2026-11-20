@@ -65,6 +65,7 @@ test('audited domain models strictly adhere to the HasUuids contract when instal
         User::class,
         'App\\Models\\'.'Setting',
         'App\\Models\\'.'AuditTrail',
+        'App\\Models\\'.'Activity',
         'App\\Models\\'.'NotificationPreference',
     ];
 

@@ -968,7 +968,7 @@ final readonly class InstallerScenario
         }
 
         if ($this->hasAuditTrails()) {
-            $tables[] = 'audit_trails';
+            $tables[] = 'activity_log';
         }
 
         return $tables;
@@ -1000,7 +1000,7 @@ final readonly class InstallerScenario
         }
 
         if (! $this->hasAuditTrails()) {
-            $tables[] = 'audit_trails';
+            $tables[] = 'activity_log';
         }
 
         return $tables;

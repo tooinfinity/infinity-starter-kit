@@ -57,3 +57,18 @@ test('orWhere applies raw or-like clause with escape character on eloquent build
             LikePattern::ESCAPE_CHARACTER,
         ]);
 });
+
+test('where wraps json paths on eloquent builder', function (): void {
+    $eloquentQuery = User::query();
+    LikePattern::where($eloquentQuery, 'meta->info->key', LikePattern::startsWith('test'));
+
+    expect($eloquentQuery->toSql())->toContain('json_extract("meta", \'$."info"."key"\') LIKE ? ESCAPE ?');
+});
+
+test('orWhere wraps json paths on eloquent builder', function (): void {
+    $eloquentQuery = User::query();
+    LikePattern::where($eloquentQuery, 'name', LikePattern::contains('test'));
+    LikePattern::orWhere($eloquentQuery, 'meta->info->key', LikePattern::contains('test'));
+
+    expect($eloquentQuery->toSql())->toContain('name LIKE ? ESCAPE ? or json_extract("meta", \'$."info"."key"\') LIKE ? ESCAPE ?');
+});

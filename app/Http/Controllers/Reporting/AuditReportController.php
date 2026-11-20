@@ -22,8 +22,8 @@ final readonly class AuditReportController
 
         $auditTrails = $result['paginated']->through(fn (AuditTrail $audit): array => [
             'id' => $audit->id,
-            'event' => $audit->event->value,
-            'event_label' => $audit->event->label(),
+            'event' => $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : ''),
+            'event_label' => $audit->event instanceof AuditEvent ? $audit->event->label() : (is_string($audit->event) ? (AuditEvent::tryFrom($audit->event)?->label() ?? $audit->event) : ''),
             'user' => $audit->user ? [
                 'id' => $audit->user->id,
                 'name' => $audit->user->name,

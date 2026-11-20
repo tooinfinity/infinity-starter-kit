@@ -175,6 +175,7 @@ arch('audit-trails does not depend on reporting or user management')
         'App\Listeners\AuditTrails',
         'App\Queries\AuditTrails',
         'App\Models\AuditTrail',
+        'App\Models\Activity',
         'App\Enums\AuditEvent',
         'App\Data\AuditTrails',
     ])
@@ -240,6 +241,7 @@ arch('notifications does not depend on reporting, audit trails, or settings')
         'App\Enums\ReportCategory',
         'App\Actions\AuditTrails',
         'App\Models\AuditTrail',
+        'App\Models\Activity',
         'App\Enums\AuditEvent',
         'App\Actions\Users',
         'App\Http\Controllers\Users',
@@ -270,6 +272,7 @@ arch('localization does not depend on other optional feature modules')
         'App\Enums\ReportCategory',
         'App\Actions\AuditTrails',
         'App\Models\AuditTrail',
+        'App\Models\Activity',
         'App\Enums\AuditEvent',
         'App\Actions\Users',
         'App\Http\Controllers\Users',
