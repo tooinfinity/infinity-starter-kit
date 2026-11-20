@@ -7,12 +7,16 @@ namespace App\Models\Concerns;
 use App\Enums\AuditEvent;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Closure;
+use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use RuntimeException;
+use Stringable;
 
 /**
  * @property string $id
@@ -82,7 +86,7 @@ trait InteractsWithAuditActivity
         return new class($query) extends Builder
         {
             /**
-             * @param  mixed  $column
+             * @param  Closure|string|array<int|string, mixed>|Expression  $column
              * @param  mixed  $operator
              * @param  mixed  $value
              * @param  string  $boolean
@@ -90,22 +94,37 @@ trait InteractsWithAuditActivity
              */
             public function where($column, $operator = null, $value = null, $boolean = 'and')
             {
-                if ($column === 'user_id') {
-                    $column = 'causer_id';
-                } elseif ($column === 'auditable_id') {
-                    $column = 'subject_id';
-                } elseif ($column === 'auditable_type') {
-                    $column = 'subject_type';
-                } elseif ($column === 'actor_email') {
-                    $column = 'properties->actor->email';
-                } elseif ($column === 'actor_name') {
-                    $column = 'properties->actor->name';
-                } elseif ($column === 'ip_address') {
-                    $column = 'properties->request->ip_address';
-                } elseif ($column === 'user_agent') {
-                    $column = 'properties->request->user_agent';
-                } elseif ($column === 'url') {
-                    $column = 'properties->request->url';
+                $translateColumn = static fn (mixed $col): mixed => match ($col) {
+                    'user_id' => 'causer_id',
+                    'auditable_id' => 'subject_id',
+                    'auditable_type' => 'subject_type',
+                    'actor_email' => 'properties->actor->email',
+                    'actor_name' => 'properties->actor->name',
+                    'ip_address' => 'properties->request->ip_address',
+                    'user_agent' => 'properties->request->user_agent',
+                    'url' => 'properties->request->url',
+                    default => $col,
+                };
+
+                if (is_string($column)) {
+                    $column = $translateColumn($column);
+                } elseif (is_array($column)) {
+                    $translated = [];
+                    foreach ($column as $key => $val) {
+                        if (is_array($val) && isset($val[0])) {
+                            $val[0] = $translateColumn($val[0]);
+                            $translated[$key] = $val;
+                        } else {
+                            $newKey = is_string($key) ? $translateColumn($key) : $key;
+                            $translated[$newKey] = $val;
+                        }
+                    }
+
+                    $column = $translated;
+                }
+
+                if (func_num_args() === 1) {
+                    return parent::where($column);
                 }
 
                 if (func_num_args() === 2) {
@@ -137,6 +156,30 @@ trait InteractsWithAuditActivity
         return $this->morphTo('auditable', 'subject_type', 'subject_id');
     }
 
+    public function setProperty(string $key, mixed $value): static
+    {
+        /** @var array<string, mixed> $properties */
+        $properties = $this->properties?->toArray() ?? [];
+
+        Arr::set($properties, $key, $value);
+        $this->attributes['properties'] = json_encode($properties);
+        $this->properties = collect($properties);
+
+        return $this;
+    }
+
+    public function setAttributeChange(string $key, mixed $value): static
+    {
+        /** @var array<string, mixed> $changes */
+        $changes = $this->attribute_changes?->toArray() ?? [];
+
+        Arr::set($changes, $key, $value);
+        $this->attributes['attribute_changes'] = json_encode($changes);
+        $this->attribute_changes = collect($changes);
+
+        return $this;
+    }
+
     protected function getUserIdAttribute(): ?string
     {
         return $this->causer_id !== null ? (string) $this->causer_id : null;
@@ -150,16 +193,6 @@ trait InteractsWithAuditActivity
         }
     }
 
-    protected function getAuditableTypeAttribute(): ?string
-    {
-        return $this->subject_type;
-    }
-
-    protected function setAuditableTypeAttribute(?string $value): void
-    {
-        $this->attributes['subject_type'] = $value;
-    }
-
     protected function getAuditableIdAttribute(): ?string
     {
         return $this->subject_id !== null ? (string) $this->subject_id : null;
@@ -170,119 +203,92 @@ trait InteractsWithAuditActivity
         $this->attributes['subject_id'] = $value;
     }
 
+    protected function getAuditableTypeAttribute(): ?string
+    {
+        return $this->subject_type;
+    }
+
+    protected function setAuditableTypeAttribute(?string $value): void
+    {
+        $this->attributes['subject_type'] = $value;
+    }
+
     protected function getActorNameAttribute(): ?string
     {
-        /** @var mixed $actor */
-        $actor = $this->getProperty('actor');
-
-        if (! is_array($actor)) {
-            return null;
-        }
-
-        $name = $actor['name'] ?? null;
+        $name = $this->getProperty('actor.name');
 
         return is_string($name) ? $name : null;
     }
 
     protected function setActorNameAttribute(?string $value): void
     {
-        $props = $this->getPropertiesArray();
-        $actor = isset($props['actor']) && is_array($props['actor']) ? $props['actor'] : [];
-        $actor['name'] = $value;
-        $props['actor'] = $actor;
-        $this->setPropertiesArray($props);
+        $this->setProperty('actor.name', $value);
     }
 
     protected function getActorEmailAttribute(): ?string
     {
-        /** @var mixed $actor */
-        $actor = $this->getProperty('actor');
-
-        if (! is_array($actor)) {
-            return null;
-        }
-
-        $email = $actor['email'] ?? null;
+        $email = $this->getProperty('actor.email');
 
         return is_string($email) ? $email : null;
     }
 
     protected function setActorEmailAttribute(?string $value): void
     {
-        $props = $this->getPropertiesArray();
-        $actor = isset($props['actor']) && is_array($props['actor']) ? $props['actor'] : [];
-        $actor['email'] = $value;
-        $props['actor'] = $actor;
-        $this->setPropertiesArray($props);
+        $this->setProperty('actor.email', $value);
     }
 
     protected function getUrlAttribute(): ?string
     {
-        /** @var mixed $req */
-        $req = $this->getProperty('request');
-
-        if (! is_array($req)) {
-            return null;
-        }
-
-        $url = $req['url'] ?? null;
+        $url = $this->getProperty('request.url');
 
         return is_string($url) ? $url : null;
     }
 
     protected function setUrlAttribute(?string $value): void
     {
-        $props = $this->getPropertiesArray();
-        $request = isset($props['request']) && is_array($props['request']) ? $props['request'] : [];
-        $request['url'] = $value;
-        $props['request'] = $request;
-        $this->setPropertiesArray($props);
+        $this->setProperty('request.url', $value);
     }
 
     protected function getIpAddressAttribute(): ?string
     {
-        /** @var mixed $req */
-        $req = $this->getProperty('request');
-
-        if (! is_array($req)) {
-            return null;
-        }
-
-        $ip = $req['ip_address'] ?? null;
+        $ip = $this->getProperty('request.ip_address');
 
         return is_string($ip) ? $ip : null;
     }
 
     protected function setIpAddressAttribute(?string $value): void
     {
-        $props = $this->getPropertiesArray();
-        $request = isset($props['request']) && is_array($props['request']) ? $props['request'] : [];
-        $request['ip_address'] = $value;
-        $props['request'] = $request;
-        $this->setPropertiesArray($props);
+        $this->setProperty('request.ip_address', $value);
     }
 
     protected function getUserAgentAttribute(): ?string
     {
-        /** @var mixed $req */
-        $req = $this->getProperty('request');
+        $userAgent = $this->getProperty('request.user_agent');
 
-        if (! is_array($req)) {
-            return null;
-        }
-
-        $agent = $req['user_agent'] ?? null;
-
-        return is_string($agent) ? $agent : null;
+        return is_string($userAgent) ? $userAgent : null;
     }
 
     protected function setUserAgentAttribute(?string $value): void
     {
-        $props = $this->getPropertiesArray();
-        $request = isset($props['request']) && is_array($props['request']) ? $props['request'] : [];
-        $request['user_agent'] = $value;
-        $props['request'] = $request;
-        $this->setPropertiesArray($props);
+        $this->setProperty('request.user_agent', $value);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function getTagsAttribute(): array
+    {
+        $tags = $this->getProperty('tags', []);
+
+        return is_array($tags) ? array_values(array_filter($tags, is_string(...))) : [];
+    }
+
+    /**
+     * @param  array<int, string>|null  $value
+     */
+    protected function setTagsAttribute(?array $value): void
+    {
+        $this->setProperty('tags', $value ?? []);
     }
 
     /**
@@ -290,14 +296,18 @@ trait InteractsWithAuditActivity
      */
     protected function getOldValuesAttribute(): ?array
     {
-        $old = $this->getProperty('old');
+        $old = $this->getProperty('old') ?? $this->attribute_changes?->get('old');
 
         if (! is_array($old)) {
             return null;
         }
 
-        /** @var array<string, mixed> $old */
-        return $old;
+        $result = [];
+        foreach ($old as $key => $val) {
+            $result[(string) $key] = $val;
+        }
+
+        return $result;
     }
 
     /**
@@ -305,14 +315,10 @@ trait InteractsWithAuditActivity
      */
     protected function setOldValuesAttribute(?array $value): void
     {
-        $props = $this->getPropertiesArray();
-        if ($value === null) {
-            unset($props['old']);
-        } else {
-            $props['old'] = $value;
+        $this->setProperty('old', $value);
+        if ($value !== null) {
+            $this->setAttributeChange('old', $value);
         }
-
-        $this->setPropertiesArray($props);
     }
 
     /**
@@ -320,14 +326,18 @@ trait InteractsWithAuditActivity
      */
     protected function getNewValuesAttribute(): ?array
     {
-        $new = $this->getProperty('attributes') ?? $this->getProperty('new');
+        $new = $this->getProperty('attributes') ?? $this->attribute_changes?->get('attributes');
 
         if (! is_array($new)) {
             return null;
         }
 
-        /** @var array<string, mixed> $new */
-        return $new;
+        $result = [];
+        foreach ($new as $key => $val) {
+            $result[(string) $key] = $val;
+        }
+
+        return $result;
     }
 
     /**
@@ -335,39 +345,10 @@ trait InteractsWithAuditActivity
      */
     protected function setNewValuesAttribute(?array $value): void
     {
-        $props = $this->getPropertiesArray();
-        if ($value === null) {
-            unset($props['attributes']);
-        } else {
-            $props['attributes'] = $value;
+        $this->setProperty('attributes', $value);
+        if ($value !== null) {
+            $this->setAttributeChange('attributes', $value);
         }
-
-        $this->setPropertiesArray($props);
-    }
-
-    /**
-     * @return list<string>|null
-     */
-    protected function getTagsAttribute(): ?array
-    {
-        $tags = $this->getProperty('tags');
-
-        return is_array($tags) ? array_values(array_filter($tags, is_string(...))) : null;
-    }
-
-    /**
-     * @param  list<string>|null  $value
-     */
-    protected function setTagsAttribute(?array $value): void
-    {
-        $props = $this->getPropertiesArray();
-        if ($value === null) {
-            unset($props['tags']);
-        } else {
-            $props['tags'] = $value;
-        }
-
-        $this->setPropertiesArray($props);
     }
 
     protected function getEventAttribute(mixed $value): AuditEvent|string|null
@@ -384,7 +365,7 @@ trait InteractsWithAuditActivity
             return AuditEvent::tryFrom($value) ?? $value;
         }
 
-        if (is_scalar($value) || $value instanceof \Stringable) {
+        if (is_scalar($value) || $value instanceof Stringable) {
             $str = (string) $value;
 
             return AuditEvent::tryFrom($str) ?? $str;
@@ -412,41 +393,5 @@ trait InteractsWithAuditActivity
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getPropertiesArray(): array
-    {
-        $properties = $this->attributes['properties'] ?? null;
-        if (is_string($properties)) {
-            /** @var array<string, mixed> $decoded */
-            $decoded = json_decode($properties, true) ?? [];
-
-            return $decoded;
-        }
-
-        if ($properties instanceof Collection) {
-            /** @var array<string, mixed> $array */
-            $array = $properties->toArray();
-
-            return $array;
-        }
-
-        if (is_array($properties)) {
-            /** @var array<string, mixed> $properties */
-            return $properties;
-        }
-
-        return [];
-    }
-
-    /**
-     * @param  array<string, mixed>  $props
-     */
-    private function setPropertiesArray(array $props): void
-    {
-        $this->attributes['properties'] = json_encode($props, JSON_THROW_ON_ERROR);
     }
 }

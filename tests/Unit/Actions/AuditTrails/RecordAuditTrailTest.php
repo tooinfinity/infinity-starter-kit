@@ -127,3 +127,18 @@ test('keeps the actor identity after the actor is deleted', function (): void {
         ->and($audit->actor_email)->toBe('ada@example.com')
         ->and($audit->actor_name)->toBe('Ada');
 });
+
+test('RecordAuditTrail respects disabled activity logging without writing records', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $action = resolve(RecordAuditTrail::class);
+
+    $record = $action->handle(
+        event: AuditEvent::UserCreated,
+        oldValues: ['name' => 'Old'],
+        newValues: ['name' => 'New'],
+    );
+
+    expect($record)->toBeNull()
+        ->and(AuditTrail::query()->count())->toBe(0);
+});

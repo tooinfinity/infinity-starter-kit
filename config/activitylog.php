@@ -53,12 +53,8 @@ return [
     /*
      * When enabled, activities are buffered in memory and inserted in a
      * single bulk query after the response has been sent to the client.
-     * This can significantly reduce the number of database queries when
-     * many activities are logged during a single request.
-     *
-     * Only enable this if your application logs a high volume of activities
-     * per request. Buffered activities will not have an ID until the
-     * buffer is flushed.
+     * Note: Bulk insertion bypasses model-level UUID generation. Keep this
+     * disabled unless a UUID-aware implementation is provided.
      */
     'buffer' => [
         'enabled' => env('ACTIVITYLOG_BUFFER_ENABLED', false),

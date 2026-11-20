@@ -9,6 +9,8 @@ use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Spatie\Activitylog\Contracts\Activity;
+use UnexpectedValueException;
 
 final readonly class RecordAuditTrail
 {
@@ -47,7 +49,7 @@ final readonly class RecordAuditTrail
         ?string $auditableType = null,
         ?string $auditableId = null,
         ?string $url = null,
-    ): AuditTrail {
+    ): ?AuditTrail {
         $request = $this->request ?? (app()->bound('request') ? request() : null);
         $actor = $user ?? (auth()->user() instanceof User ? auth()->user() : null);
 
@@ -109,23 +111,12 @@ final readonly class RecordAuditTrail
 
         $record = $activityLogger->log($event->label());
 
+        if (! $record instanceof Activity) {
+            return null;
+        }
+
         if (! $record instanceof AuditTrail) {
-            /** @var AuditTrail $record */
-            $record = AuditTrail::query()->create([
-                'user_id' => $actor?->id,
-                'actor_name' => $actor?->name,
-                'actor_email' => $actor?->email,
-                'event' => $event,
-                'auditable_type' => $type,
-                'auditable_id' => $id,
-                'old_values' => $redactedOld,
-                'new_values' => $redactedNew,
-                'url' => $url ?? $request?->fullUrl(),
-                'ip_address' => $request?->ip(),
-                'user_agent' => $request?->userAgent(),
-                'tags' => $tags,
-                'created_at' => now(),
-            ]);
+            throw new UnexpectedValueException(sprintf('Expected activity to be an instance of %s, got %s.', AuditTrail::class, get_debug_type($record)));
         }
 
         return $record;

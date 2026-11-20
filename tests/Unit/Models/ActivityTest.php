@@ -106,3 +106,20 @@ test('activity model supports two-argument where query semantics and eager loadi
         ->and($eagerLoaded->user)->toBeInstanceOf(User::class)
         ->and($eagerLoaded->auditable)->toBeInstanceOf(User::class);
 });
+
+test('activity model translates user_id to causer_id for array-form predicates', function (): void {
+    $user = User::factory()->create();
+
+    $activity = Activity::query()->create([
+        'user_id' => $user->id,
+        'actor_name' => 'Charlie Array',
+    ]);
+
+    $associativeQuery = Activity::query()->where(['user_id' => $user->id])->first();
+    expect($associativeQuery)->not->toBeNull()
+        ->and($associativeQuery->id)->toBe($activity->id);
+
+    $tupleQuery = Activity::query()->where([['user_id', '=', $user->id]])->first();
+    expect($tupleQuery)->not->toBeNull()
+        ->and($tupleQuery->id)->toBe($activity->id);
+});
