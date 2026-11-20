@@ -144,8 +144,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "_comment": [
-        "brianium/paratest is pinned to 7.26.0 for Pest compatibility."
-    ]
+    "prefer-stable": true
 }

@@ -1,6 +1,6 @@
 # App/Http/Requests guidelines
 
-- Never use policies or gates: no `app/Policies`, no `Gate::define()`, no `can:` middleware, no `$user->can()`, no `$this->authorize()`.
+- Never use policies or standalone gates: no `app/Policies`, no `Gate::define()`, no `can:` middleware, no `$this->authorize()`. Authorization happens strictly in form requests using `$this->user()?->can(...)` with the Permission enum or model visibility checks.
 - Authorization and validation only ever happen in form requests: authorization in `authorize()`, validation in `rules()`. Never in controllers, actions, or models. This includes `index` and `show` endpoints.
 - Controllers and actions never check anything themselves: no `abort()`, `abort_if()`, `abort_unless()`, `throw_if()`, `throw_unless()`, `Validator::make()`, `$request->validate()`, or `ValidationException`.
 - Create a dedicated form request for each endpoint that checks anything, and never share one between endpoints. If the endpoint has none yet, create one.
