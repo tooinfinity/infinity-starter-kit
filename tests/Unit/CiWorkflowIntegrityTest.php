@@ -78,7 +78,7 @@ test('tests workflow defines decoupled application quality, dependencies, databa
 
         return array_map(function (string $block): array {
             $properties = [];
-            if (preg_match_all('/^[ ]*(?<key>[a-zA-Z0-9_-]+):[ ]*(?<val>[^\n]+)/m', $block, $propMatches, PREG_SET_ORDER)) {
+            if (preg_match_all('/^(?:[ ]{8}(?!\s)|(?!\s))(?<key>[a-zA-Z0-9_-]+):[ ]*(?<val>[^\n]*)/m', $block, $propMatches, PREG_SET_ORDER)) {
                 foreach ($propMatches as $prop) {
                     $properties[$prop['key']] = mb_trim($prop['val'], " '\"");
                 }
@@ -88,10 +88,21 @@ test('tests workflow defines decoupled application quality, dependencies, databa
         }, $stepBlocks);
     };
 
+    $isStepDisabled = function (array $step): bool {
+        $condition = $step['properties']['if'] ?? null;
+        if ($condition === null) {
+            return false;
+        }
+
+        $stripped = mb_strtolower(preg_replace('/\s+/', '', $condition) ?? '');
+
+        return in_array($stripped, ['false', '${{false}}'], true);
+    };
+
     $qualitySteps = $parseWorkflowSteps($qualityJob);
     $frontendTestStep = collect($qualitySteps)->first(fn (array $step): bool => ($step['properties']['run'] ?? null) === 'bun run test:unit');
     expect($frontendTestStep)->not->toBeNull()
-        ->and($frontendTestStep['properties']['if'] ?? null)->not->toBe('false');
+        ->and($isStepDisabled($frontendTestStep))->toBeFalse();
 
     // Regression: step properties across intervening blank lines (e.g. if: false) are not ignored
     $sampleDisabledJob = <<<'YAML'
@@ -105,7 +116,46 @@ test('tests workflow defines decoupled application quality, dependencies, databa
     $parsedSampleSteps = $parseWorkflowSteps($sampleDisabledJob);
     $sampleDisabledStep = collect($parsedSampleSteps)->first(fn (array $step): bool => ($step['properties']['run'] ?? null) === 'bun run test:unit');
     expect($sampleDisabledStep)->not->toBeNull()
-        ->and($sampleDisabledStep['properties']['if'] ?? null)->toBe('false');
+        ->and($isStepDisabled($sampleDisabledStep))->toBeTrue();
+
+    // Regression: expression condition ${{ false }} is detected as disabled
+    $sampleExpressionDisabledJob = <<<'YAML'
+      quality:
+        steps:
+          - name: Run frontend unit tests
+            run: bun run test:unit
+
+            if: ${{ false }}
+    YAML;
+    $parsedExpressionSteps = $parseWorkflowSteps($sampleExpressionDisabledJob);
+    $expressionDisabledStep = collect($parsedExpressionSteps)->first(fn (array $step): bool => ($step['properties']['run'] ?? null) === 'bun run test:unit');
+    expect($expressionDisabledStep)->not->toBeNull()
+        ->and($isStepDisabled($expressionDisabledStep))->toBeTrue();
+
+    // Regression: nested mapping properties (e.g. env.if: 'false') do not override step-level condition
+    $sampleNestedEnvJob = <<<'YAML'
+      quality:
+        steps:
+          - name: Run frontend unit tests
+            run: bun run test:unit
+            env:
+              if: false
+          - name: Run with genuine if
+            run: bun run test:peers
+            env:
+              VAR: true
+            if: false
+    YAML;
+    $parsedNestedSteps = $parseWorkflowSteps($sampleNestedEnvJob);
+    $unconditionalNestedStep = collect($parsedNestedSteps)->first(fn (array $step): bool => ($step['properties']['run'] ?? null) === 'bun run test:unit');
+    expect($unconditionalNestedStep)->not->toBeNull()
+        ->and($unconditionalNestedStep['properties'])->not->toHaveKey('if')
+        ->and($isStepDisabled($unconditionalNestedStep))->toBeFalse();
+
+    $genuineIfStep = collect($parsedNestedSteps)->first(fn (array $step): bool => ($step['properties']['run'] ?? null) === 'bun run test:peers');
+    expect($genuineIfStep)->not->toBeNull()
+        ->and($genuineIfStep['properties']['if'] ?? null)->toBe('false')
+        ->and($isStepDisabled($genuineIfStep))->toBeTrue();
 
     // Dependencies job acts as clean compatibility guard without cache
     $dependenciesSection = mb_strstr($content, '  dependencies:');
