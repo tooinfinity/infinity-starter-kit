@@ -66,3 +66,43 @@ test('activity model correctly maps and casts legacy attributes', function (): v
         ->and($activity->user)->toBeInstanceOf(User::class)
         ->and($activity->auditable)->toBeInstanceOf(User::class);
 });
+
+test('activity model handles non-enum string events gracefully', function (): void {
+    $activity = Activity::query()->create([
+        'event' => 'custom_spatie_event',
+    ]);
+
+    expect($activity->event)->toBe('custom_spatie_event');
+
+    $refreshed = Activity::query()->findOrFail($activity->id);
+    expect($refreshed->event)->toBe('custom_spatie_event');
+});
+
+test('activity model supports two-argument where query semantics and eager loading', function (): void {
+    $user = User::factory()->create();
+
+    $activity = Activity::query()->create([
+        'user_id' => $user->id,
+        'actor_name' => 'Bob Reviewer',
+        'auditable_type' => $user->getMorphClass(),
+        'auditable_id' => $user->id,
+    ]);
+
+    $queriedByActor = Activity::query()->where('actor_name', 'Bob Reviewer')->first();
+    expect($queriedByActor)->not->toBeNull()
+        ->and($queriedByActor->id)->toBe($activity->id);
+
+    $queriedByUserId = Activity::query()->where('user_id', $user->id)->first();
+    expect($queriedByUserId)->not->toBeNull()
+        ->and($queriedByUserId->id)->toBe($activity->id);
+
+    $eagerLoaded = Activity::query()
+        ->with(['user', 'auditable'])
+        ->find($activity->id);
+
+    expect($eagerLoaded)->not->toBeNull()
+        ->and($eagerLoaded->relationLoaded('user'))->toBeTrue()
+        ->and($eagerLoaded->relationLoaded('auditable'))->toBeTrue()
+        ->and($eagerLoaded->user)->toBeInstanceOf(User::class)
+        ->and($eagerLoaded->auditable)->toBeInstanceOf(User::class);
+});

@@ -45,4 +45,9 @@ test('audit trail relationships resolve correctly', function (): void {
         ->and($trail->user->id)->toBe($user->id)
         ->and($trail->auditable)->toBeInstanceOf(User::class)
         ->and($trail->auditable->id)->toBe($user->id);
+
+    $eagerLoaded = AuditTrail::query()->with(['user', 'auditable'])->find($trail->id);
+    expect($eagerLoaded)->not->toBeNull()
+        ->and($eagerLoaded->relationLoaded('user'))->toBeTrue()
+        ->and($eagerLoaded->relationLoaded('auditable'))->toBeTrue();
 });

@@ -10,7 +10,6 @@ use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
 use App\Models\AuditTrail;
-use App\Services\LikePattern;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -202,19 +201,20 @@ final readonly class AuditReportQuery
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
-            $prefix = LikePattern::startsWith($search);
-            $contains = LikePattern::contains($search);
+            $escaped = addcslashes($search, '%_\\');
+            $prefix = "{$escaped}%";
+            $contains = "%{$escaped}%";
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
-                LikePattern::where($q, 'properties->request->ip_address', $prefix);
-                LikePattern::orWhere($q, 'subject_id', $prefix);
-                LikePattern::orWhere($q, 'subject_type', $prefix);
-                LikePattern::orWhere($q, 'properties->actor->name', $contains);
-                LikePattern::orWhere($q, 'properties->actor->email', $contains);
-                $q->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
-                    LikePattern::where($userQuery, 'name', $contains);
-                    LikePattern::orWhere($userQuery, 'email', $contains);
-                });
+                $q->where('properties->request->ip_address', 'like', $prefix)
+                    ->orWhereRaw('subject_id LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhereRaw('subject_type LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhere('properties->actor->name', 'like', $contains)
+                    ->orWhere('properties->actor->email', 'like', $contains)
+                    ->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
+                        $userQuery->whereRaw('name LIKE ? ESCAPE ?', [$contains, '\\'])
+                            ->orWhereRaw('email LIKE ? ESCAPE ?', [$contains, '\\']);
+                    });
             });
         }
 

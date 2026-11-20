@@ -108,6 +108,14 @@ trait InteractsWithAuditActivity
                     $column = 'properties->request->url';
                 }
 
+                if (func_num_args() === 2) {
+                    return parent::where($column, $operator);
+                }
+
+                if (func_num_args() === 3) {
+                    return parent::where($column, $operator, $value);
+                }
+
                 return parent::where($column, $operator, $value, $boolean);
             }
         };
@@ -118,7 +126,7 @@ trait InteractsWithAuditActivity
      */
     public function user(): MorphTo
     {
-        return $this->morphTo('causer', 'causer_type', 'causer_id');
+        return $this->morphTo('user', 'causer_type', 'causer_id');
     }
 
     /**
@@ -126,7 +134,7 @@ trait InteractsWithAuditActivity
      */
     public function auditable(): MorphTo
     {
-        return $this->morphTo('subject', 'subject_type', 'subject_id');
+        return $this->morphTo('auditable', 'subject_type', 'subject_id');
     }
 
     protected function getUserIdAttribute(): ?string
@@ -362,6 +370,34 @@ trait InteractsWithAuditActivity
         $this->setPropertiesArray($props);
     }
 
+    protected function getEventAttribute(mixed $value): AuditEvent|string|null
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof AuditEvent) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return AuditEvent::tryFrom($value) ?? $value;
+        }
+
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            $str = (string) $value;
+
+            return AuditEvent::tryFrom($str) ?? $str;
+        }
+
+        return null;
+    }
+
+    protected function setEventAttribute(mixed $value): void
+    {
+        $this->attributes['event'] = $value instanceof AuditEvent ? $value->value : $value;
+    }
+
     /**
      * @return array<string, string>
      */
@@ -369,7 +405,6 @@ trait InteractsWithAuditActivity
     {
         return [
             'id' => 'string',
-            'event' => AuditEvent::class,
             'causer_id' => 'string',
             'subject_id' => 'string',
             'attribute_changes' => 'collection',

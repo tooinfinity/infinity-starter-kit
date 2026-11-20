@@ -37,6 +37,7 @@ final readonly class UpdateUserAuditTrails
                             ->where('subject_id', $userId);
                     });
             })
+            ->lockForUpdate()
             ->get();
 
         foreach ($records as $record) {
