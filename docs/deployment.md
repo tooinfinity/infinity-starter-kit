@@ -136,6 +136,8 @@ Add a single cron entry on your production server to trigger scheduled tasks eve
 * * * * * cd /var/www && php artisan schedule:run >> /dev/null 2>&1
 ```
 
+Scheduled commands in `routes/console.php` (such as `notifications:prune` and `audit:prune`) declare `withoutOverlapping()` and `onOneServer()` to prevent overlapping executions and deadlocks across horizontally scaled servers. Note that `onOneServer()` requires a shared cache store (such as `database`, `redis`, or `memcached`), rather than a local driver (`file` or `array`). The default production cache store (`database`) satisfies this requirement.
+
 ---
 
 ## 6. Production Deployment Checklist

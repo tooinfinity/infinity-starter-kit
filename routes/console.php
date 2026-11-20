@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-/* @chisel-notifications */
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('notifications:prune')->daily();
+/* @chisel-notifications */
+Schedule::command('notifications:prune')->daily()->withoutOverlapping()->onOneServer();
 /* @end-chisel-notifications */
 
 /* @chisel-audit-trails */
-Schedule::command('audit:prune')->daily();
+Schedule::command('audit:prune')->daily()->withoutOverlapping()->onOneServer();
 /* @end-chisel-audit-trails */

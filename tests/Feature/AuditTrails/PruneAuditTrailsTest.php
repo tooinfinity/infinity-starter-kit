@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\AuditTrail;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
 
 it('prunes audit rows older than the retention window', function (): void {
@@ -31,4 +32,16 @@ it('does not prune when retention days is zero or negative', function (): void {
     Artisan::call('audit:prune', ['--days' => 0]);
 
     expect(AuditTrail::query()->pluck('id')->all())->toBe([$record->id]);
+});
+
+it('schedules audit:prune daily with withoutOverlapping and onOneServer', function (): void {
+    $schedule = resolve(Schedule::class);
+
+    $event = collect($schedule->events())->first(fn ($event): bool => str_contains($event->command ?? '', 'audit:prune'));
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('0 0 * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->onOneServer)->toBeTrue()
+        ->and($event->mutex)->not->toBeNull();
 });
