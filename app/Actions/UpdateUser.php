@@ -33,12 +33,14 @@ final readonly class UpdateUser
         $emailChanged = isset($attributes['email']) && $user->email !== $attributes['email'];
         /* @end-chisel-email-verification */
 
-        $user->update([
-            ...$attributes,
-            /* @chisel-email-verification */
-            ...($emailChanged ? ['email_verified_at' => null] : []),
-            /* @end-chisel-email-verification */
-        ]);
+        User::withoutEvents(function () use ($user, $attributes, $emailChanged): void {
+            $user->update([
+                ...$attributes,
+                /* @chisel-email-verification */
+                ...($emailChanged ? ['email_verified_at' => null] : []),
+                /* @end-chisel-email-verification */
+            ]);
+        });
 
         /* @chisel-email-verification */
         if ($emailChanged) {

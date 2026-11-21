@@ -81,7 +81,14 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     /* @end-chisel-two-factor */
 
     /* @chisel-audit-trails */
-    /** @var list<string> */
+    /**
+     * Audit contract: Application user edits (via UpdateUser actions) are
+     * explicitly audited via RecordAuditTrail (AuditEvent::UserUpdated)
+     * with full actor and request context. Direct Eloquent updates outside
+     * actions record an updated event via HasActivity.
+     *
+     * @var list<string>
+     */
     protected static array $recordEvents = ['updated'];
 
     /* @end-chisel-audit-trails */

@@ -10,6 +10,7 @@ use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
 use App\Models\Activity;
+use App\Queries\AuditTrails\AuditTrailListingQuery;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -206,11 +207,11 @@ final readonly class AuditReportQuery
             $contains = "%{$escaped}%";
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
-                $q->where('properties->request->ip_address', 'like', $prefix)
+                $q->whereRaw(AuditTrailListingQuery::jsonLikeEscapeSql('request.ip_address'), [$prefix, '\\'])
                     ->orWhereRaw('subject_id LIKE ? ESCAPE ?', [$prefix, '\\'])
                     ->orWhereRaw('subject_type LIKE ? ESCAPE ?', [$prefix, '\\'])
-                    ->orWhere('properties->actor->name', 'like', $contains)
-                    ->orWhere('properties->actor->email', 'like', $contains)
+                    ->orWhereRaw(AuditTrailListingQuery::jsonLikeEscapeSql('actor.name'), [$contains, '\\'])
+                    ->orWhereRaw(AuditTrailListingQuery::jsonLikeEscapeSql('actor.email'), [$contains, '\\'])
                     ->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
                         $userQuery->whereRaw('name LIKE ? ESCAPE ?', [$contains, '\\'])
                             ->orWhereRaw('email LIKE ? ESCAPE ?', [$contains, '\\']);

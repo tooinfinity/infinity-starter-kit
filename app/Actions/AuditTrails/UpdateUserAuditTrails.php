@@ -27,6 +27,7 @@ final readonly class UpdateUserAuditTrails
         ]));
 
         $records = DB::table('activity_log')
+            ->select(['id', 'causer_type', 'causer_id', 'subject_type', 'subject_id', 'properties', 'attribute_changes'])
             ->where(function (Builder $query) use ($userId, $userMorphs): void {
                 $query->where(function (Builder $actorQuery) use ($userId, $userMorphs): void {
                     $actorQuery->whereIn('causer_type', $userMorphs)
@@ -57,6 +58,12 @@ final readonly class UpdateUserAuditTrails
             /** @var array<string, mixed> $properties */
             $properties = is_array($rawProperties) ? $rawProperties : [];
 
+            $rawChanges = is_string($record->attribute_changes)
+                ? json_decode($record->attribute_changes, true)
+                : null;
+            /** @var array<string, mixed>|null $attributeChanges */
+            $attributeChanges = is_array($rawChanges) ? $rawChanges : null;
+
             if ($isActor) {
                 if (isset($properties['actor']) && is_array($properties['actor'])) {
                     $properties['actor']['name'] = null;
@@ -82,6 +89,21 @@ final readonly class UpdateUserAuditTrails
 
                 $properties['old'] = $this->scrubValues($oldValues);
                 $properties['attributes'] = $this->scrubValues($newValues);
+
+                if ($attributeChanges !== null) {
+                    /** @var array<string, mixed>|null $oldChanges */
+                    $oldChanges = isset($attributeChanges['old']) && is_array($attributeChanges['old'])
+                        ? $attributeChanges['old']
+                        : null;
+
+                    /** @var array<string, mixed>|null $newChanges */
+                    $newChanges = isset($attributeChanges['attributes']) && is_array($attributeChanges['attributes'])
+                        ? $attributeChanges['attributes']
+                        : null;
+
+                    $attributeChanges['old'] = $this->scrubValues($oldChanges);
+                    $attributeChanges['attributes'] = $this->scrubValues($newChanges);
+                }
             }
 
             $rawTags = $properties['tags'] ?? null;
@@ -95,6 +117,9 @@ final readonly class UpdateUserAuditTrails
 
             DB::table('activity_log')->where('id', $record->id)->update([
                 'properties' => json_encode($properties, JSON_THROW_ON_ERROR),
+                'attribute_changes' => $attributeChanges !== null
+                    ? json_encode($attributeChanges, JSON_THROW_ON_ERROR)
+                    : null,
             ]);
         }
     }

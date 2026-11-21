@@ -307,3 +307,35 @@ it('correctly attributes events for whole-hour timezones like Europe/Paris', fun
     expect($seriesTotal)->toBe(2)
         ->and($seriesTotal)->toBe($summaryTotalEvents);
 });
+
+test('audit report query finds audit record by literal underscore in actor email when no related user or subject matches', function (): void {
+    Activity::query()->delete();
+
+    Activity::factory()->create([
+        'user_id' => null,
+        'actor_email' => 'janeXdoe@example.com',
+        'auditable_type' => null,
+        'auditable_id' => 'subject-other',
+        'ip_address' => '10.0.0.1',
+        'created_at' => Date::now(),
+    ]);
+
+    $matched = Activity::factory()->create([
+        'user_id' => null,
+        'actor_email' => 'jane_doe@example.com',
+        'auditable_type' => null,
+        'auditable_id' => 'subject-none',
+        'ip_address' => '10.0.0.2',
+        'created_at' => Date::now(),
+    ]);
+
+    $result = resolve(AuditReportQuery::class)->handle([
+        'search' => 'jane_doe',
+        'date_from' => Date::now()->subDay()->toDateString(),
+        'date_to' => Date::now()->addDay()->toDateString(),
+    ]);
+
+    $ids = collect($result['paginated']->items())->pluck('id');
+
+    expect($ids->all())->toBe([$matched->id]);
+});

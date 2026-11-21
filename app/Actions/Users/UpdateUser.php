@@ -50,7 +50,9 @@ final readonly class UpdateUser
                 /* @end-chisel-email-verification */
             ];
 
-            $user->update($updatePayload);
+            User::withoutEvents(function () use ($user, $updatePayload): void {
+                $user->update($updatePayload);
+            });
 
             /* @chisel-email-verification */
             if ($emailChanged) {

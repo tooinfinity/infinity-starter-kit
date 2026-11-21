@@ -182,6 +182,28 @@ test('search matches deleted user via actor_name and actor_email', function (): 
         );
 });
 
+test('finds audit record by literal underscore in actor email when no related user or subject matches', function (): void {
+    Activity::factory()->create([
+        'user_id' => null,
+        'actor_email' => 'johnXdoe@example.com',
+        'auditable_type' => null,
+        'auditable_id' => 'target-other',
+        'ip_address' => '10.0.0.1',
+    ]);
+
+    $matched = Activity::factory()->create([
+        'user_id' => null,
+        'actor_email' => 'john_doe@example.com',
+        'auditable_type' => null,
+        'auditable_id' => 'target-none',
+        'ip_address' => '10.0.0.2',
+    ]);
+
+    $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => 'john_doe'])->items())->pluck('id');
+
+    expect($ids->all())->toBe([$matched->id]);
+});
+
 test('audit trails pagination per_page works correctly', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
@@ -197,4 +219,16 @@ test('audit trails pagination per_page works correctly', function (): void {
             ->has('auditTrails.data', 4)
             ->where('auditTrails.total', 10)
         );
+});
+
+test('jsonLikeEscapeSql formats correctly for all database drivers and throws on unsupported path', function (): void {
+    foreach (['actor.name', 'actor.email', 'request.ip_address'] as $path) {
+        expect(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'sqlite'))->toContain('json_extract')
+            ->and(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'pgsql'))->toContain('->>')
+            ->and(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'sqlsrv'))->toContain('JSON_VALUE')
+            ->and(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'mysql'))->toContain('json_unquote');
+    }
+
+    expect(fn (): string => AuditTrailListingQuery::jsonLikeEscapeSql('invalid.path'))
+        ->toThrow(InvalidArgumentException::class, 'Unsupported JSON path: invalid.path');
 });

@@ -75,6 +75,29 @@ test('UpdateUser records user.updated audit trail with diff', function (): void 
         ->and($audit->new_values['email'])->toBe('updated@example.com');
 });
 
+test('UpdateUser produces exactly one activity_log row with user_updated event and no duplicate model events', function (): void {
+    $actor = User::factory()->create();
+    $this->actingAs($actor);
+
+    $targetUser = User::factory()->create([
+        'name' => 'Original Name',
+        'email' => 'orig@example.com',
+    ]);
+
+    Activity::query()->delete();
+
+    $action = resolve(AdminUpdateUser::class);
+    $action->handle($targetUser, new UpdateUserData(
+        name: 'New Name',
+        email: 'new@example.com',
+        roles: [],
+    ));
+
+    expect(Activity::query()->count())->toBe(1)
+        ->and(Activity::query()->where('event', AuditEvent::UserUpdated->value)->count())->toBe(1)
+        ->and(Activity::query()->where('event', 'updated')->count())->toBe(0);
+});
+
 test('UpdateUserStatus (activate) records user.activated audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);

@@ -149,3 +149,23 @@ test('activity model returns null for missing old_values and new_values and supp
     expect($activity->old_values)->toBeNull()
         ->and($activity->new_values)->toBeNull();
 });
+
+test('activity model synchronizes attribute_changes when old_values and new_values transition from populated to null', function (): void {
+    $activity = Activity::factory()->create();
+
+    $activity->old_values = ['title' => 'Old Title'];
+    $activity->new_values = ['title' => 'New Title'];
+
+    expect($activity->old_values)->toBe(['title' => 'Old Title'])
+        ->and($activity->new_values)->toBe(['title' => 'New Title'])
+        ->and($activity->attribute_changes?->get('old'))->toBe(['title' => 'Old Title'])
+        ->and($activity->attribute_changes?->get('attributes'))->toBe(['title' => 'New Title']);
+
+    $activity->old_values = null;
+    $activity->new_values = null;
+
+    expect($activity->old_values)->toBeNull()
+        ->and($activity->new_values)->toBeNull()
+        ->and($activity->attribute_changes?->get('old'))->toBeNull()
+        ->and($activity->attribute_changes?->get('attributes'))->toBeNull();
+});

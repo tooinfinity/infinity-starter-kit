@@ -315,9 +315,7 @@ trait InteractsWithAuditActivity
     protected function setOldValuesAttribute(?array $value): void
     {
         $this->setProperty('old', $value);
-        if ($value !== null) {
-            $this->setAttributeChange('old', $value);
-        }
+        $this->setAttributeChange('old', $value);
     }
 
     /**
@@ -345,9 +343,7 @@ trait InteractsWithAuditActivity
     protected function setNewValuesAttribute(?array $value): void
     {
         $this->setProperty('attributes', $value);
-        if ($value !== null) {
-            $this->setAttributeChange('attributes', $value);
-        }
+        $this->setAttributeChange('attributes', $value);
     }
 
     protected function getEventAttribute(mixed $value): AuditEvent|string|null

@@ -155,7 +155,7 @@ test('UpdateUserAuditTrails handles null properties and recursively scrubs neste
     ]);
 
     $recorder = resolve(RecordAuditTrail::class);
-    $recorder->handle(
+    $recorded = $recorder->handle(
         event: AuditEvent::SettingsUpdated,
         oldValues: [
             'meta' => [
@@ -166,8 +166,9 @@ test('UpdateUserAuditTrails handles null properties and recursively scrubs neste
         user: $user,
     );
 
+    $nullId = (string) Str::uuid();
     DB::table('activity_log')->insert([
-        'id' => (string) Str::uuid(),
+        'id' => $nullId,
         'causer_type' => User::class,
         'causer_id' => $user->id,
         'properties' => null,
@@ -177,11 +178,53 @@ test('UpdateUserAuditTrails handles null properties and recursively scrubs neste
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $scrubbed = Activity::query()
-        ->where('causer_id', $user->id)
-        ->whereNotNull('properties')
-        ->first();
+    $scrubbed = Activity::query()->where('id', $recorded->id)->first();
 
     expect($scrubbed)->not->toBeNull()
         ->and($scrubbed->old_values['meta'])->toBe(['team' => 'Engineering']);
+
+    $nullRecord = Activity::query()->where('id', $nullId)->first();
+    expect($nullRecord)->not->toBeNull()
+        ->and($nullRecord->tags)->toContain('anonymized')
+        ->and($nullRecord->old_values)->toBeNull();
+});
+
+test('UpdateUserAuditTrails scrubs both properties and attribute_changes for real user update', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Frank User',
+        'email' => 'frank@example.com',
+    ]);
+
+    $activity = Activity::factory()->create([
+        'subject_type' => User::class,
+        'subject_id' => $user->id,
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'event' => AuditEvent::UserUpdated->value,
+    ]);
+
+    $activity->old_values = ['name' => 'Frank User', 'email' => 'frank@example.com', 'role' => 'user'];
+    $activity->new_values = ['name' => 'Frank Updated', 'email' => 'frank_new@example.com', 'role' => 'user'];
+    $activity->saveQuietly();
+
+    $action = resolve(UpdateUserAuditTrails::class);
+    $action->handle($user);
+
+    $reloaded = Activity::query()->where('id', $activity->id)->first();
+    expect($reloaded)->not->toBeNull()
+        ->and($reloaded->old_values)->not->toHaveKey('name')
+        ->and($reloaded->old_values)->not->toHaveKey('email')
+        ->and($reloaded->old_values['role'])->toBe('user')
+        ->and($reloaded->new_values)->not->toHaveKey('name')
+        ->and($reloaded->new_values)->not->toHaveKey('email')
+        ->and($reloaded->new_values['role'])->toBe('user');
+
+    /** @var array<string, mixed> $rawChanges */
+    $rawChanges = json_decode((string) DB::table('activity_log')->where('id', $activity->id)->value('attribute_changes'), true);
+    expect($rawChanges['old'])->not->toHaveKey('name')
+        ->and($rawChanges['old'])->not->toHaveKey('email')
+        ->and($rawChanges['old']['role'])->toBe('user')
+        ->and($rawChanges['attributes'])->not->toHaveKey('name')
+        ->and($rawChanges['attributes'])->not->toHaveKey('email')
+        ->and($rawChanges['attributes']['role'])->toBe('user');
 });
