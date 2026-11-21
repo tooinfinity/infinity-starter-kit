@@ -7,19 +7,22 @@ use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 test('user update records a diff and sensitive password or 2FA columns never appear in attribute_changes', function (): void {
+    $hasTwoFactor = Schema::hasColumn('users', 'two_factor_secret');
+
     $user = User::factory()->create([
         'name' => 'Original Name',
         'email' => 'original@example.com',
         'password' => 'secret-password-123',
-        'two_factor_secret' => '2fa-secret-code',
+        ...($hasTwoFactor ? ['two_factor_secret' => '2fa-secret-code'] : []),
     ]);
 
     $user->update([
         'name' => 'Updated Name',
         'password' => 'new-secret-password',
-        'two_factor_secret' => 'new-2fa-secret',
+        ...($hasTwoFactor ? ['two_factor_secret' => 'new-2fa-secret'] : []),
     ]);
 
     $activity = Activity::query()
@@ -39,11 +42,14 @@ test('user update records a diff and sensitive password or 2FA columns never app
     expect($attributes)->toHaveKey('name', 'Updated Name')
         ->and($old)->toHaveKey('name', 'Original Name')
         ->and($attributes)->not->toHaveKey('password')
-        ->and($attributes)->not->toHaveKey('two_factor_secret')
         ->and($attributes)->not->toHaveKey('remember_token')
         ->and($old)->not->toHaveKey('password')
-        ->and($old)->not->toHaveKey('two_factor_secret')
         ->and($old)->not->toHaveKey('remember_token');
+
+    if ($hasTwoFactor) {
+        expect($attributes)->not->toHaveKey('two_factor_secret')
+            ->and($old)->not->toHaveKey('two_factor_secret');
+    }
 });
 
 test('causer is set for authenticated actions and null for console commands', function (): void {
