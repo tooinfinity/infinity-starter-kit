@@ -6,7 +6,7 @@ namespace Tests\Feature\AuditTrails;
 
 /* @chisel-login */
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 /* @end-chisel-login */
@@ -37,9 +37,9 @@ test('successful login records auth.login audit trail with IP and user agent', f
 
     $response->assertRedirectToRoute('dashboard');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthLogin)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthLogin)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLogin)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogin)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -66,7 +66,7 @@ test('failed login with registered email records auth.login_failed with user_id 
 
     $response->assertSessionHasErrors('email');
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -93,7 +93,7 @@ test('failed login with unknown email does not persist submitted address', funct
 
     $response->assertSessionHasErrors('email');
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBeNull()
@@ -130,9 +130,9 @@ test('lockout records auth.lockout audit trail', function (): void {
 
     $response->assertSessionHasErrors('email');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthLockout)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthLockout)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLockout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLockout)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -158,7 +158,7 @@ test('failed login audit trail throttled flag respects configured rate limit', f
         ]);
     }
 
-    $audits = AuditTrail::query()
+    $audits = Activity::query()
         ->where('event', AuditEvent::AuthLoginFailed)
         ->where('actor_email', 'custom-throttle@example.com')
         ->orderBy('id')
@@ -185,9 +185,9 @@ test('logout records auth.logout audit trail', function (): void {
 
     $response->assertRedirect('/');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthLogout)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthLogout)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLogout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogout)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -211,9 +211,9 @@ test('password reset via emailed link records auth.password_reset without sensit
 
     $response->assertRedirectToRoute('login');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthPasswordReset)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthPasswordReset)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthPasswordReset)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthPasswordReset)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -244,9 +244,9 @@ test('two-factor confirmation records auth.two_factor_enabled', function (): voi
 
     $response->assertSessionHasNoErrors();
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -259,9 +259,9 @@ test('two-factor disable records auth.two_factor_disabled', function (): void {
 
     event(new TwoFactorAuthenticationDisabled($user));
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -275,9 +275,9 @@ test('recovery code usage records auth.recovery_codes_used without storing code'
 
     event(new RecoveryCodeReplaced($user, $usedRecoveryCode));
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->count())->toBe(1);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)

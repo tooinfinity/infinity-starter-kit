@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\InteractsWithAuditActivity;
-use Database\Factories\AuditTrailFactory;
+use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +16,7 @@ use Spatie\Activitylog\Models\Activity as SpatieActivity;
 #[Hidden(['properties', 'attribute_changes'])]
 final class Activity extends SpatieActivity implements ActivityContract
 {
-    /** @use HasFactory<AuditTrailFactory> */
+    /** @use HasFactory<ActivityFactory> */
     use HasFactory;
 
     use InteractsWithAuditActivity;

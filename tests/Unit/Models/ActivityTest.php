@@ -76,6 +76,11 @@ test('activity model handles non-enum string events gracefully', function (): vo
 
     $refreshed = Activity::query()->findOrFail($activity->id);
     expect($refreshed->event)->toBe('custom_spatie_event');
+
+    $nullEventActivity = Activity::factory()->anonymous()->create([
+        'event' => null,
+    ]);
+    expect($nullEventActivity->event)->toBeNull();
 });
 
 test('activity model supports two-argument where query semantics and eager loading', function (): void {
@@ -122,4 +127,25 @@ test('activity model translates user_id to causer_id for array-form predicates',
     $tupleQuery = Activity::query()->where([['user_id', '=', $user->id]])->first();
     expect($tupleQuery)->not->toBeNull()
         ->and($tupleQuery->id)->toBe($activity->id);
+});
+
+test('activity model returns null for missing old_values and new_values and supports 4-argument where', function (): void {
+    $activity = Activity::query()->create(['auditable_id' => 'test-target-id']);
+
+    expect($activity->old_values)->toBeNull()
+        ->and($activity->new_values)->toBeNull();
+
+    $queried = Activity::query()
+        ->where('auditable_id', '=', 'test-target-id', 'and')
+        ->where(fn ($query) => $query->where('auditable_id', 'test-target-id'))
+        ->first();
+
+    expect($queried)->not->toBeNull()
+        ->and($queried->id)->toBe($activity->id);
+
+    $activity->old_values = null;
+    $activity->new_values = null;
+
+    expect($activity->old_values)->toBeNull()
+        ->and($activity->new_values)->toBeNull();
 });

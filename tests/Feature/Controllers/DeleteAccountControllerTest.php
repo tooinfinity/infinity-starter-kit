@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /* @chisel-audit-trails */
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 /* @end-chisel-audit-trails */
 use App\Models\User;
 /* @chisel-notifications */
@@ -142,7 +142,7 @@ it('records audit trail when user deletes own account (OBS-001)', function (): v
             'password' => 'password',
         ]);
 
-    $audit = AuditTrail::query()
+    $audit = Activity::query()
         ->where('event', AuditEvent::UserDeleted)
         ->where('auditable_id', $user->id)
         ->first();

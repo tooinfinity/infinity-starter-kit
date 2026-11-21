@@ -7,7 +7,7 @@ use App\Enums\AuditEvent;
 /* @end-chisel-audit-trails */
 use App\Enums\Permission;
 /* @chisel-audit-trails */
-use App\Models\AuditTrail;
+use App\Models\Activity;
 /* @end-chisel-audit-trails */
 use App\Models\User;
 /* @chisel-notifications */
@@ -139,7 +139,7 @@ it('ensures password values never appear in audit data', function (): void {
             'password' => 'super-secret-password-xyz',
         ]);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserPasswordChanged)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserPasswordChanged)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->new_values['password'])->toBe('[REDACTED]')

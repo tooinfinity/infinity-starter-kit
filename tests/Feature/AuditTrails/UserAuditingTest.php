@@ -16,7 +16,7 @@ use App\Actions\Users\UpdateUserStatus;
 use App\Data\Users\CreateUserData;
 use App\Data\Users\UpdateUserData;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Spatie\Permission\Models\Role as RoleModel;
 
@@ -35,7 +35,7 @@ test('CreateUser records user.created audit trail', function (): void {
 
     $createdUser = $action->handle($data);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserCreated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserCreated)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -64,7 +64,7 @@ test('UpdateUser records user.updated audit trail with diff', function (): void 
 
     $action->handle($targetUser, $data);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserUpdated)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -84,7 +84,7 @@ test('UpdateUserStatus (activate) records user.activated audit trail', function 
     $action = resolve(UpdateUserStatus::class);
     $action->handle($targetUser, true);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserActivated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserActivated)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -102,7 +102,7 @@ test('UpdateUserStatus (deactivate) records user.deactivated audit trail', funct
     $action = resolve(UpdateUserStatus::class);
     $action->handle($targetUser, false, $actor);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserDeactivated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserDeactivated)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -124,7 +124,7 @@ test('DeleteUser records user.deleted audit trail and anonymizes target PII', fu
     $action = resolve(AdminDeleteUser::class);
     $action->handle($targetUser, $actor);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserDeleted)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -151,7 +151,7 @@ test('DeleteUser retains target name and email when anonymization is disabled', 
     $action = resolve(AdminDeleteUser::class);
     $action->handle($targetUser, $actor);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserDeleted)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -169,7 +169,7 @@ test('UpdateUserPassword records user.password_changed audit trail with redacted
     $action = resolve(AdminUpdateUserPassword::class);
     $action->handle($targetUser, 'brand_new_secret_password');
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::UserPasswordChanged)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserPasswordChanged)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
@@ -191,7 +191,7 @@ test('UpdateUser self-service action records user.updated audit trail (OBS-001)'
         'email' => 'new_self@example.com',
     ]);
 
-    $audit = AuditTrail::query()
+    $audit = Activity::query()
         ->where('event', AuditEvent::UserUpdated)
         ->where('auditable_id', $user->id)
         ->first();
@@ -216,7 +216,7 @@ test('UpdateUserPassword self-service action records user.password_changed audit
     $action = resolve(UpdateUserPassword::class);
     $action->handle($user, 'new_secret_pass_123');
 
-    $audit = AuditTrail::query()
+    $audit = Activity::query()
         ->where('event', AuditEvent::UserPasswordChanged)
         ->where('auditable_id', $user->id)
         ->first();
@@ -239,7 +239,7 @@ test('DeleteUser self-service action records user.deleted audit trail and anonym
     $action = resolve(DeleteUser::class);
     $action->handle($user);
 
-    $audit = AuditTrail::query()
+    $audit = Activity::query()
         ->where('event', AuditEvent::UserDeleted)
         ->where('auditable_id', $userId)
         ->first();
@@ -270,7 +270,7 @@ test('DeleteUser self-service action retains name and email when anonymization i
     $action = resolve(DeleteUser::class);
     $action->handle($user);
 
-    $audit = AuditTrail::query()
+    $audit = Activity::query()
         ->where('event', AuditEvent::UserDeleted)
         ->where('auditable_id', $userId)
         ->first();
@@ -304,8 +304,8 @@ test('user.updated audit payload has identical keys between self-service and adm
         'email' => 'self_updated@example.com',
     ]);
 
-    $adminAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $targetForAdmin->id)->firstOrFail();
-    $selfAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $selfUser->id)->firstOrFail();
+    $adminAudit = Activity::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $targetForAdmin->id)->firstOrFail();
+    $selfAudit = Activity::query()->where('event', AuditEvent::UserUpdated)->where('auditable_id', $selfUser->id)->firstOrFail();
 
     $expectedKeys = ['name', 'email', 'is_active', 'roles'];
     sort($expectedKeys);
@@ -332,8 +332,8 @@ test('user.deleted audit payload has identical keys between self-service and adm
     $this->actingAs($selfUser);
     resolve(DeleteUser::class)->handle($selfUser);
 
-    $adminAudit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $adminId)->firstOrFail();
-    $selfAudit = AuditTrail::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $selfId)->firstOrFail();
+    $adminAudit = Activity::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $adminId)->firstOrFail();
+    $selfAudit = Activity::query()->where('event', AuditEvent::UserDeleted)->where('auditable_id', $selfId)->firstOrFail();
 
     $expectedKeys = ['name', 'email', 'is_active', 'roles'];
     sort($expectedKeys);
@@ -355,7 +355,7 @@ test('UpdateUserRoles records user.role_changed audit trail with roles and tags'
     $action = resolve(UpdateUserRoles::class);
     $action->handle($targetUser, ['manager']);
 
-    $audit = AuditTrail::query()
+    $audit = Activity::query()
         ->where('event', AuditEvent::UserRoleChanged)
         ->where('auditable_id', $targetUser->id)
         ->latest('id')
@@ -381,7 +381,7 @@ test('UpdateUserRoles does not record user.role_changed audit trail when roles d
     $action = resolve(UpdateUserRoles::class);
     $action->handle($targetUser, ['editor']);
 
-    expect(AuditTrail::query()->where('event', AuditEvent::UserRoleChanged)->count())->toBe(0);
+    expect(Activity::query()->where('event', AuditEvent::UserRoleChanged)->count())->toBe(0);
 });
 
 test('UpdateUser records both user.updated and user.role_changed when roles change', function (): void {
@@ -402,8 +402,8 @@ test('UpdateUser records both user.updated and user.role_changed when roles chan
     );
     $action->handle($targetUser, $data);
 
-    $roleAudit = AuditTrail::query()->where('event', AuditEvent::UserRoleChanged)->first();
-    $userAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+    $roleAudit = Activity::query()->where('event', AuditEvent::UserRoleChanged)->first();
+    $userAudit = Activity::query()->where('event', AuditEvent::UserUpdated)->first();
 
     expect($roleAudit)->not->toBeNull()
         ->and($roleAudit->old_values['roles'])->toBe(['editor'])
@@ -430,9 +430,9 @@ test('UpdateUser records only user.updated when roles do not change', function (
     );
     $action->handle($targetUser, $data);
 
-    expect(AuditTrail::query()->where('event', AuditEvent::UserRoleChanged)->count())->toBe(0);
+    expect(Activity::query()->where('event', AuditEvent::UserRoleChanged)->count())->toBe(0);
 
-    $userAudit = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+    $userAudit = Activity::query()->where('event', AuditEvent::UserUpdated)->first();
     expect($userAudit)->not->toBeNull()
         ->and($userAudit->old_values['name'])->toBe('Initial Name')
         ->and($userAudit->new_values['name'])->toBe('New Name');

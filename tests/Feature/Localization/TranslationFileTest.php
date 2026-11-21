@@ -38,7 +38,7 @@ test('all required translation files exist for English', function (): void {
         ->and(file_exists(lang_path('en/validation.php')))->toBeTrue()
         ->and(file_exists(lang_path('en.json')))->toBeTrue();
 
-    if (file_exists(app_path('Models/AuditTrail.php'))) {
+    if (file_exists(app_path('Models/Activity.php'))) {
         expect(file_exists(lang_path('en/audit.php')))->toBeTrue();
     }
 

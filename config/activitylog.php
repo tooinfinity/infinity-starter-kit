@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use Spatie\Activitylog\Actions\CleanActivityLogAction;
 use Spatie\Activitylog\Actions\LogActivityAction;
 
@@ -42,13 +42,19 @@ return [
      * It should implement the Spatie\Activitylog\Contracts\Activity interface
      * and extend Illuminate\Database\Eloquent\Model.
      */
-    'activity_model' => AuditTrail::class,
+    'activity_model' => Activity::class,
 
     /*
      * These attributes will be excluded from logging for all models.
      * Model-specific exclusions via logExcept() are merged with these.
      */
-    'default_except_attributes' => [],
+    'default_except_attributes' => [
+        'password',
+        'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+    ],
 
     /*
      * When enabled, activities are buffered in memory and inserted in a

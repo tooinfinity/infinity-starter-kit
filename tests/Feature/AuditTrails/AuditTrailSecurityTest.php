@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\Permission;
 use App\Http\Requests\AuditTrails\AuditTrailIndexRequest;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Spatie\Permission\Models\Permission as PermissionModel;
 
@@ -35,7 +35,7 @@ test('no create update or delete endpoints exist for audit trails', function ():
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    $record = AuditTrail::factory()->create();
+    $record = Activity::factory()->create();
 
     $this->actingAs($admin)
         ->post('/audit-trails', ['event' => 'fake'])
@@ -55,14 +55,14 @@ test('no create update or delete endpoints exist for audit trails', function ():
 });
 
 test('audit trail records are immutable and cannot be updated via model', function (): void {
-    $record = AuditTrail::factory()->create();
+    $record = Activity::factory()->create();
 
     expect(fn () => $record->update(['url' => 'https://evil.com']))
         ->toThrow(RuntimeException::class, 'Audit trail records are immutable and cannot be updated.');
 });
 
 test('audit trail records cannot be individually deleted via model', function (): void {
-    $record = AuditTrail::factory()->create();
+    $record = Activity::factory()->create();
 
     expect(fn () => $record->delete())
         ->toThrow(RuntimeException::class, 'Audit trail records cannot be individually deleted.');

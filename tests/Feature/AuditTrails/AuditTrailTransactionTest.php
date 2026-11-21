@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +12,7 @@ test('audit trail is rolled back if database transaction fails', function (): vo
     $action = resolve(RecordAuditTrail::class);
     $user = User::factory()->create();
 
-    expect(AuditTrail::query()->count())->toBe(0);
+    expect(Activity::query()->count())->toBe(0);
 
     try {
         DB::transaction(function () use ($action, $user): void {
@@ -23,7 +23,7 @@ test('audit trail is rolled back if database transaction fails', function (): vo
             );
 
             // Verify it was created within the transaction boundary
-            expect(AuditTrail::query()->count())->toBe(1);
+            expect(Activity::query()->count())->toBe(1);
 
             // Force a transaction failure
             throw new RuntimeException('Simulated database failure');
@@ -33,5 +33,5 @@ test('audit trail is rolled back if database transaction fails', function (): vo
     }
 
     // Verify the audit trail was rolled back
-    expect(AuditTrail::query()->count())->toBe(0);
+    expect(Activity::query()->count())->toBe(0);
 });

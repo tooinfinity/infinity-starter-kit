@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Queries\AuditTrails;
 
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
@@ -13,12 +13,12 @@ final readonly class AuditTrailListingQuery
 {
     /**
      * @param  array{search?: string|null, event?: string|null, user_id?: string|null, date_from?: string|null, date_to?: string|null}  $filters
-     * @return LengthAwarePaginator<int, AuditTrail>
+     * @return LengthAwarePaginator<int, Activity>
      */
     public function handle(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        /** @var Builder<AuditTrail> $query */
-        $query = AuditTrail::query()->with('user');
+        /** @var Builder<Activity> $query */
+        $query = Activity::query()->with('user');
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);

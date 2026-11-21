@@ -6,7 +6,8 @@ namespace App\Queries\Reporting;
 
 use App\Data\Reporting\ReportDateRange;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,7 +25,7 @@ final readonly class ExportAuditReportStream
     {
         $range = ReportDateRange::fromFilters($filters);
 
-        /** @var Builder<AuditTrail> $query */
+        /** @var Builder<Activity> $query */
         $query = $this->reportQuery->buildFilteredQuery($filters, $range->from, $range->to)->latest('created_at');
 
         $fileName = sprintf('audit-report-%s.csv', Date::now()->format('Y-m-d-His'));
@@ -49,12 +50,13 @@ final readonly class ExportAuditReportStream
                 escape: '\\');
 
             foreach ($query->lazy(500) as $audit) {
-                /** @var AuditTrail $audit */
-                $isAnonymized = ! $audit->user && ! $audit->actor_name && in_array('anonymized', (array) $audit->tags, true);
+                /** @var Activity $audit */
+                $user = $audit->user instanceof User ? $audit->user : null;
+                $isAnonymized = ! $user && ! $audit->actor_name && in_array('anonymized', (array) $audit->tags, true);
                 $fallbackActor = $isAnonymized ? __('reports.common.anonymized_user') : __('reports.common.system');
 
-                $actorName = $audit->user->name ?? $audit->actor_name ?? $fallbackActor;
-                $actorEmail = $audit->user->email ?? $audit->actor_email ?? '';
+                $actorName = $user instanceof User ? $user->name : (is_string($audit->actor_name) ? $audit->actor_name : $fallbackActor);
+                $actorEmail = $user instanceof User ? $user->email : (is_string($audit->actor_email) ? $audit->actor_email : '');
 
                 $eventValue = $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : '');
 

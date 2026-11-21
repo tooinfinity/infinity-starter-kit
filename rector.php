@@ -39,6 +39,9 @@ return RectorConfig::configure()
     ->withSkip([
         MakeInheritedMethodVisibilitySameAsParentRector::class,
         AddOverrideAttributeToOverriddenPropertiesRector::class,
+        Rector\Privatization\Rector\Property\PrivatizeFinalClassPropertyRector::class => [
+            __DIR__.'/app/Models/User.php',
+        ],
         Rector\Php55\Rector\String_\StringClassNameToClassConstantRector::class => [
             __DIR__.'/tests/Unit/ArchTest.php',
         ],

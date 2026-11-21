@@ -580,7 +580,7 @@ The starter kit enforces structural and architectural boundaries through executa
 │   │   │   └── Users/
 │   │   ├── Middleware/           # HandleInertiaRequests (shares auth data)
 │   │   └── Requests/            # Form Requests with authorize() & validation
-│   ├── Models/                   # Eloquent models (User, AuditTrail, Setting)
+│   ├── Models/                   # Eloquent models (User, Activity, Setting)
 │   ├── Queries/                  # Read-only query & export services
 │   │   ├── AuditTrails/
 │   │   ├── Reporting/            # UserReportQuery, AuditReportQuery, CSV streams

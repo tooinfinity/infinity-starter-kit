@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\AuditTrails;
 
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Spatie\Activitylog\Contracts\Activity;
-use UnexpectedValueException;
 
 final readonly class RecordAuditTrail
 {
@@ -49,7 +47,7 @@ final readonly class RecordAuditTrail
         ?string $auditableType = null,
         ?string $auditableId = null,
         ?string $url = null,
-    ): ?AuditTrail {
+    ): ?Activity {
         $request = $this->request ?? (app()->bound('request') ? request() : null);
         $actor = $user ?? (auth()->user() instanceof User ? auth()->user() : null);
 
@@ -113,10 +111,6 @@ final readonly class RecordAuditTrail
 
         if (! $record instanceof Activity) {
             return null;
-        }
-
-        if (! $record instanceof AuditTrail) {
-            throw new UnexpectedValueException(sprintf('Expected activity to be an instance of %s, got %s.', AuditTrail::class, get_debug_type($record)));
         }
 
         return $record;

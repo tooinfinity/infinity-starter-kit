@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('causer_type')->nullable();
             $table->foreignUuid('causer_id')->nullable()->constrained('users')->nullOnDelete();
             $table->index(['causer_type', 'causer_id']);
+            $table->index(['event', 'created_at']);
+            $table->index(['causer_id', 'created_at']);
             $table->json('attribute_changes')->nullable();
             $table->json('properties')->nullable();
             $table->timestamp('created_at')->nullable()->index();

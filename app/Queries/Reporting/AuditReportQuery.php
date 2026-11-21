@@ -9,7 +9,7 @@ use App\Data\Reporting\ReportDateRange;
 use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,7 +32,7 @@ final readonly class AuditReportQuery
      *     summary: list<ReportSummaryCardData>,
      *     series: list<ReportTimeSeriesPointData>,
      *     breakdown: list<ReportBreakdownItemData>,
-     *     paginated: LengthAwarePaginator<int, AuditTrail>,
+     *     paginated: LengthAwarePaginator<int, Activity>,
      *     date_from: string,
      *     date_to: string
      * }
@@ -44,8 +44,8 @@ final readonly class AuditReportQuery
         $to = $range->to;
 
         // 1. Summary Cards
-        $totalEvents = AuditTrail::query()->whereBetween('created_at', [$from, $to])->count();
-        $uniqueActors = AuditTrail::query()
+        $totalEvents = Activity::query()->whereBetween('created_at', [$from, $to])->count();
+        $uniqueActors = Activity::query()
             ->whereBetween('created_at', [$from, $to])
             ->whereNotNull('causer_id')
             ->distinct('causer_id')
@@ -182,12 +182,12 @@ final readonly class AuditReportQuery
 
     /**
      * @param  array{date_from?: string|null, date_to?: string|null, event?: string|null, user_id?: string|null, search?: string|null, sort?: string|null, direction?: string|null}  $filters
-     * @return Builder<AuditTrail>
+     * @return Builder<Activity>
      */
     public function buildFilteredQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
-        /** @var Builder<AuditTrail> $query */
-        $query = AuditTrail::query()->with('user');
+        /** @var Builder<Activity> $query */
+        $query = Activity::query()->with('user');
 
         $query->whereBetween('created_at', [$from, $to]);
 

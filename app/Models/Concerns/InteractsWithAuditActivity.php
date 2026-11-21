@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use RuntimeException;
-use Stringable;
 
 /**
  * @property string $id
@@ -353,25 +352,11 @@ trait InteractsWithAuditActivity
 
     protected function getEventAttribute(mixed $value): AuditEvent|string|null
     {
-        if ($value === null || $value === '') {
+        if (! is_string($value) || $value === '') {
             return null;
         }
 
-        if ($value instanceof AuditEvent) {
-            return $value;
-        }
-
-        if (is_string($value)) {
-            return AuditEvent::tryFrom($value) ?? $value;
-        }
-
-        if (is_scalar($value) || $value instanceof Stringable) {
-            $str = (string) $value;
-
-            return AuditEvent::tryFrom($str) ?? $str;
-        }
-
-        return null;
+        return AuditEvent::tryFrom($value) ?? $value;
     }
 
     protected function setEventAttribute(mixed $value): void

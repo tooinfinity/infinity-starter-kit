@@ -53,7 +53,7 @@ final readonly class UpdateUserAuditTrails
 
             $rawProperties = is_string($record->properties)
                 ? json_decode($record->properties, true)
-                : (is_array($record->properties) ? $record->properties : []);
+                : [];
             /** @var array<string, mixed> $properties */
             $properties = is_array($rawProperties) ? $rawProperties : [];
 
@@ -78,13 +78,10 @@ final readonly class UpdateUserAuditTrails
                 /** @var array<string, mixed>|null $newValues */
                 $newValues = isset($properties['attributes']) && is_array($properties['attributes'])
                     ? $properties['attributes']
-                    : (isset($properties['new']) && is_array($properties['new']) ? $properties['new'] : null);
+                    : null;
 
                 $properties['old'] = $this->scrubValues($oldValues);
                 $properties['attributes'] = $this->scrubValues($newValues);
-                if (isset($properties['new'])) {
-                    unset($properties['new']);
-                }
             }
 
             $rawTags = $properties['tags'] ?? null;

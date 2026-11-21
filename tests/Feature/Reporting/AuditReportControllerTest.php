@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\AuditEvent;
 use App\Enums\Permission;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -28,7 +28,7 @@ test('authorized user can view audit report with valid props', function (): void
     PermissionModel::findOrCreate(Permission::ReportsView->value);
     $user->givePermissionTo(Permission::ReportsView->value);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $user->id,
         'event' => AuditEvent::UserCreated,
     ]);
@@ -108,7 +108,7 @@ test('authorized user can export audit report as CSV with formula injection prot
     $user->givePermissionTo(Permission::ReportsView->value);
     $user->givePermissionTo(Permission::ReportsExport->value);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $user->id,
         'event' => AuditEvent::UserCreated,
         'ip_address' => '=SUM(1+1)',
@@ -136,7 +136,7 @@ test('authorized user can export audit report with custom date range and system 
     $user->givePermissionTo(Permission::ReportsView->value);
     $user->givePermissionTo(Permission::ReportsExport->value);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => null,
         'event' => AuditEvent::SettingsUpdated,
         'ip_address' => '127.0.0.1',
@@ -205,7 +205,7 @@ test('exports audit trails without a per-row user query', function (): void {
 
     $actors = User::factory()->count(25)->create();
     foreach ($actors as $actor) {
-        AuditTrail::factory()->create([
+        Activity::factory()->create([
             'user_id' => $actor->id,
             'event' => AuditEvent::UserCreated,
         ]);
