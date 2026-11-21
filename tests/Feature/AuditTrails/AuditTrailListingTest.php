@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\AuditEvent;
 use App\Enums\Permission;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use App\Queries\AuditTrails\AuditTrailListingQuery;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -14,7 +14,7 @@ test('authorized user can view audit trails listing page with inertia', function
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    AuditTrail::factory()->count(3)->create();
+    Activity::factory()->count(3)->create();
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index'));
@@ -32,9 +32,9 @@ test('audit trails can be filtered by event type', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    AuditTrail::factory()->forEvent(AuditEvent::UserCreated)->create();
-    AuditTrail::factory()->forEvent(AuditEvent::UserUpdated)->create();
-    AuditTrail::factory()->forEvent(AuditEvent::SettingsUpdated)->create();
+    Activity::factory()->forEvent(AuditEvent::UserCreated)->create();
+    Activity::factory()->forEvent(AuditEvent::UserUpdated)->create();
+    Activity::factory()->forEvent(AuditEvent::SettingsUpdated)->create();
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index', ['event' => AuditEvent::UserCreated->value]));
@@ -54,8 +54,8 @@ test('audit trails can be filtered by user id', function (): void {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
-    AuditTrail::factory()->create(['user_id' => $userA->id]);
-    AuditTrail::factory()->create(['user_id' => $userB->id]);
+    Activity::factory()->create(['user_id' => $userA->id]);
+    Activity::factory()->create(['user_id' => $userB->id]);
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index', ['user_id' => $userA->id]));
@@ -72,9 +72,9 @@ test('audit trails can be filtered by date range', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    AuditTrail::factory()->create(['created_at' => now()->subDays(5)]);
-    AuditTrail::factory()->create(['created_at' => now()->subDays(2)]);
-    AuditTrail::factory()->create(['created_at' => now()]);
+    Activity::factory()->create(['created_at' => now()->subDays(5)]);
+    Activity::factory()->create(['created_at' => now()->subDays(2)]);
+    Activity::factory()->create(['created_at' => now()]);
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index', [
@@ -94,12 +94,12 @@ test('audit trails can be searched by ip address, auditable id, or user name', f
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
     $specificUser = User::factory()->create(['name' => 'Alice Auditor']);
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $specificUser->id,
         'ip_address' => '10.0.0.1',
         'auditable_id' => 'target-12345',
     ]);
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'ip_address' => '192.168.1.1',
         'auditable_id' => 'other-99999',
     ]);
@@ -124,8 +124,8 @@ test('audit trails can be searched by ip address, auditable id, or user name', f
 });
 
 test('treats % in the search box as a literal character', function (): void {
-    AuditTrail::factory()->create(['ip_address' => '10.0.0.1']);
-    $literal = AuditTrail::factory()->create(['auditable_id' => '%literal-target']);
+    Activity::factory()->create(['ip_address' => '10.0.0.1']);
+    $literal = Activity::factory()->create(['auditable_id' => '%literal-target']);
 
     $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '%'])->items())->pluck('id');
 
@@ -133,8 +133,8 @@ test('treats % in the search box as a literal character', function (): void {
 });
 
 test('treats _ in the search box as a literal character', function (): void {
-    AuditTrail::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
-    $literal = AuditTrail::factory()->create(['auditable_id' => '_literal_target']);
+    Activity::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
+    $literal = Activity::factory()->create(['auditable_id' => '_literal_target']);
 
     $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '_'])->items())->pluck('id');
 
@@ -142,8 +142,8 @@ test('treats _ in the search box as a literal character', function (): void {
 });
 
 test('treats backslash in the search box as a literal character', function (): void {
-    AuditTrail::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
-    $literal = AuditTrail::factory()->create(['auditable_id' => '\\literal\\target']);
+    Activity::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
+    $literal = Activity::factory()->create(['auditable_id' => '\\literal\\target']);
 
     $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '\\'])->items())->pluck('id');
 
@@ -154,12 +154,12 @@ test('search matches deleted user via actor_name and actor_email', function (): 
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    $deletedActor = AuditTrail::factory()->create([
+    $deletedActor = Activity::factory()->create([
         'user_id' => null,
         'actor_name' => 'Former Admin',
         'actor_email' => 'former@example.com',
     ]);
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => null,
         'actor_name' => 'Other Person',
         'actor_email' => 'other@example.com',
@@ -186,7 +186,7 @@ test('audit trails pagination per_page works correctly', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    AuditTrail::factory()->count(10)->create();
+    Activity::factory()->count(10)->create();
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index', ['per_page' => 4]));

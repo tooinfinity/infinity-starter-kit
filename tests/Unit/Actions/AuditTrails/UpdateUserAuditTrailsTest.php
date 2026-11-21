@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Actions\AuditTrails\UpdateUserAuditTrails;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user audit trails', function (): void {
     $user = User::factory()->create([
@@ -38,7 +40,7 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $records = AuditTrail::query()->where('user_id', $user->id)->get();
+    $records = Activity::query()->where('user_id', $user->id)->get();
     expect($records)->toHaveCount(2);
 
     foreach ($records as $record) {
@@ -49,7 +51,7 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
             ->and($record->tags)->toContain('anonymized');
     }
 
-    $updatedRecord = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+    $updatedRecord = Activity::query()->where('event', AuditEvent::UserUpdated)->first();
     expect($updatedRecord)->not->toBeNull()
         ->and($updatedRecord->old_values)->not->toHaveKey('name')
         ->and($updatedRecord->old_values)->not->toHaveKey('email')
@@ -83,7 +85,7 @@ test('UpdateUserAuditTrails scrubs target PII while preserving admin actor detai
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($targetUser);
 
-    $createdRecord = AuditTrail::query()->where('event', AuditEvent::UserCreated)->first();
+    $createdRecord = Activity::query()->where('event', AuditEvent::UserCreated)->first();
     expect($createdRecord)->not->toBeNull()
         ->and($createdRecord->user_id)->toBe($admin->id)
         ->and($createdRecord->actor_name)->toBe('Admin Boss')
@@ -113,7 +115,7 @@ test('UpdateUserAuditTrails respects disabled anonymize_on_delete configuration'
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $record = AuditTrail::query()->where('user_id', $user->id)->first();
+    $record = Activity::query()->where('user_id', $user->id)->first();
     expect($record)->not->toBeNull()
         ->and($record->actor_name)->toBe('Charlie User')
         ->and($record->actor_email)->toBe('charlie@example.com')
@@ -139,9 +141,47 @@ test('UpdateUserAuditTrails allows explicit anonymize parameter override', funct
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user, anonymize: false);
 
-    $record = AuditTrail::query()->where('user_id', $user->id)->first();
+    $record = Activity::query()->where('user_id', $user->id)->first();
     expect($record)->not->toBeNull()
         ->and($record->actor_name)->toBe('Diana User')
         ->and($record->actor_email)->toBe('diana@example.com')
         ->and($record->tags)->not->toContain('anonymized');
+});
+
+test('UpdateUserAuditTrails handles null properties and recursively scrubs nested arrays', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Eve User',
+        'email' => 'eve@example.com',
+    ]);
+
+    $recorder = resolve(RecordAuditTrail::class);
+    $recorder->handle(
+        event: AuditEvent::SettingsUpdated,
+        oldValues: [
+            'meta' => [
+                'name' => 'Eve Nested',
+                'team' => 'Engineering',
+            ],
+        ],
+        user: $user,
+    );
+
+    DB::table('activity_log')->insert([
+        'id' => (string) Str::uuid(),
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'properties' => null,
+        'created_at' => now(),
+    ]);
+
+    $action = resolve(UpdateUserAuditTrails::class);
+    $action->handle($user);
+
+    $scrubbed = Activity::query()
+        ->where('causer_id', $user->id)
+        ->whereNotNull('properties')
+        ->first();
+
+    expect($scrubbed)->not->toBeNull()
+        ->and($scrubbed->old_values['meta'])->toBe(['team' => 'Engineering']);
 });

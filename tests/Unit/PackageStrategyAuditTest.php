@@ -64,7 +64,7 @@ test('audited domain models strictly adhere to the HasUuids contract when instal
     $models = [
         User::class,
         'App\\Models\\'.'Setting',
-        'App\\Models\\'.'AuditTrail',
+        'App\\Models\\'.'Activity',
         'App\\Models\\'.'NotificationPreference',
     ];
 
@@ -81,7 +81,7 @@ test('audited domain models strictly adhere to the HasUuids contract when instal
 });
 
 test('audit trail model declares null updated_at and immutability handlers when installed', function (): void {
-    $auditTrailClass = 'App\\Models\\'.'AuditTrail';
+    $auditTrailClass = 'App\\Models\\'.'Activity';
     if (! class_exists($auditTrailClass)) {
         return;
     }

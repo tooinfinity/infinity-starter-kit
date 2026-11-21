@@ -6,7 +6,8 @@ namespace App\Http\Controllers\Reporting;
 
 use App\Enums\AuditEvent;
 use App\Http\Requests\Reporting\AuditReportRequest;
-use App\Models\AuditTrail;
+use App\Models\Activity;
+use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,11 +21,11 @@ final readonly class AuditReportController
 
         $result = $query->handle($filters, $perPage);
 
-        $auditTrails = $result['paginated']->through(fn (AuditTrail $audit): array => [
+        $auditTrails = $result['paginated']->through(fn (Activity $audit): array => [
             'id' => $audit->id,
-            'event' => $audit->event->value,
-            'event_label' => $audit->event->label(),
-            'user' => $audit->user ? [
+            'event' => $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : ''),
+            'event_label' => $audit->event instanceof AuditEvent ? $audit->event->label() : (is_string($audit->event) ? (AuditEvent::tryFrom($audit->event)?->label() ?? $audit->event) : ''),
+            'user' => $audit->user instanceof User ? [
                 'id' => $audit->user->id,
                 'name' => $audit->user->name,
                 'email' => $audit->user->email,

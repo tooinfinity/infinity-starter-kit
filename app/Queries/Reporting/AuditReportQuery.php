@@ -9,8 +9,7 @@ use App\Data\Reporting\ReportDateRange;
 use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
-use App\Services\LikePattern;
+use App\Models\Activity;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,7 +32,7 @@ final readonly class AuditReportQuery
      *     summary: list<ReportSummaryCardData>,
      *     series: list<ReportTimeSeriesPointData>,
      *     breakdown: list<ReportBreakdownItemData>,
-     *     paginated: LengthAwarePaginator<int, AuditTrail>,
+     *     paginated: LengthAwarePaginator<int, Activity>,
      *     date_from: string,
      *     date_to: string
      * }
@@ -45,17 +44,18 @@ final readonly class AuditReportQuery
         $to = $range->to;
 
         // 1. Summary Cards
-        $totalEvents = AuditTrail::query()->whereBetween('created_at', [$from, $to])->count();
-        $uniqueActors = AuditTrail::query()
+        $totalEvents = Activity::query()->whereBetween('created_at', [$from, $to])->count();
+        $uniqueActors = Activity::query()
             ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('user_id')
-            ->distinct('user_id')
-            ->count('user_id');
+            ->whereNotNull('causer_id')
+            ->distinct('causer_id')
+            ->count('causer_id');
 
         /** @var object{event: string, count: int|string}|null $topEventRecord */
-        $topEventRecord = DB::table('audit_trails')
+        $topEventRecord = DB::table('activity_log')
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
+            ->whereNotNull('event')
             ->groupBy('event')
             ->orderByDesc('count')
             ->first();
@@ -64,17 +64,17 @@ final readonly class AuditReportQuery
             ? (AuditEvent::tryFrom((string) $topEventRecord->event)?->label() ?? (string) $topEventRecord->event)
             : __('reports.common.none');
 
-        /** @var object{auditable_type: string, count: int|string}|null $topResourceRecord */
-        $topResourceRecord = DB::table('audit_trails')
-            ->selectRaw('auditable_type, count(*) as count')
+        /** @var object{subject_type: string, count: int|string}|null $topResourceRecord */
+        $topResourceRecord = DB::table('activity_log')
+            ->selectRaw('subject_type, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('auditable_type')
-            ->groupBy('auditable_type')
+            ->whereNotNull('subject_type')
+            ->groupBy('subject_type')
             ->orderByDesc('count')
             ->first();
 
         $topResourceLabel = $topResourceRecord !== null
-            ? class_basename((string) $topResourceRecord->auditable_type)
+            ? class_basename((string) $topResourceRecord->subject_type)
             : __('reports.common.none');
 
         $summary = [
@@ -114,7 +114,7 @@ final readonly class AuditReportQuery
         $bucketSql = TimeBucketSql::forDriver(column: 'created_at');
 
         /** @var list<object{bucket: string, count: int|string}> $rawSeries */
-        $rawSeries = DB::table('audit_trails')
+        $rawSeries = DB::table('activity_log')
             ->selectRaw("{$bucketSql} as bucket, count(*) as count")
             ->whereBetween('created_at', [$from, $to])
             ->groupBy(DB::raw($bucketSql))
@@ -140,9 +140,10 @@ final readonly class AuditReportQuery
 
         // 3. Breakdown by event type
         /** @var list<object{event: string, count: int|string}> $rawBreakdown */
-        $rawBreakdown = DB::table('audit_trails')
+        $rawBreakdown = DB::table('activity_log')
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
+            ->whereNotNull('event')
             ->groupBy('event')
             ->orderByDesc('count')
             ->get()
@@ -181,12 +182,12 @@ final readonly class AuditReportQuery
 
     /**
      * @param  array{date_from?: string|null, date_to?: string|null, event?: string|null, user_id?: string|null, search?: string|null, sort?: string|null, direction?: string|null}  $filters
-     * @return Builder<AuditTrail>
+     * @return Builder<Activity>
      */
     public function buildFilteredQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
-        /** @var Builder<AuditTrail> $query */
-        $query = AuditTrail::query()->with('user');
+        /** @var Builder<Activity> $query */
+        $query = Activity::query()->with('user');
 
         $query->whereBetween('created_at', [$from, $to]);
 
@@ -195,24 +196,25 @@ final readonly class AuditReportQuery
         }
 
         if (! empty($filters['user_id'])) {
-            $query->where('user_id', $filters['user_id']);
+            $query->where('causer_id', $filters['user_id']);
         }
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
-            $prefix = LikePattern::startsWith($search);
-            $contains = LikePattern::contains($search);
+            $escaped = addcslashes($search, '%_\\');
+            $prefix = "{$escaped}%";
+            $contains = "%{$escaped}%";
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
-                LikePattern::where($q, 'ip_address', $prefix);
-                LikePattern::orWhere($q, 'auditable_id', $prefix);
-                LikePattern::orWhere($q, 'auditable_type', $prefix);
-                LikePattern::orWhere($q, 'actor_name', $contains);
-                LikePattern::orWhere($q, 'actor_email', $contains);
-                $q->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
-                    LikePattern::where($userQuery, 'name', $contains);
-                    LikePattern::orWhere($userQuery, 'email', $contains);
-                });
+                $q->where('properties->request->ip_address', 'like', $prefix)
+                    ->orWhereRaw('subject_id LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhereRaw('subject_type LIKE ? ESCAPE ?', [$prefix, '\\'])
+                    ->orWhere('properties->actor->name', 'like', $contains)
+                    ->orWhere('properties->actor->email', 'like', $contains)
+                    ->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
+                        $userQuery->whereRaw('name LIKE ? ESCAPE ?', [$contains, '\\'])
+                            ->orWhereRaw('email LIKE ? ESCAPE ?', [$contains, '\\']);
+                    });
             });
         }
 

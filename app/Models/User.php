@@ -29,6 +29,10 @@ use Illuminate\Notifications\Notifiable;
 /* @chisel-two-factor */
 use Laravel\Fortify\TwoFactorAuthenticatable;
 /* @end-chisel-two-factor */
+/* @chisel-audit-trails */
+use Spatie\Activitylog\Models\Concerns\HasActivity;
+use Spatie\Activitylog\Support\LogOptions;
+/* @end-chisel-audit-trails */
 /* @chisel-roles-permissions */
 use Spatie\Permission\Traits\HasRoles;
 
@@ -57,13 +61,17 @@ use Spatie\Permission\Traits\HasRoles;
 ])]
 final class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {
+    /* @chisel-audit-trails */
+    use HasActivity;
+    /* @end-chisel-audit-trails */
+
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     /* @chisel-roles-permissions */
     use HasRoles;
-
     /* @end-chisel-roles-permissions */
+
     use HasUuids;
     use Notifiable;
 
@@ -71,6 +79,12 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     use TwoFactorAuthenticatable;
 
     /* @end-chisel-two-factor */
+
+    /* @chisel-audit-trails */
+    /** @var list<string> */
+    protected static array $recordEvents = ['updated'];
+
+    /* @end-chisel-audit-trails */
 
     /**
      * @return array<string, string>
@@ -120,6 +134,17 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     }
 
     /* @end-chisel-notifications */
+
+    /* @chisel-audit-trails */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
+
+    /* @end-chisel-audit-trails */
 
     /* @chisel-user-management */
     public function canManage(self $target): bool

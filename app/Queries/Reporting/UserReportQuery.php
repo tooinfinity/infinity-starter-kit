@@ -8,7 +8,6 @@ use App\Data\Reporting\ReportDateRange;
 use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Models\User;
-use App\Services\LikePattern;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -152,11 +151,11 @@ final readonly class UserReportQuery
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
-            $pattern = LikePattern::contains($search);
+            $escaped = addcslashes($search, '%_\\');
 
-            $query->where(function (Builder $q) use ($pattern): void {
-                LikePattern::where($q, 'name', $pattern);
-                LikePattern::orWhere($q, 'email', $pattern);
+            $query->where(function (Builder $q) use ($escaped): void {
+                $q->whereRaw('name LIKE ? ESCAPE ?', ["%{$escaped}%", '\\'])
+                    ->orWhereRaw('email LIKE ? ESCAPE ?', ["%{$escaped}%", '\\']);
             });
         }
 

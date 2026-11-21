@@ -325,7 +325,7 @@ The Infinity Starter Kit features a deterministic, declarative feature configura
 | **User Management** | `user-management` | Administrative user directory with user creation, profile editing, role assignment, and lifecycle controls. | `authorization` | — | — | — | `users.view`, `users.create`, `users.update`, `users.delete`, `users.manage-roles`, `users.manage-password` | Enabled | User directory listing & filtering, User creation & editing, Role assignment & self-protection, Account activation & deactivation, Password management |
 | **Localization** | `localization` | Trilingual localization with real-time language switching, RTL layout support, and Inertia translation sync. | — | — | `erag/laravel-lang-sync-inertia` | `@erag/lang-sync-inertia` | — | Enabled | Trilingual support (EN, FR, AR), RTL layout auto-switching, Language selector component, Persistent guest & user locale cookie, Inertia translation synchronization |
 | **Notifications** | `notifications` | Database and email notification system with user channel preferences and interactive notification center. | — | — | — | — | — | Enabled | Database & email notifications, User notification channel preferences, Header bell & interactive dropdown, Mark all as read & batch prune, Security event alerts |
-| **Audit Trails** | `audit-trails` | Security audit logging capturing actor context, IP addresses, events, and automated retention pruning. | `authorization` | — | — | — | `audit.view` | Enabled | Security & activity event tracking, Actor, IP, and user agent recording, Searchable audit log viewer, Automated log pruning command |
+| **Audit Trails** | `audit-trails` | Security audit logging capturing actor context, IP addresses, events, and automated retention pruning. | `authorization` | — | `spatie/laravel-activitylog` | — | `audit.view` | Enabled | Security & activity event tracking, Actor, IP, and user agent recording, Searchable audit log viewer, Automated log pruning command |
 | **Reporting** | `reporting` | Read-only analytics dashboards, accessible SVG trend charts, date filtering, and streaming CSV exports. | `audit-trails`, `user-management`, `authorization` | — | — | — | `reports.view`, `reports.export` | Enabled | User growth & activity analytics, Audit event trend dashboards, Zero-dependency accessible SVG charts, Formula-safe streaming CSV export, Multi-day date range filtering |
 <!-- @end-chisel-feature-matrix -->
 
@@ -580,7 +580,7 @@ The starter kit enforces structural and architectural boundaries through executa
 │   │   │   └── Users/
 │   │   ├── Middleware/           # HandleInertiaRequests (shares auth data)
 │   │   └── Requests/            # Form Requests with authorize() & validation
-│   ├── Models/                   # Eloquent models (User, AuditTrail, Setting)
+│   ├── Models/                   # Eloquent models (User, Activity, Setting)
 │   ├── Queries/                  # Read-only query & export services
 │   │   ├── AuditTrails/
 │   │   ├── Reporting/            # UserReportQuery, AuditReportQuery, CSV streams

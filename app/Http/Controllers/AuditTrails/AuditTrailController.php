@@ -6,7 +6,8 @@ namespace App\Http\Controllers\AuditTrails;
 
 use App\Enums\AuditEvent;
 use App\Http\Requests\AuditTrails\AuditTrailIndexRequest;
-use App\Models\AuditTrail;
+use App\Models\Activity;
+use App\Models\User;
 use App\Queries\AuditTrails\AuditTrailListingQuery;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,18 +21,18 @@ final readonly class AuditTrailController
 
         $paginated = $query->handle($filters, $perPage);
 
-        $auditTrails = $paginated->through(fn (AuditTrail $audit): array => [
+        $auditTrails = $paginated->through(fn (Activity $audit): array => [
             'id' => $audit->id,
             'user_id' => $audit->user_id,
-            'user' => $audit->user ? [
+            'user' => $audit->user instanceof User ? [
                 'id' => $audit->user->id,
                 'name' => $audit->user->name,
                 'email' => $audit->user->email,
             ] : null,
             'actor_name' => $audit->actor_name,
             'actor_email' => $audit->actor_email,
-            'event' => $audit->event->value,
-            'event_label' => $audit->event->label(),
+            'event' => $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : ''),
+            'event_label' => $audit->event instanceof AuditEvent ? $audit->event->label() : (is_string($audit->event) ? (AuditEvent::tryFrom($audit->event)?->label() ?? $audit->event) : ''),
             'auditable_type' => $audit->auditable_type,
             'auditable_id' => $audit->auditable_id,
             'old_values' => $audit->old_values,

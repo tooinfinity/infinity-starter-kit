@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -28,7 +28,7 @@ test('RecordAuditTrail stores an audit trail record with all provided attributes
         tags: ['users', 'management'],
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->user_id)->toBe($actor->id)
         ->and($record->event)->toBe(AuditEvent::UserUpdated)
         ->and($record->auditable_type)->toBe($target->getMorphClass())
@@ -126,4 +126,33 @@ test('keeps the actor identity after the actor is deleted', function (): void {
     expect($audit->user_id)->toBeNull()
         ->and($audit->actor_email)->toBe('ada@example.com')
         ->and($audit->actor_name)->toBe('Ada');
+});
+
+test('RecordAuditTrail respects disabled activity logging without writing records', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $action = resolve(RecordAuditTrail::class);
+
+    $record = $action->handle(
+        event: AuditEvent::UserCreated,
+        oldValues: ['name' => 'Old'],
+        newValues: ['name' => 'New'],
+    );
+
+    expect($record)->toBeNull()
+        ->and(Activity::query()->count())->toBe(0);
+});
+
+test('RecordAuditTrail records subject from auditableType and auditableId strings', function (): void {
+    $action = resolve(RecordAuditTrail::class);
+
+    $record = $action->handle(
+        event: AuditEvent::SettingsUpdated,
+        auditableType: User::class,
+        auditableId: 'custom_id_123',
+    );
+
+    expect($record)->not->toBeNull()
+        ->and($record->subject_type)->toBe(User::class)
+        ->and($record->subject_id)->toBe('custom_id_123');
 });

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
 use App\Queries\Reporting\ExportAuditReportStream;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 test('audit report query handles empty dataset gracefully', function (): void {
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
     $query = new AuditReportQuery;
     $result = $query->handle([
@@ -31,14 +31,14 @@ test('audit report query handles empty dataset gracefully', function (): void {
 });
 
 test('audit report query computes accurate summary metrics and event breakdown', function (): void {
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
 
     $baseDate = Date::now()->subDays(2);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $user1->id,
         'event' => AuditEvent::UserCreated,
         'auditable_type' => User::class,
@@ -46,7 +46,7 @@ test('audit report query computes accurate summary metrics and event breakdown',
         'created_at' => $baseDate->copy()->startOfDay()->addHours(1),
     ]);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $user1->id,
         'event' => AuditEvent::UserCreated,
         'auditable_type' => User::class,
@@ -54,7 +54,7 @@ test('audit report query computes accurate summary metrics and event breakdown',
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(2),
     ]);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $user2->id,
         'event' => AuditEvent::UserUpdated,
         'auditable_type' => User::class,
@@ -63,7 +63,7 @@ test('audit report query computes accurate summary metrics and event breakdown',
     ]);
 
     // System audit event (user_id is null)
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => null,
         'event' => AuditEvent::UserDeleted,
         'auditable_type' => User::class,
@@ -92,21 +92,21 @@ test('audit report query computes accurate summary metrics and event breakdown',
 });
 
 test('audit report query filters by event, user_id and search', function (): void {
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
     $user = User::factory()->create(['name' => 'Specific Actor', 'email' => 'actor@example.com']);
     $otherUser = User::factory()->create(['name' => 'Other Person', 'email' => 'other@example.com']);
 
     $today = Date::now();
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $user->id,
         'event' => AuditEvent::UserCreated,
         'ip_address' => '192.168.1.100',
         'created_at' => $today,
     ]);
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'user_id' => $otherUser->id,
         'event' => AuditEvent::UserDeleted,
         'ip_address' => '10.0.0.1',
@@ -152,26 +152,26 @@ test('audit report query filters by event, user_id and search', function (): voi
 });
 
 test('audit report query treats literal wildcard and backslash characters in search', function (): void {
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
     $today = Date::now();
 
-    $a1 = AuditTrail::factory()->create([
+    $a1 = Activity::factory()->create([
         'auditable_id' => '_target-123',
         'ip_address' => '10.0.0.1',
         'created_at' => $today,
     ]);
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'auditable_id' => 'targetx123',
         'ip_address' => '10.0.0.2',
         'created_at' => $today,
     ]);
-    $a3 = AuditTrail::factory()->create([
+    $a3 = Activity::factory()->create([
         'auditable_id' => '%target-123',
         'ip_address' => '10.0.0.3',
         'created_at' => $today,
     ]);
-    $a4 = AuditTrail::factory()->create([
+    $a4 = Activity::factory()->create([
         'auditable_id' => '\\target-123',
         'ip_address' => '10.0.0.4',
         'created_at' => $today,
@@ -196,9 +196,9 @@ test('audit report query treats literal wildcard and backslash characters in sea
 it('buckets report days in the configured display timezone', function (): void {
     config(['app.display_timezone' => 'Africa/Algiers']); // UTC+1
 
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'created_at' => '2026-10-17 23:30:00', // 2026-10-18 00:30 local
     ]);
 
@@ -223,7 +223,7 @@ it('exports audit report stream with display timezone configurations', function 
 ]);
 
 it('does not load every row to build the time series', function (): void {
-    AuditTrail::factory()->count(50)->create();
+    Activity::factory()->count(50)->create();
     DB::enableQueryLog();
 
     resolve(AuditReportQuery::class)->handle([]);
@@ -241,14 +241,14 @@ it('does not load every row to build the time series', function (): void {
 it('correctly attributes events around midnight for half-hour timezones like Asia/Kolkata', function (): void {
     config(['app.display_timezone' => 'Asia/Kolkata']);
 
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
     // 18:29 UTC on Oct 17 -> 23:59 IST on Oct 17 (day N)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:29:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:29:00']);
     // 18:31 UTC on Oct 17 -> 00:01 IST on Oct 18 (day N+1)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:31:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:31:00']);
     // 18:59 UTC on Oct 17 -> 00:29 IST on Oct 18 (day N+1)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:59:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:59:00']);
 
     $result = resolve(AuditReportQuery::class)->handle([
         'date_from' => '2026-10-17',
@@ -267,12 +267,12 @@ it('correctly attributes events around midnight for half-hour timezones like Asi
 it('correctly attributes events around midnight for 45-minute timezones like Asia/Kathmandu', function (): void {
     config(['app.display_timezone' => 'Asia/Kathmandu']);
 
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
     // 18:14 UTC on Oct 17 -> 23:59 NPT on Oct 17 (day N)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:14:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:14:00']);
     // 18:16 UTC on Oct 17 -> 00:01 NPT on Oct 18 (day N+1)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:16:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:16:00']);
 
     $result = resolve(AuditReportQuery::class)->handle([
         'date_from' => '2026-10-17',
@@ -291,10 +291,10 @@ it('correctly attributes events around midnight for 45-minute timezones like Asi
 it('correctly attributes events for whole-hour timezones like Europe/Paris', function (): void {
     config(['app.display_timezone' => 'Europe/Paris']);
 
-    AuditTrail::query()->delete();
+    Activity::query()->delete();
 
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 21:59:00']);
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 22:01:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 21:59:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 22:01:00']);
 
     $result = resolve(AuditReportQuery::class)->handle([
         'date_from' => '2026-10-17',
