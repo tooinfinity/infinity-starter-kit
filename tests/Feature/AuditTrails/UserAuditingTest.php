@@ -98,6 +98,26 @@ test('UpdateUser produces exactly one activity_log row with user_updated event a
         ->and(Activity::query()->where('event', 'updated')->count())->toBe(0);
 });
 
+test('profile UpdateUser action produces exactly one activity_log row with user_updated event', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Self Name',
+        'email' => 'self@example.com',
+    ]);
+    $this->actingAs($user);
+
+    Activity::query()->delete();
+
+    $action = resolve(UpdateUser::class);
+    $action->handle($user, [
+        'name' => 'Self Updated',
+        'email' => 'self_updated@example.com',
+    ]);
+
+    expect(Activity::query()->count())->toBe(1)
+        ->and(Activity::query()->where('event', AuditEvent::UserUpdated->value)->count())->toBe(1)
+        ->and(Activity::query()->where('event', 'updated')->count())->toBe(0);
+});
+
 test('UpdateUserStatus (activate) records user.activated audit trail', function (): void {
     $actor = User::factory()->create();
     $this->actingAs($actor);

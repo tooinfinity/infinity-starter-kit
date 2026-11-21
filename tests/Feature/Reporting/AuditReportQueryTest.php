@@ -339,3 +339,29 @@ test('audit report query finds audit record by literal underscore in actor email
 
     expect($ids->all())->toBe([$matched->id]);
 });
+
+test('audit report query formats Spatie lifecycle events in summary and breakdown with human labels', function (): void {
+    Activity::query()->delete();
+
+    Activity::factory()->create(['event' => 'updated', 'created_at' => Date::now()]);
+    Activity::factory()->create(['event' => 'created', 'created_at' => Date::now()]);
+    Activity::factory()->create(['event' => 'deleted', 'created_at' => Date::now()]);
+    Activity::factory()->create(['event' => 'custom_hook_fired', 'created_at' => Date::now()]);
+
+    $result = resolve(AuditReportQuery::class)->handle([
+        'date_from' => Date::now()->subDay()->toDateString(),
+        'date_to' => Date::now()->addDay()->toDateString(),
+    ]);
+
+    $breakdownUpdated = collect($result['breakdown'])->firstWhere('key', 'updated');
+    expect($breakdownUpdated?->label)->toBe(__('audit.events.user_updated'));
+
+    $breakdownCreated = collect($result['breakdown'])->firstWhere('key', 'created');
+    expect($breakdownCreated?->label)->toBe(__('audit.events.user_created'));
+
+    $breakdownDeleted = collect($result['breakdown'])->firstWhere('key', 'deleted');
+    expect($breakdownDeleted?->label)->toBe(__('audit.events.user_deleted'));
+
+    $breakdownCustom = collect($result['breakdown'])->firstWhere('key', 'custom_hook_fired');
+    expect($breakdownCustom?->label)->toBe('Custom Hook Fired');
+});

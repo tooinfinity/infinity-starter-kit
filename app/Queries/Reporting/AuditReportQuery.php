@@ -62,7 +62,7 @@ final readonly class AuditReportQuery
             ->first();
 
         $topEventLabel = $topEventRecord !== null
-            ? (AuditEvent::tryFrom((string) $topEventRecord->event)?->label() ?? (string) $topEventRecord->event)
+            ? $this->formatEventLabel((string) $topEventRecord->event)
             : __('reports.common.none');
 
         /** @var object{subject_type: string, count: int|string}|null $topResourceRecord */
@@ -154,10 +154,9 @@ final readonly class AuditReportQuery
         foreach ($rawBreakdown as $row) {
             $count = (int) $row->count;
             $percentage = $totalEvents > 0 ? round(($count / $totalEvents) * 100, 1) : 0.0;
-            $eventEnum = AuditEvent::tryFrom($row->event);
             $breakdown[] = new ReportBreakdownItemData(
                 key: $row->event,
-                label: $eventEnum?->label() ?? $row->event,
+                label: $this->formatEventLabel($row->event),
                 count: $count,
                 percentage: $percentage,
             );
@@ -220,5 +219,15 @@ final readonly class AuditReportQuery
         }
 
         return $query;
+    }
+
+    private function formatEventLabel(string $event): string
+    {
+        return match ($event) {
+            'updated' => __('audit.events.user_updated'),
+            'created' => __('audit.events.user_created'),
+            'deleted' => __('audit.events.user_deleted'),
+            default => AuditEvent::tryFrom($event)?->label() ?? (string) str($event)->headline(),
+        };
     }
 }
