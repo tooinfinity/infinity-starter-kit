@@ -224,11 +224,13 @@ test('audit trails listing formats lifecycle events and empty events into labels
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    Activity::factory()->create(['event' => 'created', 'description' => 'created']);
-    Activity::factory()->create(['event' => 'updated', 'description' => 'updated']);
-    Activity::factory()->create(['event' => 'deleted', 'description' => 'deleted']);
-    Activity::factory()->create(['event' => null, 'description' => 'unknown']);
-    Activity::factory()->create(['event' => 'custom_action', 'description' => 'custom_action']);
+    $expectedLabels = [
+        Activity::factory()->create(['event' => 'created', 'description' => 'created'])->id => 'User Created',
+        Activity::factory()->create(['event' => 'updated', 'description' => 'updated'])->id => 'User Updated',
+        Activity::factory()->create(['event' => 'deleted', 'description' => 'deleted'])->id => 'User Deleted',
+        Activity::factory()->create(['event' => null, 'description' => 'unknown'])->id => '',
+        Activity::factory()->create(['event' => 'custom_action', 'description' => 'custom_action'])->id => 'Custom Action',
+    ];
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index'));
@@ -237,6 +239,7 @@ test('audit trails listing formats lifecycle events and empty events into labels
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('audit-trails/index')
             ->has('auditTrails.data', 5)
-            ->where('auditTrails.data.0.event_label', fn ($label): bool => is_string($label) && $label !== '')
+            ->where('auditTrails.data', fn ($rows): bool => collect($rows)->pluck('event_label', 'id')->sortKeys()->all()
+                === collect($expectedLabels)->sortKeys()->all())
         );
 });

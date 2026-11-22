@@ -7,6 +7,7 @@ use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 test('RecordAuditTrail stores an audit trail record with all provided attributes', function (): void {
     $actor = User::factory()->create();
@@ -152,6 +153,8 @@ test('RecordAuditTrail respects disabled activity logging without writing record
 test('RecordAuditTrail records subject from auditableType and auditableId strings', function (): void {
     $action = resolve(RecordAuditTrail::class);
 
+    DB::enableQueryLog();
+
     $record = $action->handle(
         event: AuditEvent::SettingsUpdated,
         auditableType: User::class,
@@ -160,5 +163,11 @@ test('RecordAuditTrail records subject from auditableType and auditableId string
 
     expect($record)->not->toBeNull()
         ->and($record->subject_type)->toBe(User::class)
-        ->and($record->subject_id)->toBe('custom_id_123');
+        ->and($record->subject_id)->toBe('custom_id_123')
+        ->and($record->relationLoaded('subject'))->toBeTrue()
+        ->and($record->subject)->toBeNull();
+
+    expect(collect(DB::getQueryLog())->pluck('query')->contains(
+        fn (string $query): bool => str_contains($query, 'select') && str_contains($query, 'users'),
+    ))->toBeFalse();
 });

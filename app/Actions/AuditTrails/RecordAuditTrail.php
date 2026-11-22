@@ -114,6 +114,8 @@ final readonly class RecordAuditTrail
             }
 
             if (! $auditable instanceof Model) {
+                $activity->setRelation('subject', null);
+
                 if ($type !== null) {
                     $activity->setAttribute('subject_type', $type);
                 }

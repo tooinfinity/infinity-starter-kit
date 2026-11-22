@@ -29,19 +29,19 @@ final readonly class UpdateUser
         $oldValues = UserAuditData::fromModel($user)->toArray();
         /* @end-chisel-audit-trails */
 
+        $updatePayload = $attributes;
         /* @chisel-email-verification */
         $emailChanged = isset($attributes['email']) && $user->email !== $attributes['email'];
+        if ($emailChanged) {
+            $updatePayload['email_verified_at'] = null;
+        }
+
         /* @end-chisel-email-verification */
 
         /* @chisel-audit-trails */
-        $performUpdate = static function () use ($user, $attributes, $emailChanged): void {
+        $performUpdate = static function () use ($user, $updatePayload): void {
             /* @end-chisel-audit-trails */
-            $user->update([
-                ...$attributes,
-                /* @chisel-email-verification */
-                ...($emailChanged ? ['email_verified_at' => null] : []),
-                /* @end-chisel-email-verification */
-            ]);
+            $user->update($updatePayload);
             /* @chisel-audit-trails */
         };
 

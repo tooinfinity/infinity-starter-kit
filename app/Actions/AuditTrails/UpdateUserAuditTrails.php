@@ -27,14 +27,6 @@ final readonly class UpdateUserAuditTrails
             'users',
         ]));
 
-        DB::table('activity_log')
-            ->whereIn('causer_type', $userMorphs)
-            ->where('causer_id', $userId)
-            ->update([
-                'ip_address' => null,
-                'user_agent' => null,
-            ]);
-
         $query = DB::table('activity_log')
             ->select(['id', 'causer_type', 'causer_id', 'subject_type', 'subject_id', 'properties', 'attribute_changes'])
             ->where(function (Builder $q) use ($userId, $userMorphs): void {
@@ -49,7 +41,7 @@ final readonly class UpdateUserAuditTrails
             });
 
         /** @param Collection<int, object> $records */
-        $query->orderBy('id')->chunkById(200, function (Collection $records) use ($userId, $userMorphs): void {
+        DB::transaction(fn (): bool => $query->lockForUpdate()->orderBy('id')->chunkById(200, function (Collection $records) use ($userId, $userMorphs): void {
             foreach ($records as $record) {
                 $isActor = is_string($record->causer_type)
                     && in_array($record->causer_type, $userMorphs, true)
@@ -110,13 +102,14 @@ final readonly class UpdateUserAuditTrails
                 $properties['tags'] = $tags;
 
                 DB::table('activity_log')->where('id', $record->id)->update([
+                    ...($isActor ? ['ip_address' => null, 'user_agent' => null] : []),
                     'properties' => json_encode($properties, JSON_THROW_ON_ERROR),
                     'attribute_changes' => $attributeChanges !== null
                         ? json_encode($attributeChanges, JSON_THROW_ON_ERROR)
                         : null,
                 ]);
             }
-        });
+        }));
     }
 
     /**
