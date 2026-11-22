@@ -19,7 +19,7 @@ return new class extends Migration
             $table->index(['subject_type', 'subject_id']);
             $table->string('event')->nullable()->index();
             $table->string('causer_type')->nullable();
-            $table->foreignUuid('causer_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('causer_id')->nullable();
             $table->index(['causer_type', 'causer_id']);
             $table->index(['event', 'created_at']);
             $table->index(['causer_id', 'created_at']);

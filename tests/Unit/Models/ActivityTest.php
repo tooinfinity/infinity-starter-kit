@@ -7,10 +7,16 @@ namespace Tests\Unit\Models;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Attributes\Unguarded;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\MySqlConnection;
 use Illuminate\Database\PostgresConnection;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Grammars\MySqlGrammar;
+use Illuminate\Database\Schema\Grammars\PostgresGrammar;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -111,6 +117,33 @@ test('activity-to-causer polymorphic relationship resolves correctly with UUID-b
         ->and($anonymous->causer_id)->toBeNull();
 });
 
+test('activity-to-causer polymorphic relationship supports non-user UUID-based causers', function (): void {
+    Schema::create('custom_causers', function (Blueprint $table): void {
+        $table->uuid('id')->primary();
+        $table->string('name');
+        $table->timestamps();
+    });
+
+    $customCauserClass = new #[Unguarded] #[Table(name: 'custom_causers')] class extends Model
+    {
+        use HasFactory;
+        use HasUuids;
+    };
+
+    $causer = $customCauserClass::query()->create(['name' => 'Automated Bot']);
+
+    $activity = Activity::query()->create([
+        'causer_type' => $causer->getMorphClass(),
+        'causer_id' => $causer->id,
+        'description' => 'Action by non-user causer',
+    ]);
+
+    expect($activity->causer_type)->toBe($causer->getMorphClass())
+        ->and($activity->causer_id)->toBe($causer->id)
+        ->and($activity->causer)->toBeInstanceOf(Model::class)
+        ->and($activity->causer?->getKey())->toBe($causer->id);
+});
+
 test('activity-to-subject polymorphic relationship resolves correctly with UUID-based model and string IDs', function (): void {
     $user = User::factory()->create();
 
@@ -204,7 +237,7 @@ test('activity log table blueprint compiles valid DDL for sqlite, mysql, and pgs
         $blueprint->index(['subject_type', 'subject_id']);
         $blueprint->string('event')->nullable()->index();
         $blueprint->string('causer_type')->nullable();
-        $blueprint->foreignUuid('causer_id')->nullable()->constrained('users')->nullOnDelete();
+        $blueprint->string('causer_id')->nullable();
         $blueprint->index(['causer_type', 'causer_id']);
         $blueprint->index(['event', 'created_at']);
         $blueprint->index(['causer_id', 'created_at']);
@@ -221,28 +254,52 @@ test('activity log table blueprint compiles valid DDL for sqlite, mysql, and pgs
     $sqliteConnection = DB::connection();
     $sqliteConnection->useDefaultSchemaGrammar();
 
-    $sqliteSql = $buildBlueprint($sqliteConnection)->toSql();
-    expect($sqliteSql)->toBeArray()->not->toBeEmpty();
+    $sqliteSql = implode(';', $buildBlueprint($sqliteConnection)->toSql());
+    expect($sqliteSql)->toContain('create table "activity_log"')
+        ->and($sqliteSql)->toContain('"id" varchar not null')
+        ->and($sqliteSql)->toContain('primary key ("id")')
+        ->and($sqliteSql)->toContain('"causer_type" varchar')
+        ->and($sqliteSql)->toContain('"causer_id" varchar')
+        ->and($sqliteSql)->toContain('"subject_type" varchar')
+        ->and($sqliteSql)->toContain('"subject_id" varchar');
 
+    $mysqlGrammar = new MySqlGrammar($sqliteConnection);
     $mysqlConnection = new MySqlConnection(
         fn (): PDO => new PDO('sqlite::memory:'),
         'laravel',
         '',
         ['charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci']
     );
-    $mysqlConnection->useDefaultSchemaGrammar();
+    $mysqlConnection->setSchemaGrammar($mysqlGrammar);
 
-    $mysqlSql = $buildBlueprint($mysqlConnection)->toSql();
-    expect($mysqlSql)->toBeArray()->not->toBeEmpty();
+    $mysqlSql = implode(';', $buildBlueprint($mysqlConnection)->toSql());
+    expect($mysqlSql)->toContain('create table `activity_log`')
+        ->and($mysqlSql)->toContain('`id` char(36) not null')
+        ->and($mysqlSql)->toContain('primary key (`id`)')
+        ->and($mysqlSql)->toContain('`causer_type` varchar(255)')
+        ->and($mysqlSql)->toContain('`causer_id` varchar(255)')
+        ->and($mysqlSql)->toContain('`subject_type` varchar(255)')
+        ->and($mysqlSql)->toContain('`subject_id` varchar(255)')
+        ->and($mysqlSql)->toContain('`attribute_changes` json')
+        ->and($mysqlSql)->toContain('`properties` json');
 
+    $pgsqlGrammar = new PostgresGrammar($sqliteConnection);
     $pgsqlConnection = new PostgresConnection(
         fn (): PDO => new PDO('sqlite::memory:'),
         'laravel',
         '',
         ['charset' => 'utf8']
     );
-    $pgsqlConnection->useDefaultSchemaGrammar();
+    $pgsqlConnection->setSchemaGrammar($pgsqlGrammar);
 
-    $pgsqlSql = $buildBlueprint($pgsqlConnection)->toSql();
-    expect($pgsqlSql)->toBeArray()->not->toBeEmpty();
+    $pgsqlSql = implode(';', $buildBlueprint($pgsqlConnection)->toSql());
+    expect($pgsqlSql)->toContain('create table "activity_log"')
+        ->and($pgsqlSql)->toContain('"id" uuid not null')
+        ->and($pgsqlSql)->toContain('primary key ("id")')
+        ->and($pgsqlSql)->toContain('"causer_type" varchar(255)')
+        ->and($pgsqlSql)->toContain('"causer_id" varchar(255)')
+        ->and($pgsqlSql)->toContain('"subject_type" varchar(255)')
+        ->and($pgsqlSql)->toContain('"subject_id" varchar(255)')
+        ->and($pgsqlSql)->toContain('"attribute_changes" json')
+        ->and($pgsqlSql)->toContain('"properties" json');
 });
