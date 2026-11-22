@@ -57,11 +57,7 @@ final readonly class UpdateUser
                 /* @chisel-audit-trails */
             };
 
-            if (function_exists('activity')) {
-                activity()->withoutLogging($performUpdate);
-            } else {
-                $performUpdate();
-            }
+            activity()->withoutLogging($performUpdate);
 
             /* @end-chisel-audit-trails */
 

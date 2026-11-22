@@ -219,3 +219,24 @@ test('jsonLikeEscapeSql formats correctly for all database drivers and throws on
     expect(fn (): string => AuditTrailListingQuery::jsonLikeEscapeSql('invalid.path'))
         ->toThrow(InvalidArgumentException::class, 'Unsupported JSON path: invalid.path');
 });
+
+test('audit trails listing formats lifecycle events and empty events into labels', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
+
+    Activity::factory()->create(['event' => 'created', 'description' => 'created']);
+    Activity::factory()->create(['event' => 'updated', 'description' => 'updated']);
+    Activity::factory()->create(['event' => 'deleted', 'description' => 'deleted']);
+    Activity::factory()->create(['event' => null, 'description' => 'unknown']);
+    Activity::factory()->create(['event' => 'custom_action', 'description' => 'custom_action']);
+
+    $response = $this->actingAs($admin)
+        ->get(route('audit-trails.index'));
+
+    $response->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('audit-trails/index')
+            ->has('auditTrails.data', 5)
+            ->where('auditTrails.data.0.event_label', fn ($label): bool => is_string($label) && $label !== '')
+        );
+});

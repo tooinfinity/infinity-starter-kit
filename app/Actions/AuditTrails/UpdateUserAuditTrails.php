@@ -85,29 +85,19 @@ final readonly class UpdateUserAuditTrails
                     }
                 }
 
-                if ($isSubject || $isActor) {
-                    if (isset($properties['old']) && is_array($properties['old'])) {
-                        $properties['old'] = $this->scrubValues($properties['old']);
-                    }
+                if (($isSubject || $isActor) && $attributeChanges !== null) {
+                    /** @var array<string, mixed>|null $oldChanges */
+                    $oldChanges = isset($attributeChanges['old']) && is_array($attributeChanges['old'])
+                        ? $attributeChanges['old']
+                        : null;
 
-                    if (isset($properties['attributes']) && is_array($properties['attributes'])) {
-                        $properties['attributes'] = $this->scrubValues($properties['attributes']);
-                    }
+                    /** @var array<string, mixed>|null $newChanges */
+                    $newChanges = isset($attributeChanges['attributes']) && is_array($attributeChanges['attributes'])
+                        ? $attributeChanges['attributes']
+                        : null;
 
-                    if ($attributeChanges !== null) {
-                        /** @var array<string, mixed>|null $oldChanges */
-                        $oldChanges = isset($attributeChanges['old']) && is_array($attributeChanges['old'])
-                            ? $attributeChanges['old']
-                            : null;
-
-                        /** @var array<string, mixed>|null $newChanges */
-                        $newChanges = isset($attributeChanges['attributes']) && is_array($attributeChanges['attributes'])
-                            ? $attributeChanges['attributes']
-                            : null;
-
-                        $attributeChanges['old'] = $this->scrubValues($oldChanges);
-                        $attributeChanges['attributes'] = $this->scrubValues($newChanges);
-                    }
+                    $attributeChanges['old'] = $this->scrubValues($oldChanges);
+                    $attributeChanges['attributes'] = $this->scrubValues($newChanges);
                 }
 
                 $rawTags = $properties['tags'] ?? null;

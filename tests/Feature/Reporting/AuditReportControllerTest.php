@@ -218,3 +218,24 @@ test('exports audit trails without a per-row user query', function (): void {
     expect($userQueries)->toBeLessThanOrEqual(2)
         ->and(mb_substr_count($csv, "\n"))->toBeGreaterThanOrEqual(26);
 });
+
+test('audit report formats lifecycle events and empty events into labels', function (): void {
+    $user = User::factory()->create();
+    PermissionModel::findOrCreate(Permission::ReportsView->value);
+    $user->givePermissionTo(Permission::ReportsView->value);
+
+    Activity::factory()->create(['event' => 'created', 'description' => 'created']);
+    Activity::factory()->create(['event' => 'updated', 'description' => 'updated']);
+    Activity::factory()->create(['event' => 'deleted', 'description' => 'deleted']);
+    Activity::factory()->create(['event' => null, 'description' => 'unknown']);
+    Activity::factory()->create(['event' => 'custom_action', 'description' => 'custom_action']);
+
+    $this->actingAs($user)
+        ->get(route('reports.audit'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('reports/audit')
+            ->has('auditTrails.data', 5)
+            ->where('auditTrails.data.0.event_label', fn ($label): bool => is_string($label) && $label !== '')
+        );
+});
