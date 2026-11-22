@@ -31,6 +31,15 @@ enum AuditEvent: string
         return array_column(self::cases(), 'value');
     }
 
+    public function logName(): string
+    {
+        return match (explode('.', $this->value, 2)[0]) {
+            'user' => 'users',
+            'settings' => 'settings',
+            default => 'auth',
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

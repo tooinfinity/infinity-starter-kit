@@ -33,14 +33,25 @@ final readonly class UpdateUser
         $emailChanged = isset($attributes['email']) && $user->email !== $attributes['email'];
         /* @end-chisel-email-verification */
 
-        User::withoutEvents(function () use ($user, $attributes, $emailChanged): void {
+        /* @chisel-audit-trails */
+        $performUpdate = static function () use ($user, $attributes, $emailChanged): void {
+            /* @end-chisel-audit-trails */
             $user->update([
                 ...$attributes,
                 /* @chisel-email-verification */
                 ...($emailChanged ? ['email_verified_at' => null] : []),
                 /* @end-chisel-email-verification */
             ]);
-        });
+            /* @chisel-audit-trails */
+        };
+
+        if (function_exists('activity')) {
+            activity()->withoutLogging($performUpdate);
+        } else {
+            $performUpdate();
+        }
+
+        /* @end-chisel-audit-trails */
 
         /* @chisel-email-verification */
         if ($emailChanged) {

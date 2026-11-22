@@ -10,6 +10,7 @@ use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
 use App\Models\Activity;
+use App\Models\User;
 use App\Queries\AuditTrails\AuditTrailListingQuery;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -187,7 +188,7 @@ final readonly class AuditReportQuery
     public function buildFilteredQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
         /** @var Builder<Activity> $query */
-        $query = Activity::query()->with('user');
+        $query = Activity::query()->with('causer');
 
         $query->whereBetween('created_at', [$from, $to]);
 
@@ -206,12 +207,12 @@ final readonly class AuditReportQuery
             $contains = "%{$escaped}%";
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
-                $q->whereRaw(AuditTrailListingQuery::jsonLikeEscapeSql('request.ip_address'), [$prefix, '\\'])
+                $q->whereRaw('ip_address LIKE ? ESCAPE ?', [$prefix, '\\'])
                     ->orWhereRaw('subject_id LIKE ? ESCAPE ?', [$prefix, '\\'])
                     ->orWhereRaw('subject_type LIKE ? ESCAPE ?', [$prefix, '\\'])
                     ->orWhereRaw(AuditTrailListingQuery::jsonLikeEscapeSql('actor.name'), [$contains, '\\'])
                     ->orWhereRaw(AuditTrailListingQuery::jsonLikeEscapeSql('actor.email'), [$contains, '\\'])
-                    ->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
+                    ->orWhereHasMorph('causer', [User::class], function (Builder $userQuery) use ($contains): void {
                         $userQuery->whereRaw('name LIKE ? ESCAPE ?', [$contains, '\\'])
                             ->orWhereRaw('email LIKE ? ESCAPE ?', [$contains, '\\']);
                     });

@@ -58,6 +58,9 @@ final readonly class RecordAuditTrail
         $key = $auditable?->getKey();
         $id = is_string($key) || is_int($key) ? (string) $key : $auditableId;
 
+        $ipAddress = $request?->ip();
+        $userAgent = $request?->userAgent();
+
         $properties = [
             'actor' => [
                 'name' => $actor?->name,
@@ -65,27 +68,31 @@ final readonly class RecordAuditTrail
             ],
             'request' => [
                 'url' => $url ?? $request?->fullUrl(),
-                'ip_address' => $request?->ip(),
-                'user_agent' => $request?->userAgent(),
             ],
         ];
-
-        if ($redactedOld !== null) {
-            $properties['old'] = $redactedOld;
-        }
-
-        if ($redactedNew !== null) {
-            $properties['attributes'] = $redactedNew;
-        }
 
         if ($tags !== null) {
             $properties['tags'] = $tags;
         }
 
         $activityLogger = activity()
-            ->useLog('default')
+            ->useLog($event->logName())
             ->event($event->value)
             ->withProperties($properties);
+
+        if ($redactedOld !== null || $redactedNew !== null) {
+            $changes = [];
+
+            if ($redactedOld !== null) {
+                $changes['old'] = $redactedOld;
+            }
+
+            if ($redactedNew !== null) {
+                $changes['attributes'] = $redactedNew;
+            }
+
+            $activityLogger->withChanges($changes);
+        }
 
         if ($actor !== null) {
             $activityLogger->causedBy($actor);
@@ -95,8 +102,18 @@ final readonly class RecordAuditTrail
 
         if ($auditable instanceof Model) {
             $activityLogger->performedOn($auditable);
-        } elseif ($type !== null || $id !== null) {
-            $activityLogger->tap(function (Model $activity) use ($type, $id): void {
+        }
+
+        $activityLogger->tap(function (Model $activity) use ($ipAddress, $userAgent, $type, $id, $auditable): void {
+            if ($ipAddress !== null) {
+                $activity->setAttribute('ip_address', $ipAddress);
+            }
+
+            if ($userAgent !== null) {
+                $activity->setAttribute('user_agent', $userAgent);
+            }
+
+            if (! $auditable instanceof Model) {
                 if ($type !== null) {
                     $activity->setAttribute('subject_type', $type);
                 }
@@ -104,10 +121,10 @@ final readonly class RecordAuditTrail
                 if ($id !== null) {
                     $activity->setAttribute('subject_id', $id);
                 }
-            });
-        }
+            }
+        });
 
-        $record = $activityLogger->log($event->label());
+        $record = $activityLogger->log($event->value);
 
         if (! $record instanceof Activity) {
             return null;

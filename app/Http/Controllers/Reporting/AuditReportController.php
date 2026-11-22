@@ -23,18 +23,18 @@ final readonly class AuditReportController
 
         $auditTrails = $result['paginated']->through(fn (Activity $audit): array => [
             'id' => $audit->id,
-            'event' => $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : ''),
-            'event_label' => $audit->event instanceof AuditEvent ? $audit->event->label() : (is_string($audit->event) ? (AuditEvent::tryFrom($audit->event)?->label() ?? $audit->event) : ''),
-            'user' => $audit->user instanceof User ? [
-                'id' => $audit->user->id,
-                'name' => $audit->user->name,
-                'email' => $audit->user->email,
+            'event' => $audit->event ?? '',
+            'event_label' => $this->formatEventLabel($audit->event),
+            'user' => $audit->causer instanceof User ? [
+                'id' => $audit->causer->id,
+                'name' => $audit->causer->name,
+                'email' => $audit->causer->email,
             ] : null,
-            'actor_name' => $audit->actor_name,
-            'actor_email' => $audit->actor_email,
-            'tags' => $audit->tags,
-            'auditable_type' => $audit->auditable_type,
-            'auditable_id' => $audit->auditable_id,
+            'actor_name' => $audit->getProperty('actor.name') ?? ($audit->causer instanceof User ? $audit->causer->name : null),
+            'actor_email' => $audit->getProperty('actor.email') ?? ($audit->causer instanceof User ? $audit->causer->email : null),
+            'tags' => $audit->getProperty('tags'),
+            'auditable_type' => $audit->subject_type,
+            'auditable_id' => $audit->subject_id,
             'ip_address' => $audit->ip_address,
             'created_at' => $audit->created_at?->toISOString() ?? '',
         ]);
@@ -63,5 +63,19 @@ final readonly class AuditReportController
                 'direction' => $filters['direction'] ?? 'desc',
             ],
         ]);
+    }
+
+    private function formatEventLabel(?string $event): string
+    {
+        if ($event === null || $event === '') {
+            return '';
+        }
+
+        return match ($event) {
+            'updated' => __('audit.events.user_updated'),
+            'created' => __('audit.events.user_created'),
+            'deleted' => __('audit.events.user_deleted'),
+            default => AuditEvent::tryFrom($event)?->label() ?? (string) str($event)->headline(),
+        };
     }
 }

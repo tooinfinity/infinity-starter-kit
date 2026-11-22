@@ -139,10 +139,10 @@ it('ensures password values never appear in audit data', function (): void {
             'password' => 'super-secret-password-xyz',
         ]);
 
-    $audit = Activity::query()->where('event', AuditEvent::UserPasswordChanged)->first();
+    $audit = Activity::query()->where('event', AuditEvent::UserPasswordChanged->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->new_values['password'])->toBe('[REDACTED]')
-        ->and(json_encode($audit->new_values))->not->toContain('super-secret-password-xyz');
+        ->and($audit->attribute_changes?->get('attributes')['password'])->toBe('[REDACTED]')
+        ->and(json_encode($audit->attribute_changes?->get('attributes')))->not->toContain('super-secret-password-xyz');
 });
 /* @end-chisel-audit-trails */

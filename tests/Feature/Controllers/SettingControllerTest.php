@@ -317,16 +317,16 @@ it('writes exactly one audit row when changing only one setting', function (): v
 
     $response->assertRedirectToRoute('settings.edit');
 
-    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated)->get();
+    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
     expect($audits)->toHaveCount(1);
 
     $audit = $audits->first();
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->old_values['key'])->toBe(SettingKey::ApplicationTimezone->value)
-        ->and($audit->old_values['value'])->toBe('UTC')
-        ->and($audit->new_values['key'])->toBe(SettingKey::ApplicationTimezone->value)
-        ->and($audit->new_values['value'])->toBe('Europe/London');
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->attribute_changes?->get('old')['key'])->toBe(SettingKey::ApplicationTimezone->value)
+        ->and($audit->attribute_changes?->get('old')['value'])->toBe('UTC')
+        ->and($audit->attribute_changes?->get('attributes')['key'])->toBe(SettingKey::ApplicationTimezone->value)
+        ->and($audit->attribute_changes?->get('attributes')['value'])->toBe('Europe/London');
 });
 /* @end-chisel-audit-trails */

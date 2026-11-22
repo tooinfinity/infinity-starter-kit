@@ -143,8 +143,8 @@ it('records audit trail when user deletes own account (OBS-001)', function (): v
         ]);
 
     $audit = Activity::query()
-        ->where('event', AuditEvent::UserDeleted)
-        ->where('auditable_id', $user->id)
+        ->where('event', AuditEvent::UserDeleted->value)
+        ->where('subject_id', $user->id)
         ->first();
 
     expect($audit)->not->toBeNull();

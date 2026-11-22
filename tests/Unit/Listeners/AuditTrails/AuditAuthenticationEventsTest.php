@@ -47,15 +47,15 @@ it('records auth.login event with actor and guard', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLogin($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLogin)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogin->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_name)->toBe($user->name)
-        ->and($audit->actor_email)->toBe($user->email)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->new_values['guard'])->toBe('web')
-        ->and($audit->tags)->toBe(['auth', 'login']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.name'))->toBe($user->name)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->attribute_changes?->get('attributes')['guard'])->toBe('web')
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'login']);
 });
 
 it('records auth.login_failed with known user and throttle outcome without credentials', function (): void {
@@ -71,17 +71,17 @@ it('records auth.login_failed with known user and throttle outcome without crede
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_name)->toBe($user->name)
-        ->and($audit->actor_email)->toBe($user->email)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->new_values['guard'])->toBe('web')
-        ->and($audit->new_values['throttled'])->toBeFalse()
-        ->and($audit->new_values['attempts'])->toBe(1)
-        ->and(json_encode($audit->new_values))->not->toContain('secret123');
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.name'))->toBe($user->name)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->attribute_changes?->get('attributes')['guard'])->toBe('web')
+        ->and($audit->attribute_changes?->get('attributes')['throttled'])->toBeFalse()
+        ->and($audit->attribute_changes?->get('attributes')['attempts'])->toBe(1)
+        ->and(json_encode($audit->attribute_changes?->get('attributes')))->not->toContain('secret123');
 
     RateLimiter::clear($throttleKey);
 });
@@ -103,11 +103,11 @@ it('uses configured rate limit when determining throttled state on failed login'
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->new_values['throttled'])->toBeTrue()
-        ->and($audit->new_values['attempts'])->toBe(3);
+        ->and($audit->attribute_changes?->get('attributes')['throttled'])->toBeTrue()
+        ->and($audit->attribute_changes?->get('attributes')['attempts'])->toBe(3);
 
     RateLimiter::clear($throttleKey);
 });
@@ -121,16 +121,16 @@ it('records auth.login_failed with unknown user without storing submitted email 
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBeNull()
-        ->and($audit->actor_name)->toBeNull()
-        ->and($audit->actor_email)->toBeNull()
-        ->and($audit->auditable_id)->toBeNull()
-        ->and($audit->new_values['guard'])->toBe('web')
-        ->and(json_encode($audit->new_values))->not->toContain('attacker-probe@unknown.com')
-        ->and(json_encode($audit->new_values))->not->toContain('secret123');
+        ->and($audit->causer_id)->toBeNull()
+        ->and($audit->getProperty('actor.name'))->toBeNull()
+        ->and($audit->getProperty('actor.email'))->toBeNull()
+        ->and($audit->subject_id)->toBeNull()
+        ->and($audit->attribute_changes?->get('attributes')['guard'])->toBe('web')
+        ->and(json_encode($audit->attribute_changes?->get('attributes')))->not->toContain('attacker-probe@unknown.com')
+        ->and(json_encode($audit->attribute_changes?->get('attributes')))->not->toContain('secret123');
 });
 
 it('resolves user by email in handleFailed if event user is null but user exists', function (): void {
@@ -141,11 +141,11 @@ it('resolves user by email in handleFailed if event user is null but user exists
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_email)->toBe($user->email);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email);
 });
 
 it('records auth.lockout with known user', function (): void {
@@ -156,14 +156,14 @@ it('records auth.lockout with known user', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLockout($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLockout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLockout->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_email)->toBe($user->email)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->new_values['throttled'])->toBeTrue()
-        ->and($audit->tags)->toBe(['auth', 'lockout']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->attribute_changes?->get('attributes')['throttled'])->toBeTrue()
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'lockout']);
 });
 
 it('records auth.lockout with unknown user without storing submitted email', function (): void {
@@ -173,14 +173,14 @@ it('records auth.lockout with unknown user without storing submitted email', fun
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLockout($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLockout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLockout->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBeNull()
-        ->and($audit->actor_email)->toBeNull()
-        ->and($audit->auditable_id)->toBeNull()
-        ->and($audit->new_values['throttled'])->toBeTrue()
-        ->and(json_encode($audit->new_values))->not->toContain('unknown@example.com');
+        ->and($audit->causer_id)->toBeNull()
+        ->and($audit->getProperty('actor.email'))->toBeNull()
+        ->and($audit->subject_id)->toBeNull()
+        ->and($audit->attribute_changes?->get('attributes')['throttled'])->toBeTrue()
+        ->and(json_encode($audit->attribute_changes?->get('attributes')))->not->toContain('unknown@example.com');
 });
 
 it('records auth.logout event with actor', function (): void {
@@ -190,14 +190,14 @@ it('records auth.logout event with actor', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLogout($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLogout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogout->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_name)->toBe($user->name)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->new_values['guard'])->toBe('web')
-        ->and($audit->tags)->toBe(['auth', 'logout']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.name'))->toBe($user->name)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->attribute_changes?->get('attributes')['guard'])->toBe('web')
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'logout']);
 });
 
 it('records auth.password_reset event with actor and without credentials', function (): void {
@@ -207,14 +207,14 @@ it('records auth.password_reset event with actor and without credentials', funct
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onPasswordReset($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthPasswordReset)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthPasswordReset->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->old_values)->toBeNull()
-        ->and($audit->new_values)->toBeNull()
-        ->and($audit->tags)->toBe(['auth', 'password']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->attribute_changes?->get('attributes'))->toBeNull()
+        ->and($audit->attribute_changes?->get('old'))->toBeNull()
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'password']);
 });
 
 it('records auth.two_factor_enabled event on confirmation', function (): void {
@@ -224,12 +224,12 @@ it('records auth.two_factor_enabled event on confirmation', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorConfirmed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'two-factor']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'two-factor']);
 });
 
 it('ignores TwoFactorAuthenticationEnabled when confirmation is required', function (): void {
@@ -243,7 +243,7 @@ it('ignores TwoFactorAuthenticationEnabled when confirmation is required', funct
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorEnabled($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
     expect($audit)->toBeNull();
 });
 
@@ -258,10 +258,10 @@ it('records auth.two_factor_enabled when confirmation is not required', function
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorEnabled($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id);
+        ->and($audit->causer_id)->toBe($user->id);
 });
 
 it('records auth.two_factor_disabled event', function (): void {
@@ -271,11 +271,11 @@ it('records auth.two_factor_disabled event', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorDisabled($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'two-factor']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'two-factor']);
 });
 
 it('records auth.recovery_codes_used without storing recovery code', function (): void {
@@ -286,13 +286,12 @@ it('records auth.recovery_codes_used without storing recovery code', function ()
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onRecoveryCodeReplaced($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'two-factor'])
-        ->and(json_encode($audit->old_values))->not->toContain($secretCode)
-        ->and(json_encode($audit->new_values))->not->toContain($secretCode);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'two-factor'])
+        ->and(json_encode($audit->attribute_changes))->not->toContain($secretCode);
 });
 
 it('records auth.login_failed on TwoFactorAuthenticationFailed', function (): void {
@@ -302,11 +301,11 @@ it('records auth.login_failed on TwoFactorAuthenticationFailed', function (): vo
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorAuthenticationFailed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'login', 'two-factor']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'login', 'two-factor']);
 });
 
 it('omits query strings from URLs recorded for authentication events', function (): void {
@@ -318,12 +317,12 @@ it('omits query strings from URLs recorded for authentication events', function 
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->url)->toBe('http://localhost/login')
-        ->and($audit->url)->not->toContain('signature')
-        ->and($audit->url)->not->toContain('secret123');
+        ->and($audit->getProperty('request.url'))->toBe('http://localhost/login')
+        ->and($audit->getProperty('request.url'))->not->toContain('signature')
+        ->and($audit->getProperty('request.url'))->not->toContain('secret123');
 });
 
 it('catches and reports audit write exceptions without interrupting authentication', function (): void {

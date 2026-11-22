@@ -6,6 +6,7 @@ namespace App\Actions\AuditTrails;
 
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final readonly class UpdateUserAuditTrails
@@ -26,10 +27,18 @@ final readonly class UpdateUserAuditTrails
             'users',
         ]));
 
-        $records = DB::table('activity_log')
+        DB::table('activity_log')
+            ->whereIn('causer_type', $userMorphs)
+            ->where('causer_id', $userId)
+            ->update([
+                'ip_address' => null,
+                'user_agent' => null,
+            ]);
+
+        $query = DB::table('activity_log')
             ->select(['id', 'causer_type', 'causer_id', 'subject_type', 'subject_id', 'properties', 'attribute_changes'])
-            ->where(function (Builder $query) use ($userId, $userMorphs): void {
-                $query->where(function (Builder $actorQuery) use ($userId, $userMorphs): void {
+            ->where(function (Builder $q) use ($userId, $userMorphs): void {
+                $q->where(function (Builder $actorQuery) use ($userId, $userMorphs): void {
                     $actorQuery->whereIn('causer_type', $userMorphs)
                         ->where('causer_id', $userId);
                 })
@@ -37,95 +46,91 @@ final readonly class UpdateUserAuditTrails
                         $subjectQuery->whereIn('subject_type', $userMorphs)
                             ->where('subject_id', $userId);
                     });
-            })
-            ->lockForUpdate()
-            ->get();
+            });
 
-        foreach ($records as $record) {
-            $isActor = is_string($record->causer_type)
-                && in_array($record->causer_type, $userMorphs, true)
-                && (is_string($record->causer_id) || is_int($record->causer_id))
-                && (string) $record->causer_id === $userId;
+        /** @param Collection<int, object> $records */
+        $query->orderBy('id')->chunkById(200, function (Collection $records) use ($userId, $userMorphs): void {
+            foreach ($records as $record) {
+                $isActor = is_string($record->causer_type)
+                    && in_array($record->causer_type, $userMorphs, true)
+                    && (is_string($record->causer_id) || is_int($record->causer_id))
+                    && (string) $record->causer_id === $userId;
 
-            $isSubject = is_string($record->subject_type)
-                && in_array($record->subject_type, $userMorphs, true)
-                && (is_string($record->subject_id) || is_int($record->subject_id))
-                && (string) $record->subject_id === $userId;
+                $isSubject = is_string($record->subject_type)
+                    && in_array($record->subject_type, $userMorphs, true)
+                    && (is_string($record->subject_id) || is_int($record->subject_id))
+                    && (string) $record->subject_id === $userId;
 
-            $rawProperties = is_string($record->properties)
-                ? json_decode($record->properties, true)
-                : [];
-            /** @var array<string, mixed> $properties */
-            $properties = is_array($rawProperties) ? $rawProperties : [];
+                $rawProperties = is_string($record->properties)
+                    ? json_decode($record->properties, true)
+                    : [];
+                /** @var array<string, mixed> $properties */
+                $properties = is_array($rawProperties) ? $rawProperties : [];
 
-            $rawChanges = is_string($record->attribute_changes)
-                ? json_decode($record->attribute_changes, true)
-                : null;
-            /** @var array<string, mixed>|null $attributeChanges */
-            $attributeChanges = is_array($rawChanges) ? $rawChanges : null;
-
-            if ($isActor) {
-                if (isset($properties['actor']) && is_array($properties['actor'])) {
-                    $properties['actor']['name'] = null;
-                    $properties['actor']['email'] = null;
-                }
-
-                if (isset($properties['request']) && is_array($properties['request'])) {
-                    $properties['request']['ip_address'] = null;
-                    $properties['request']['user_agent'] = null;
-                }
-            }
-
-            if ($isSubject || $isActor) {
-                /** @var array<string, mixed>|null $oldValues */
-                $oldValues = isset($properties['old']) && is_array($properties['old'])
-                    ? $properties['old']
+                $rawChanges = is_string($record->attribute_changes)
+                    ? json_decode($record->attribute_changes, true)
                     : null;
+                /** @var array<string, mixed>|null $attributeChanges */
+                $attributeChanges = is_array($rawChanges) ? $rawChanges : null;
 
-                /** @var array<string, mixed>|null $newValues */
-                $newValues = isset($properties['attributes']) && is_array($properties['attributes'])
-                    ? $properties['attributes']
-                    : null;
+                if ($isActor) {
+                    if (isset($properties['actor']) && is_array($properties['actor'])) {
+                        $properties['actor']['name'] = null;
+                        $properties['actor']['email'] = null;
+                    }
 
-                $properties['old'] = $this->scrubValues($oldValues);
-                $properties['attributes'] = $this->scrubValues($newValues);
-
-                if ($attributeChanges !== null) {
-                    /** @var array<string, mixed>|null $oldChanges */
-                    $oldChanges = isset($attributeChanges['old']) && is_array($attributeChanges['old'])
-                        ? $attributeChanges['old']
-                        : null;
-
-                    /** @var array<string, mixed>|null $newChanges */
-                    $newChanges = isset($attributeChanges['attributes']) && is_array($attributeChanges['attributes'])
-                        ? $attributeChanges['attributes']
-                        : null;
-
-                    $attributeChanges['old'] = $this->scrubValues($oldChanges);
-                    $attributeChanges['attributes'] = $this->scrubValues($newChanges);
+                    if (isset($properties['request']) && is_array($properties['request'])) {
+                        $properties['request']['ip_address'] = null;
+                        $properties['request']['user_agent'] = null;
+                    }
                 }
+
+                if ($isSubject || $isActor) {
+                    if (isset($properties['old']) && is_array($properties['old'])) {
+                        $properties['old'] = $this->scrubValues($properties['old']);
+                    }
+
+                    if (isset($properties['attributes']) && is_array($properties['attributes'])) {
+                        $properties['attributes'] = $this->scrubValues($properties['attributes']);
+                    }
+
+                    if ($attributeChanges !== null) {
+                        /** @var array<string, mixed>|null $oldChanges */
+                        $oldChanges = isset($attributeChanges['old']) && is_array($attributeChanges['old'])
+                            ? $attributeChanges['old']
+                            : null;
+
+                        /** @var array<string, mixed>|null $newChanges */
+                        $newChanges = isset($attributeChanges['attributes']) && is_array($attributeChanges['attributes'])
+                            ? $attributeChanges['attributes']
+                            : null;
+
+                        $attributeChanges['old'] = $this->scrubValues($oldChanges);
+                        $attributeChanges['attributes'] = $this->scrubValues($newChanges);
+                    }
+                }
+
+                $rawTags = $properties['tags'] ?? null;
+                /** @var list<string> $tags */
+                $tags = is_array($rawTags) ? array_values(array_filter($rawTags, is_string(...))) : [];
+                if (! in_array('anonymized', $tags, true)) {
+                    $tags[] = 'anonymized';
+                }
+
+                $properties['tags'] = $tags;
+
+                DB::table('activity_log')->where('id', $record->id)->update([
+                    'properties' => json_encode($properties, JSON_THROW_ON_ERROR),
+                    'attribute_changes' => $attributeChanges !== null
+                        ? json_encode($attributeChanges, JSON_THROW_ON_ERROR)
+                        : null,
+                ]);
             }
-
-            $rawTags = $properties['tags'] ?? null;
-            /** @var list<string> $tags */
-            $tags = is_array($rawTags) ? array_values(array_filter($rawTags, is_string(...))) : [];
-            if (! in_array('anonymized', $tags, true)) {
-                $tags[] = 'anonymized';
-            }
-
-            $properties['tags'] = $tags;
-
-            DB::table('activity_log')->where('id', $record->id)->update([
-                'properties' => json_encode($properties, JSON_THROW_ON_ERROR),
-                'attribute_changes' => $attributeChanges !== null
-                    ? json_encode($attributeChanges, JSON_THROW_ON_ERROR)
-                    : null,
-            ]);
-        }
+        });
     }
 
     /**
-     * @param  array<string, mixed>|null  $values
+     * @param  array<array-key, mixed>|null  $values
      * @return array<string, mixed>|null
      */
     private function scrubValues(?array $values): ?array
@@ -137,17 +142,17 @@ final readonly class UpdateUserAuditTrails
         $result = [];
 
         foreach ($values as $key => $value) {
-            $normalizedKey = mb_strtolower((string) $key);
+            $stringKey = (string) $key;
+            $normalizedKey = mb_strtolower($stringKey);
 
             if (in_array($normalizedKey, ['name', 'email', 'actor_name', 'actor_email'], true)) {
                 continue;
             }
 
             if (is_array($value)) {
-                /** @var array<string, mixed> $value */
-                $result[$key] = $this->scrubValues($value);
+                $result[$stringKey] = $this->scrubValues($value);
             } else {
-                $result[$key] = $value;
+                $result[$stringKey] = $value;
             }
         }
 

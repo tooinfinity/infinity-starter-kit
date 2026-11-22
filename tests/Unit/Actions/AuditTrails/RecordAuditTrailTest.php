@@ -29,19 +29,21 @@ test('RecordAuditTrail stores an audit trail record with all provided attributes
     );
 
     expect($record)->toBeInstanceOf(Activity::class)
-        ->and($record->user_id)->toBe($actor->id)
-        ->and($record->event)->toBe(AuditEvent::UserUpdated)
-        ->and($record->auditable_type)->toBe($target->getMorphClass())
-        ->and($record->auditable_id)->toBe($target->id)
-        ->and($record->old_values)->toBe(['name' => 'Old Name'])
-        ->and($record->new_values)->toBe(['name' => 'New Name'])
-        ->and($record->url)->toBe('http://localhost/users/'.$target->id)
+        ->and($record->causer_id)->toBe($actor->id)
+        ->and($record->event)->toBe(AuditEvent::UserUpdated->value)
+        ->and($record->description)->toBe(AuditEvent::UserUpdated->value)
+        ->and($record->log_name)->toBe('users')
+        ->and($record->subject_type)->toBe($target->getMorphClass())
+        ->and($record->subject_id)->toBe($target->id)
+        ->and($record->attribute_changes?->get('old'))->toBe(['name' => 'Old Name'])
+        ->and($record->attribute_changes?->get('attributes'))->toBe(['name' => 'New Name'])
+        ->and($record->getProperty('request.url'))->toBe('http://localhost/users/'.$target->id)
         ->and($record->ip_address)->toBe('192.168.1.100')
         ->and($record->user_agent)->toBe('TestBrowser/1.0')
-        ->and($record->tags)->toBe(['users', 'management'])
+        ->and($record->getProperty('tags'))->toBe(['users', 'management'])
         ->and($record->created_at)->not->toBeNull()
-        ->and($record->auditable)->toBeInstanceOf(User::class)
-        ->and($record->auditable->id)->toBe($target->id);
+        ->and($record->subject)->toBeInstanceOf(User::class)
+        ->and($record->subject->id)->toBe($target->id);
 });
 
 test('RecordAuditTrail automatically redacts sensitive fields from old and new values', function (): void {
@@ -72,21 +74,25 @@ test('RecordAuditTrail automatically redacts sensitive fields from old and new v
         ],
     );
 
-    expect($record->old_values['password'])->toBe('[REDACTED]')
-        ->and($record->old_values['password_confirmation'])->toBe('[REDACTED]')
-        ->and($record->old_values['current_password'])->toBe('[REDACTED]')
-        ->and($record->old_values['remember_token'])->toBe('[REDACTED]')
+    $changes = $record->attribute_changes?->toArray() ?? [];
+    $old = $changes['old'] ?? [];
+    $new = $changes['attributes'] ?? [];
+
+    expect($old['password'])->toBe('[REDACTED]')
+        ->and($old['password_confirmation'])->toBe('[REDACTED]')
+        ->and($old['current_password'])->toBe('[REDACTED]')
+        ->and($old['remember_token'])->toBe('[REDACTED]')
         /* @chisel-two-factor */
-        ->and($record->old_values['two_factor_secret'])->toBe('[REDACTED]')
-        ->and($record->old_values['two_factor_recovery_codes'])->toBe('[REDACTED]')
+        ->and($old['two_factor_secret'])->toBe('[REDACTED]')
+        ->and($old['two_factor_recovery_codes'])->toBe('[REDACTED]')
         /* @end-chisel-two-factor */
-        ->and($record->old_values['api_key'])->toBe('[REDACTED]')
-        ->and($record->old_values['app_token'])->toBe('[REDACTED]')
-        ->and($record->old_values['safe_field'])->toBe('visible_value')
-        ->and($record->new_values['password'])->toBe('[REDACTED]')
-        ->and($record->new_values['nested']['password'])->toBe('[REDACTED]')
-        ->and($record->new_values['nested']['normal_key'])->toBe('normal_val')
-        ->and($record->new_values['safe_field'])->toBe('new_visible_value');
+        ->and($old['api_key'])->toBe('[REDACTED]')
+        ->and($old['app_token'])->toBe('[REDACTED]')
+        ->and($old['safe_field'])->toBe('visible_value')
+        ->and($new['password'])->toBe('[REDACTED]')
+        ->and($new['nested']['password'])->toBe('[REDACTED]')
+        ->and($new['nested']['normal_key'])->toBe('normal_val')
+        ->and($new['safe_field'])->toBe('new_visible_value');
 });
 
 test('RecordAuditTrail handles anonymous or system actions without an actor', function (): void {
@@ -98,8 +104,8 @@ test('RecordAuditTrail handles anonymous or system actions without an actor', fu
         newValues: ['app.name' => 'New'],
     );
 
-    expect($record->user_id)->toBeNull()
-        ->and($record->user)->toBeNull();
+    expect($record->causer_id)->toBeNull()
+        ->and($record->causer)->toBeNull();
 });
 
 test('RecordAuditTrail falls back to authenticated user when actor is not passed', function (): void {
@@ -112,7 +118,7 @@ test('RecordAuditTrail falls back to authenticated user when actor is not passed
         event: AuditEvent::UserActivated,
     );
 
-    expect($record->user_id)->toBe($user->id);
+    expect($record->causer_id)->toBe($user->id);
 });
 
 test('keeps the actor identity after the actor is deleted', function (): void {
@@ -123,9 +129,9 @@ test('keeps the actor identity after the actor is deleted', function (): void {
     $actor->delete();
 
     $audit->refresh();
-    expect($audit->user_id)->toBeNull()
-        ->and($audit->actor_email)->toBe('ada@example.com')
-        ->and($audit->actor_name)->toBe('Ada');
+    expect($audit->causer_id)->toBeNull()
+        ->and($audit->getProperty('actor.email'))->toBe('ada@example.com')
+        ->and($audit->getProperty('actor.name'))->toBe('Ada');
 });
 
 test('RecordAuditTrail respects disabled activity logging without writing records', function (): void {

@@ -96,7 +96,7 @@ test('recording an explicit audit trail produces exactly one activity log row', 
 
     $activity = Activity::query()->latest('id')->first();
     expect($activity)->not->toBeNull()
-        ->and($activity->event)->toBe(AuditEvent::SettingsUpdated);
+        ->and($activity->event)->toBe(AuditEvent::SettingsUpdated->value);
 });
 
 test('rolled back transaction leaves no activity row in activity_log', function (): void {
@@ -122,20 +122,4 @@ test('rolled back transaction leaves no activity row in activity_log', function 
     }
 
     expect(Activity::query()->count())->toBe($initialCount);
-});
-
-test('query builder translates legacy audit trail columns', function (): void {
-    $activity = Activity::factory()->create([
-        'auditable_type' => User::class,
-        'actor_email' => 'test@example.com',
-        'ip_address' => '192.168.1.1',
-        'user_agent' => 'TestBrowser/2.0',
-        'url' => 'http://localhost/legacy-test',
-    ]);
-
-    expect(Activity::query()->where('auditable_type', User::class)->where('id', $activity->id)->exists())->toBeTrue()
-        ->and(Activity::query()->where('actor_email', 'test@example.com')->where('id', $activity->id)->exists())->toBeTrue()
-        ->and(Activity::query()->where('ip_address', '192.168.1.1')->where('id', $activity->id)->exists())->toBeTrue()
-        ->and(Activity::query()->where('user_agent', 'TestBrowser/2.0')->where('id', $activity->id)->exists())->toBeTrue()
-        ->and(Activity::query()->where('url', 'http://localhost/legacy-test')->where('id', $activity->id)->exists())->toBeTrue();
 });

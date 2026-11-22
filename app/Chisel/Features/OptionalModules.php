@@ -459,7 +459,6 @@ final class OptionalModules
                     'app/Http/Requests/AuditTrails/AuditTrailIndexRequest.php',
                     'app/Listeners/AuditTrails/AuditAuthenticationEvents.php',
                     'app/Models/Activity.php',
-                    'app/Models/Concerns/InteractsWithAuditActivity.php',
                     'app/Queries/AuditTrails/AuditTrailListingQuery.php',
                     'app/Data/AuditTrails/UserAuditData.php',
                     'config/activitylog.php',

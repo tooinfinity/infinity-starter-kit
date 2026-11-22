@@ -50,9 +50,20 @@ final readonly class UpdateUser
                 /* @end-chisel-email-verification */
             ];
 
-            User::withoutEvents(function () use ($user, $updatePayload): void {
+            /* @chisel-audit-trails */
+            $performUpdate = static function () use ($user, $updatePayload): void {
+                /* @end-chisel-audit-trails */
                 $user->update($updatePayload);
-            });
+                /* @chisel-audit-trails */
+            };
+
+            if (function_exists('activity')) {
+                activity()->withoutLogging($performUpdate);
+            } else {
+                $performUpdate();
+            }
+
+            /* @end-chisel-audit-trails */
 
             /* @chisel-email-verification */
             if ($emailChanged) {

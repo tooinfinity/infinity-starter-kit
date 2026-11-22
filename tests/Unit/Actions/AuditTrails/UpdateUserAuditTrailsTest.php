@@ -40,25 +40,25 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $records = Activity::query()->where('user_id', $user->id)->get();
+    $records = Activity::query()->where('causer_id', $user->id)->get();
     expect($records)->toHaveCount(2);
 
     foreach ($records as $record) {
-        expect($record->actor_name)->toBeNull()
-            ->and($record->actor_email)->toBeNull()
+        expect($record->getProperty('actor.name'))->toBeNull()
+            ->and($record->getProperty('actor.email'))->toBeNull()
             ->and($record->ip_address)->toBeNull()
             ->and($record->user_agent)->toBeNull()
-            ->and($record->tags)->toContain('anonymized');
+            ->and($record->getProperty('tags'))->toContain('anonymized');
     }
 
-    $updatedRecord = Activity::query()->where('event', AuditEvent::UserUpdated)->first();
+    $updatedRecord = Activity::query()->where('event', AuditEvent::UserUpdated->value)->first();
     expect($updatedRecord)->not->toBeNull()
-        ->and($updatedRecord->old_values)->not->toHaveKey('name')
-        ->and($updatedRecord->old_values)->not->toHaveKey('email')
-        ->and($updatedRecord->old_values['is_active'])->toBeTrue()
-        ->and($updatedRecord->new_values)->not->toHaveKey('name')
-        ->and($updatedRecord->new_values)->not->toHaveKey('email')
-        ->and($updatedRecord->new_values['is_active'])->toBeTrue();
+        ->and($updatedRecord->attribute_changes?->get('old'))->not->toHaveKey('name')
+        ->and($updatedRecord->attribute_changes?->get('old'))->not->toHaveKey('email')
+        ->and($updatedRecord->attribute_changes?->get('old')['is_active'])->toBeTrue()
+        ->and($updatedRecord->attribute_changes?->get('attributes'))->not->toHaveKey('name')
+        ->and($updatedRecord->attribute_changes?->get('attributes'))->not->toHaveKey('email')
+        ->and($updatedRecord->attribute_changes?->get('attributes')['is_active'])->toBeTrue();
 });
 
 test('UpdateUserAuditTrails scrubs target PII while preserving admin actor details', function (): void {
@@ -85,15 +85,15 @@ test('UpdateUserAuditTrails scrubs target PII while preserving admin actor detai
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($targetUser);
 
-    $createdRecord = Activity::query()->where('event', AuditEvent::UserCreated)->first();
+    $createdRecord = Activity::query()->where('event', AuditEvent::UserCreated->value)->first();
     expect($createdRecord)->not->toBeNull()
-        ->and($createdRecord->user_id)->toBe($admin->id)
-        ->and($createdRecord->actor_name)->toBe('Admin Boss')
-        ->and($createdRecord->actor_email)->toBe('admin@example.com')
-        ->and($createdRecord->tags)->toContain('anonymized')
-        ->and($createdRecord->new_values)->not->toHaveKey('name')
-        ->and($createdRecord->new_values)->not->toHaveKey('email')
-        ->and($createdRecord->new_values['is_active'])->toBeTrue();
+        ->and($createdRecord->causer_id)->toBe($admin->id)
+        ->and($createdRecord->getProperty('actor.name'))->toBe('Admin Boss')
+        ->and($createdRecord->getProperty('actor.email'))->toBe('admin@example.com')
+        ->and($createdRecord->getProperty('tags'))->toContain('anonymized')
+        ->and($createdRecord->attribute_changes?->get('attributes'))->not->toHaveKey('name')
+        ->and($createdRecord->attribute_changes?->get('attributes'))->not->toHaveKey('email')
+        ->and($createdRecord->attribute_changes?->get('attributes')['is_active'])->toBeTrue();
 });
 
 test('UpdateUserAuditTrails respects disabled anonymize_on_delete configuration', function (): void {
@@ -115,11 +115,11 @@ test('UpdateUserAuditTrails respects disabled anonymize_on_delete configuration'
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $record = Activity::query()->where('user_id', $user->id)->first();
+    $record = Activity::query()->where('causer_id', $user->id)->first();
     expect($record)->not->toBeNull()
-        ->and($record->actor_name)->toBe('Charlie User')
-        ->and($record->actor_email)->toBe('charlie@example.com')
-        ->and($record->tags)->not->toContain('anonymized');
+        ->and($record->getProperty('actor.name'))->toBe('Charlie User')
+        ->and($record->getProperty('actor.email'))->toBe('charlie@example.com')
+        ->and($record->getProperty('tags'))->not->toContain('anonymized');
 });
 
 test('UpdateUserAuditTrails allows explicit anonymize parameter override', function (): void {
@@ -141,11 +141,11 @@ test('UpdateUserAuditTrails allows explicit anonymize parameter override', funct
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user, anonymize: false);
 
-    $record = Activity::query()->where('user_id', $user->id)->first();
+    $record = Activity::query()->where('causer_id', $user->id)->first();
     expect($record)->not->toBeNull()
-        ->and($record->actor_name)->toBe('Diana User')
-        ->and($record->actor_email)->toBe('diana@example.com')
-        ->and($record->tags)->not->toContain('anonymized');
+        ->and($record->getProperty('actor.name'))->toBe('Diana User')
+        ->and($record->getProperty('actor.email'))->toBe('diana@example.com')
+        ->and($record->getProperty('tags'))->not->toContain('anonymized');
 });
 
 test('UpdateUserAuditTrails handles null properties and recursively scrubs nested arrays', function (): void {
@@ -181,12 +181,12 @@ test('UpdateUserAuditTrails handles null properties and recursively scrubs neste
     $scrubbed = Activity::query()->where('id', $recorded->id)->first();
 
     expect($scrubbed)->not->toBeNull()
-        ->and($scrubbed->old_values['meta'])->toBe(['team' => 'Engineering']);
+        ->and($scrubbed->attribute_changes?->get('old')['meta'])->toBe(['team' => 'Engineering']);
 
     $nullRecord = Activity::query()->where('id', $nullId)->first();
     expect($nullRecord)->not->toBeNull()
-        ->and($nullRecord->tags)->toContain('anonymized')
-        ->and($nullRecord->old_values)->toBeNull();
+        ->and($nullRecord->getProperty('tags'))->toContain('anonymized')
+        ->and($nullRecord->attribute_changes)->toBeNull();
 });
 
 test('UpdateUserAuditTrails scrubs both properties and attribute_changes for real user update', function (): void {
@@ -201,30 +201,21 @@ test('UpdateUserAuditTrails scrubs both properties and attribute_changes for rea
         'causer_type' => User::class,
         'causer_id' => $user->id,
         'event' => AuditEvent::UserUpdated->value,
+        'attribute_changes' => [
+            'old' => ['name' => 'Frank User', 'email' => 'frank@example.com', 'role' => 'user'],
+            'attributes' => ['name' => 'Frank Updated', 'email' => 'frank_new@example.com', 'role' => 'user'],
+        ],
     ]);
-
-    $activity->old_values = ['name' => 'Frank User', 'email' => 'frank@example.com', 'role' => 'user'];
-    $activity->new_values = ['name' => 'Frank Updated', 'email' => 'frank_new@example.com', 'role' => 'user'];
-    $activity->saveQuietly();
 
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
     $reloaded = Activity::query()->where('id', $activity->id)->first();
     expect($reloaded)->not->toBeNull()
-        ->and($reloaded->old_values)->not->toHaveKey('name')
-        ->and($reloaded->old_values)->not->toHaveKey('email')
-        ->and($reloaded->old_values['role'])->toBe('user')
-        ->and($reloaded->new_values)->not->toHaveKey('name')
-        ->and($reloaded->new_values)->not->toHaveKey('email')
-        ->and($reloaded->new_values['role'])->toBe('user');
-
-    /** @var array<string, mixed> $rawChanges */
-    $rawChanges = json_decode((string) DB::table('activity_log')->where('id', $activity->id)->value('attribute_changes'), true);
-    expect($rawChanges['old'])->not->toHaveKey('name')
-        ->and($rawChanges['old'])->not->toHaveKey('email')
-        ->and($rawChanges['old']['role'])->toBe('user')
-        ->and($rawChanges['attributes'])->not->toHaveKey('name')
-        ->and($rawChanges['attributes'])->not->toHaveKey('email')
-        ->and($rawChanges['attributes']['role'])->toBe('user');
+        ->and($reloaded->attribute_changes?->get('old'))->not->toHaveKey('name')
+        ->and($reloaded->attribute_changes?->get('old'))->not->toHaveKey('email')
+        ->and($reloaded->attribute_changes?->get('old')['role'])->toBe('user')
+        ->and($reloaded->attribute_changes?->get('attributes'))->not->toHaveKey('name')
+        ->and($reloaded->attribute_changes?->get('attributes'))->not->toHaveKey('email')
+        ->and($reloaded->attribute_changes?->get('attributes')['role'])->toBe('user');
 });

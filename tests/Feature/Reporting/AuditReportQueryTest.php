@@ -39,35 +39,37 @@ test('audit report query computes accurate summary metrics and event breakdown',
     $baseDate = Date::now()->subDays(2);
 
     Activity::factory()->create([
-        'user_id' => $user1->id,
-        'event' => AuditEvent::UserCreated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
+        'causer_type' => User::class,
+        'causer_id' => $user1->id,
+        'event' => AuditEvent::UserCreated->value,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
         'created_at' => $baseDate->copy()->startOfDay()->addHours(1),
     ]);
 
     Activity::factory()->create([
-        'user_id' => $user1->id,
-        'event' => AuditEvent::UserCreated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user2->id,
+        'causer_type' => User::class,
+        'causer_id' => $user1->id,
+        'event' => AuditEvent::UserCreated->value,
+        'subject_type' => User::class,
+        'subject_id' => $user2->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(2),
     ]);
 
     Activity::factory()->create([
-        'user_id' => $user2->id,
-        'event' => AuditEvent::UserUpdated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
+        'causer_type' => User::class,
+        'causer_id' => $user2->id,
+        'event' => AuditEvent::UserUpdated->value,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(5),
     ]);
 
-    // System audit event (user_id is null)
-    Activity::factory()->create([
-        'user_id' => null,
-        'event' => AuditEvent::UserDeleted,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
+    // System audit event (causer_id is null)
+    Activity::factory()->anonymous()->create([
+        'event' => AuditEvent::UserDeleted->value,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(6),
     ]);
 
@@ -100,15 +102,17 @@ test('audit report query filters by event, user_id and search', function (): voi
     $today = Date::now();
 
     Activity::factory()->create([
-        'user_id' => $user->id,
-        'event' => AuditEvent::UserCreated,
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'event' => AuditEvent::UserCreated->value,
         'ip_address' => '192.168.1.100',
         'created_at' => $today,
     ]);
 
     Activity::factory()->create([
-        'user_id' => $otherUser->id,
-        'event' => AuditEvent::UserDeleted,
+        'causer_type' => User::class,
+        'causer_id' => $otherUser->id,
+        'event' => AuditEvent::UserDeleted->value,
         'ip_address' => '10.0.0.1',
         'created_at' => $today,
     ]);
@@ -122,7 +126,7 @@ test('audit report query filters by event, user_id and search', function (): voi
         'event' => AuditEvent::UserCreated->value,
     ]);
     expect($eventResult['paginated']->total())->toBe(1)
-        ->and($eventResult['paginated']->first()?->event)->toBe(AuditEvent::UserCreated);
+        ->and($eventResult['paginated']->first()?->event)->toBe(AuditEvent::UserCreated->value);
 
     // Filter by user_id
     $userResult = $query->handle([
@@ -131,7 +135,7 @@ test('audit report query filters by event, user_id and search', function (): voi
         'user_id' => $user->id,
     ]);
     expect($userResult['paginated']->total())->toBe(1)
-        ->and($userResult['paginated']->first()?->user_id)->toBe($user->id);
+        ->and($userResult['paginated']->first()?->causer_id)->toBe($user->id);
 
     // Search by IP
     $ipResult = $query->handle([
@@ -157,22 +161,22 @@ test('audit report query treats literal wildcard and backslash characters in sea
     $today = Date::now();
 
     $a1 = Activity::factory()->create([
-        'auditable_id' => '_target-123',
+        'subject_id' => '_target-123',
         'ip_address' => '10.0.0.1',
         'created_at' => $today,
     ]);
     Activity::factory()->create([
-        'auditable_id' => 'targetx123',
+        'subject_id' => 'targetx123',
         'ip_address' => '10.0.0.2',
         'created_at' => $today,
     ]);
     $a3 = Activity::factory()->create([
-        'auditable_id' => '%target-123',
+        'subject_id' => '%target-123',
         'ip_address' => '10.0.0.3',
         'created_at' => $today,
     ]);
     $a4 = Activity::factory()->create([
-        'auditable_id' => '\\target-123',
+        'subject_id' => '\\target-123',
         'ip_address' => '10.0.0.4',
         'created_at' => $today,
     ]);
@@ -311,20 +315,16 @@ it('correctly attributes events for whole-hour timezones like Europe/Paris', fun
 test('audit report query finds audit record by literal underscore in actor email when no related user or subject matches', function (): void {
     Activity::query()->delete();
 
-    Activity::factory()->create([
-        'user_id' => null,
-        'actor_email' => 'janeXdoe@example.com',
-        'auditable_type' => null,
-        'auditable_id' => 'subject-other',
+    Activity::factory()->anonymous()->withActor(null, 'janeXdoe@example.com')->create([
+        'subject_type' => null,
+        'subject_id' => 'subject-other',
         'ip_address' => '10.0.0.1',
         'created_at' => Date::now(),
     ]);
 
-    $matched = Activity::factory()->create([
-        'user_id' => null,
-        'actor_email' => 'jane_doe@example.com',
-        'auditable_type' => null,
-        'auditable_id' => 'subject-none',
+    $matched = Activity::factory()->anonymous()->withActor(null, 'jane_doe@example.com')->create([
+        'subject_type' => null,
+        'subject_id' => 'subject-none',
         'ip_address' => '10.0.0.2',
         'created_at' => Date::now(),
     ]);

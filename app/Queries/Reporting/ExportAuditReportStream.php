@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Queries\Reporting;
 
 use App\Data\Reporting\ReportDateRange;
-use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,22 +50,25 @@ final readonly class ExportAuditReportStream
 
             foreach ($query->lazy(500) as $audit) {
                 /** @var Activity $audit */
-                $user = $audit->user instanceof User ? $audit->user : null;
-                $isAnonymized = ! $user && ! $audit->actor_name && in_array('anonymized', (array) $audit->tags, true);
+                $user = $audit->causer instanceof User ? $audit->causer : null;
+                $actorNameProp = $audit->getProperty('actor.name');
+                $actorEmailProp = $audit->getProperty('actor.email');
+                $tags = (array) ($audit->getProperty('tags') ?? []);
+                $isAnonymized = ! $user && ! $actorNameProp && in_array('anonymized', $tags, true);
                 $fallbackActor = $isAnonymized ? __('reports.common.anonymized_user') : __('reports.common.system');
 
-                $actorName = $user instanceof User ? $user->name : (is_string($audit->actor_name) ? $audit->actor_name : $fallbackActor);
-                $actorEmail = $user instanceof User ? $user->email : (is_string($audit->actor_email) ? $audit->actor_email : '');
+                $actorName = $user instanceof User ? $user->name : (is_string($actorNameProp) ? $actorNameProp : $fallbackActor);
+                $actorEmail = $user instanceof User ? $user->email : (is_string($actorEmailProp) ? $actorEmailProp : '');
 
-                $eventValue = $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : '');
+                $eventValue = $audit->event ?? '';
 
                 fputcsv($handle, [
                     $audit->id,
                     $this->sanitizeValue($eventValue),
                     $this->sanitizeValue($actorName),
                     $this->sanitizeValue($actorEmail),
-                    $this->sanitizeValue($audit->auditable_type ?? ''),
-                    $this->sanitizeValue($audit->auditable_id ?? ''),
+                    $this->sanitizeValue($audit->subject_type ?? ''),
+                    $this->sanitizeValue((string) ($audit->subject_id ?? '')),
                     $this->sanitizeValue($audit->ip_address ?? ''),
                     $audit->created_at?->toISOString() ?? '',
                 ],

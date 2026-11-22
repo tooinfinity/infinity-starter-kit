@@ -37,17 +37,17 @@ test('successful login records auth.login audit trail with IP and user agent', f
 
     $response->assertRedirectToRoute('dashboard');
 
-    expect(Activity::query()->where('event', AuditEvent::AuthLogin)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthLogin->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLogin)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogin->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_name)->toBe($user->name)
-        ->and($audit->actor_email)->toBe($user->email)
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.name'))->toBe($user->name)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email)
         ->and($audit->ip_address)->toBe('198.51.100.42')
         ->and($audit->user_agent)->toBe('AuditBrowser/1.0')
-        ->and($audit->tags)->toBe(['auth', 'login']);
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'login']);
 });
 
 test('failed login with registered email records auth.login_failed with user_id and throttle info', function (): void {
@@ -66,18 +66,18 @@ test('failed login with registered email records auth.login_failed with user_id 
 
     $response->assertSessionHasErrors('email');
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_name)->toBe($user->name)
-        ->and($audit->actor_email)->toBe($user->email)
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.name'))->toBe($user->name)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email)
         ->and($audit->ip_address)->toBe('198.51.100.55')
         ->and($audit->user_agent)->toBe('AuditBrowser/2.0')
-        ->and($audit->new_values['guard'])->toBe('web')
-        ->and($audit->new_values['throttled'])->toBeFalse()
-        ->and($audit->new_values['attempts'])->toBe(1)
-        ->and(json_encode($audit->new_values))->not->toContain('wrong-secret-guess');
+        ->and($audit->attribute_changes?->get('attributes')['guard'])->toBe('web')
+        ->and($audit->attribute_changes?->get('attributes')['throttled'])->toBeFalse()
+        ->and($audit->attribute_changes?->get('attributes')['attempts'])->toBe(1)
+        ->and(json_encode($audit->attribute_changes?->get('attributes')))->not->toContain('wrong-secret-guess');
 });
 
 test('failed login with unknown email does not persist submitted address', function (): void {
@@ -93,17 +93,16 @@ test('failed login with unknown email does not persist submitted address', funct
 
     $response->assertSessionHasErrors('email');
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBeNull()
-        ->and($audit->actor_name)->toBeNull()
-        ->and($audit->actor_email)->toBeNull()
-        ->and($audit->auditable_id)->toBeNull()
+        ->and($audit->causer_id)->toBeNull()
+        ->and($audit->getProperty('actor.name'))->toBeNull()
+        ->and($audit->getProperty('actor.email'))->toBeNull()
+        ->and($audit->subject_id)->toBeNull()
         ->and($audit->ip_address)->toBe('203.0.113.10')
         ->and($audit->user_agent)->toBe('MaliciousClient/1.0')
-        ->and(json_encode($audit->old_values))->not->toContain($attackerSubmittedEmail)
-        ->and(json_encode($audit->new_values))->not->toContain($attackerSubmittedEmail);
+        ->and(json_encode($audit->attribute_changes))->not->toContain($attackerSubmittedEmail);
 });
 
 test('lockout records auth.lockout audit trail', function (): void {
@@ -130,15 +129,15 @@ test('lockout records auth.lockout audit trail', function (): void {
 
     $response->assertSessionHasErrors('email');
 
-    expect(Activity::query()->where('event', AuditEvent::AuthLockout)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthLockout->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLockout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLockout->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_email)->toBe($user->email)
-        ->and($audit->new_values['throttled'])->toBeTrue()
-        ->and($audit->tags)->toBe(['auth', 'lockout']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.email'))->toBe($user->email)
+        ->and($audit->attribute_changes?->get('attributes')['throttled'])->toBeTrue()
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'lockout']);
 });
 
 test('failed login audit trail throttled flag respects configured rate limit', function (): void {
@@ -159,16 +158,16 @@ test('failed login audit trail throttled flag respects configured rate limit', f
     }
 
     $audits = Activity::query()
-        ->where('event', AuditEvent::AuthLoginFailed)
-        ->where('actor_email', 'custom-throttle@example.com')
+        ->where('event', AuditEvent::AuthLoginFailed->value)
+        ->where('properties->actor->email', 'custom-throttle@example.com')
         ->orderBy('id')
         ->get();
 
     expect($audits)->toHaveCount(3)
-        ->and($audits[0]->new_values['throttled'])->toBeFalse()
-        ->and($audits[1]->new_values['throttled'])->toBeFalse()
-        ->and($audits[2]->new_values['throttled'])->toBeTrue()
-        ->and($audits[2]->new_values['attempts'])->toBe(3);
+        ->and($audits[0]->attribute_changes?->get('attributes')['throttled'])->toBeFalse()
+        ->and($audits[1]->attribute_changes?->get('attributes')['throttled'])->toBeFalse()
+        ->and($audits[2]->attribute_changes?->get('attributes')['throttled'])->toBeTrue()
+        ->and($audits[2]->attribute_changes?->get('attributes')['attempts'])->toBe(3);
 });
 /* @end-chisel-login */
 
@@ -185,15 +184,15 @@ test('logout records auth.logout audit trail', function (): void {
 
     $response->assertRedirect('/');
 
-    expect(Activity::query()->where('event', AuditEvent::AuthLogout)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthLogout->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthLogout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogout->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->actor_name)->toBe($user->name)
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('actor.name'))->toBe($user->name)
         ->and($audit->ip_address)->toBe('198.51.100.77')
-        ->and($audit->tags)->toBe(['auth', 'logout']);
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'logout']);
 });
 /* @end-chisel-logout */
 
@@ -211,16 +210,16 @@ test('password reset via emailed link records auth.password_reset without sensit
 
     $response->assertRedirectToRoute('login');
 
-    expect(Activity::query()->where('event', AuditEvent::AuthPasswordReset)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthPasswordReset->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthPasswordReset)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthPasswordReset->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'password'])
-        ->and(json_encode($audit->new_values))->not->toContain('NewSecurePassword123!')
-        ->and(json_encode($audit->new_values))->not->toContain($token);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'password'])
+        ->and(json_encode($audit->attribute_changes))->not->toContain('NewSecurePassword123!')
+        ->and(json_encode($audit->attribute_changes))->not->toContain($token);
 });
 /* @end-chisel-password-reset */
 
@@ -244,14 +243,14 @@ test('two-factor confirmation records auth.two_factor_enabled', function (): voi
 
     $response->assertSessionHasNoErrors();
 
-    expect(Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'two-factor']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'two-factor']);
 });
 
 test('two-factor disable records auth.two_factor_disabled', function (): void {
@@ -259,14 +258,14 @@ test('two-factor disable records auth.two_factor_disabled', function (): void {
 
     event(new TwoFactorAuthenticationDisabled($user));
 
-    expect(Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->auditable_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'two-factor']);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->subject_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'two-factor']);
 });
 
 test('recovery code usage records auth.recovery_codes_used without storing code', function (): void {
@@ -275,14 +274,13 @@ test('recovery code usage records auth.recovery_codes_used without storing code'
 
     event(new RecoveryCodeReplaced($user, $usedRecoveryCode));
 
-    expect(Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->count())->toBe(1);
+    expect(Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed->value)->count())->toBe(1);
 
-    $audit = Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($user->id)
-        ->and($audit->tags)->toBe(['auth', 'two-factor'])
-        ->and(json_encode($audit->old_values))->not->toContain($usedRecoveryCode)
-        ->and(json_encode($audit->new_values))->not->toContain($usedRecoveryCode);
+        ->and($audit->causer_id)->toBe($user->id)
+        ->and($audit->getProperty('tags'))->toBe(['auth', 'two-factor'])
+        ->and(json_encode($audit->attribute_changes))->not->toContain($usedRecoveryCode);
 });
 /* @end-chisel-two-factor */

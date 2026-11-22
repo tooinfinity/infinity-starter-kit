@@ -146,6 +146,7 @@ final class User extends Authenticatable implements HasLocalePreference, MustVer
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
+            ->useLogName('users')
             ->logOnly(['name', 'email'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();

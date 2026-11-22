@@ -28,9 +28,8 @@ test('authorized user can view audit report with valid props', function (): void
     PermissionModel::findOrCreate(Permission::ReportsView->value);
     $user->givePermissionTo(Permission::ReportsView->value);
 
-    Activity::factory()->create([
-        'user_id' => $user->id,
-        'event' => AuditEvent::UserCreated,
+    Activity::factory()->forUser($user)->create([
+        'event' => AuditEvent::UserCreated->value,
     ]);
 
     $this->actingAs($user)
@@ -108,9 +107,8 @@ test('authorized user can export audit report as CSV with formula injection prot
     $user->givePermissionTo(Permission::ReportsView->value);
     $user->givePermissionTo(Permission::ReportsExport->value);
 
-    Activity::factory()->create([
-        'user_id' => $user->id,
-        'event' => AuditEvent::UserCreated,
+    Activity::factory()->forUser($user)->create([
+        'event' => AuditEvent::UserCreated->value,
         'ip_address' => '=SUM(1+1)',
     ]);
 
@@ -136,9 +134,8 @@ test('authorized user can export audit report with custom date range and system 
     $user->givePermissionTo(Permission::ReportsView->value);
     $user->givePermissionTo(Permission::ReportsExport->value);
 
-    Activity::factory()->create([
-        'user_id' => null,
-        'event' => AuditEvent::SettingsUpdated,
+    Activity::factory()->anonymous()->create([
+        'event' => AuditEvent::SettingsUpdated->value,
         'ip_address' => '127.0.0.1',
     ]);
 
@@ -205,9 +202,8 @@ test('exports audit trails without a per-row user query', function (): void {
 
     $actors = User::factory()->count(25)->create();
     foreach ($actors as $actor) {
-        Activity::factory()->create([
-            'user_id' => $actor->id,
-            'event' => AuditEvent::UserCreated,
+        Activity::factory()->forUser($actor)->create([
+            'event' => AuditEvent::UserCreated->value,
         ]);
     }
 

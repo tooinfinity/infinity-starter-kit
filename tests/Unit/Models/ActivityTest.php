@@ -8,6 +8,7 @@ use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 test('activity model adheres to HasUuids contract', function (): void {
@@ -31,40 +32,52 @@ test('activity model declares null updated_at and immutability handlers', functi
         ->toThrow(RuntimeException::class, 'Audit trail records cannot be individually deleted. Use the retention prune command instead.');
 });
 
-test('activity model correctly maps and casts legacy attributes', function (): void {
+test('activity model persists and casts native attributes and relations', function (): void {
     $user = User::factory()->create();
 
     $activity = Activity::query()->create([
-        'user_id' => $user->id,
-        'actor_name' => 'Alice Auditor',
-        'actor_email' => 'alice@example.com',
-        'event' => AuditEvent::UserCreated,
-        'auditable_type' => $user->getMorphClass(),
-        'auditable_id' => $user->id,
-        'old_values' => ['name' => 'Old Name'],
-        'new_values' => ['name' => 'New Name'],
-        'url' => 'http://localhost/test',
+        'log_name' => 'users',
+        'description' => AuditEvent::UserCreated->value,
+        'event' => AuditEvent::UserCreated->value,
+        'causer_type' => $user->getMorphClass(),
+        'causer_id' => $user->id,
+        'subject_type' => $user->getMorphClass(),
+        'subject_id' => $user->id,
+        'attribute_changes' => [
+            'old' => ['name' => 'Old Name'],
+            'attributes' => ['name' => 'New Name'],
+        ],
+        'properties' => [
+            'actor' => [
+                'name' => 'Alice Auditor',
+                'email' => 'alice@example.com',
+            ],
+            'request' => [
+                'url' => 'http://localhost/test',
+            ],
+            'tags' => ['users', 'auth'],
+        ],
         'ip_address' => '127.0.0.1',
         'user_agent' => 'TestAgent/1.0',
-        'tags' => ['users', 'auth'],
     ]);
 
     expect($activity->id)->toBeString()
-        ->and($activity->user_id)->toBe($user->id)
+        ->and($activity->log_name)->toBe('users')
+        ->and($activity->description)->toBe(AuditEvent::UserCreated->value)
+        ->and($activity->event)->toBe(AuditEvent::UserCreated->value)
         ->and($activity->causer_id)->toBe($user->id)
-        ->and($activity->actor_name)->toBe('Alice Auditor')
-        ->and($activity->actor_email)->toBe('alice@example.com')
-        ->and($activity->event)->toBe(AuditEvent::UserCreated)
-        ->and($activity->auditable_type)->toBe($user->getMorphClass())
-        ->and($activity->auditable_id)->toBe($user->id)
-        ->and($activity->old_values)->toBe(['name' => 'Old Name'])
-        ->and($activity->new_values)->toBe(['name' => 'New Name'])
-        ->and($activity->url)->toBe('http://localhost/test')
+        ->and($activity->subject_id)->toBe($user->id)
         ->and($activity->ip_address)->toBe('127.0.0.1')
         ->and($activity->user_agent)->toBe('TestAgent/1.0')
-        ->and($activity->tags)->toBe(['users', 'auth'])
-        ->and($activity->user)->toBeInstanceOf(User::class)
-        ->and($activity->auditable)->toBeInstanceOf(User::class);
+        ->and($activity->attribute_changes)->toBeInstanceOf(Collection::class)
+        ->and($activity->attribute_changes?->get('old'))->toBe(['name' => 'Old Name'])
+        ->and($activity->attribute_changes?->get('attributes'))->toBe(['name' => 'New Name'])
+        ->and($activity->properties)->toBeInstanceOf(Collection::class)
+        ->and($activity->getProperty('actor.name'))->toBe('Alice Auditor')
+        ->and($activity->getProperty('actor.email'))->toBe('alice@example.com')
+        ->and($activity->getProperty('tags'))->toBe(['users', 'auth'])
+        ->and($activity->causer)->toBeInstanceOf(User::class)
+        ->and($activity->subject)->toBeInstanceOf(User::class);
 });
 
 test('activity model handles non-enum string events gracefully', function (): void {
@@ -83,89 +96,21 @@ test('activity model handles non-enum string events gracefully', function (): vo
     expect($nullEventActivity->event)->toBeNull();
 });
 
-test('activity model supports two-argument where query semantics and eager loading', function (): void {
+test('activity model supports spatie query scopes', function (): void {
     $user = User::factory()->create();
 
     $activity = Activity::query()->create([
-        'user_id' => $user->id,
-        'actor_name' => 'Bob Reviewer',
-        'auditable_type' => $user->getMorphClass(),
-        'auditable_id' => $user->id,
+        'log_name' => 'settings',
+        'event' => AuditEvent::SettingsUpdated->value,
+        'description' => AuditEvent::SettingsUpdated->value,
+        'causer_type' => $user->getMorphClass(),
+        'causer_id' => $user->id,
+        'subject_type' => $user->getMorphClass(),
+        'subject_id' => $user->id,
     ]);
 
-    $queriedByActor = Activity::query()->where('actor_name', 'Bob Reviewer')->first();
-    expect($queriedByActor)->not->toBeNull()
-        ->and($queriedByActor->id)->toBe($activity->id);
-
-    $queriedByUserId = Activity::query()->where('user_id', $user->id)->first();
-    expect($queriedByUserId)->not->toBeNull()
-        ->and($queriedByUserId->id)->toBe($activity->id);
-
-    $eagerLoaded = Activity::query()
-        ->with(['user', 'auditable'])
-        ->find($activity->id);
-
-    expect($eagerLoaded)->not->toBeNull()
-        ->and($eagerLoaded->relationLoaded('user'))->toBeTrue()
-        ->and($eagerLoaded->relationLoaded('auditable'))->toBeTrue()
-        ->and($eagerLoaded->user)->toBeInstanceOf(User::class)
-        ->and($eagerLoaded->auditable)->toBeInstanceOf(User::class);
-});
-
-test('activity model translates user_id to causer_id for array-form predicates', function (): void {
-    $user = User::factory()->create();
-
-    $activity = Activity::query()->create([
-        'user_id' => $user->id,
-        'actor_name' => 'Charlie Array',
-    ]);
-
-    $associativeQuery = Activity::query()->where(['user_id' => $user->id])->first();
-    expect($associativeQuery)->not->toBeNull()
-        ->and($associativeQuery->id)->toBe($activity->id);
-
-    $tupleQuery = Activity::query()->where([['user_id', '=', $user->id]])->first();
-    expect($tupleQuery)->not->toBeNull()
-        ->and($tupleQuery->id)->toBe($activity->id);
-});
-
-test('activity model returns null for missing old_values and new_values and supports 4-argument where', function (): void {
-    $activity = Activity::query()->create(['auditable_id' => 'test-target-id']);
-
-    expect($activity->old_values)->toBeNull()
-        ->and($activity->new_values)->toBeNull();
-
-    $queried = Activity::query()
-        ->where('auditable_id', '=', 'test-target-id', 'and')
-        ->where(fn ($query) => $query->where('auditable_id', 'test-target-id'))
-        ->first();
-
-    expect($queried)->not->toBeNull()
-        ->and($queried->id)->toBe($activity->id);
-
-    $activity->old_values = null;
-    $activity->new_values = null;
-
-    expect($activity->old_values)->toBeNull()
-        ->and($activity->new_values)->toBeNull();
-});
-
-test('activity model synchronizes attribute_changes when old_values and new_values transition from populated to null', function (): void {
-    $activity = Activity::factory()->create();
-
-    $activity->old_values = ['title' => 'Old Title'];
-    $activity->new_values = ['title' => 'New Title'];
-
-    expect($activity->old_values)->toBe(['title' => 'Old Title'])
-        ->and($activity->new_values)->toBe(['title' => 'New Title'])
-        ->and($activity->attribute_changes?->get('old'))->toBe(['title' => 'Old Title'])
-        ->and($activity->attribute_changes?->get('attributes'))->toBe(['title' => 'New Title']);
-
-    $activity->old_values = null;
-    $activity->new_values = null;
-
-    expect($activity->old_values)->toBeNull()
-        ->and($activity->new_values)->toBeNull()
-        ->and($activity->attribute_changes?->get('old'))->toBeNull()
-        ->and($activity->attribute_changes?->get('attributes'))->toBeNull();
+    expect(Activity::query()->inLog('settings')->where('id', $activity->id)->exists())->toBeTrue()
+        ->and(Activity::query()->causedBy($user)->where('id', $activity->id)->exists())->toBeTrue()
+        ->and(Activity::query()->forSubject($user)->where('id', $activity->id)->exists())->toBeTrue()
+        ->and(Activity::query()->forEvent(AuditEvent::SettingsUpdated->value)->where('id', $activity->id)->exists())->toBeTrue();
 });

@@ -26,21 +26,21 @@ test('UpdateSettings records settings.updated audit trail for each setting chang
         SettingKey::ApplicationTimezone->value => 'America/New_York',
     ]);
 
-    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated)->get();
+    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
     expect($audits)->toHaveCount(2);
 
-    $nameAudit = $audits->firstWhere('new_values.key', SettingKey::ApplicationName->value);
+    $nameAudit = $audits->first(fn (Activity $a): bool => $a->attribute_changes?->get('attributes')['key'] === SettingKey::ApplicationName->value);
     expect($nameAudit)->not->toBeNull()
-        ->and($nameAudit->user_id)->toBe($actor->id)
-        ->and($nameAudit->old_values['value'])->toBe('Old App Name')
-        ->and($nameAudit->new_values['value'])->toBe('New App Name');
+        ->and($nameAudit->causer_id)->toBe($actor->id)
+        ->and($nameAudit->attribute_changes?->get('old')['value'])->toBe('Old App Name')
+        ->and($nameAudit->attribute_changes?->get('attributes')['value'])->toBe('New App Name');
 
-    $tzAudit = $audits->firstWhere('new_values.key', SettingKey::ApplicationTimezone->value);
+    $tzAudit = $audits->first(fn (Activity $a): bool => $a->attribute_changes?->get('attributes')['key'] === SettingKey::ApplicationTimezone->value);
     expect($tzAudit)->not->toBeNull()
-        ->and($tzAudit->user_id)->toBe($actor->id)
-        ->and($tzAudit->old_values['value'])->toBeNull()
-        ->and($tzAudit->new_values['value'])->toBe('America/New_York');
+        ->and($tzAudit->causer_id)->toBe($actor->id)
+        ->and($tzAudit->attribute_changes?->get('old')['value'])->toBeNull()
+        ->and($tzAudit->attribute_changes?->get('attributes')['value'])->toBe('America/New_York');
 });
 
 test('UpdateSettings set method records settings.updated audit trail', function (): void {
@@ -50,10 +50,10 @@ test('UpdateSettings set method records settings.updated audit trail', function 
     $action = resolve(UpdateSettings::class);
     $action->set(SettingKey::ApplicationName, 'Custom Name Via Set');
 
-    $audit = Activity::query()->where('event', AuditEvent::SettingsUpdated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->new_values['value'])->toBe('Custom Name Via Set');
+        ->and($audit->attribute_changes?->get('attributes')['value'])->toBe('Custom Name Via Set');
 });
 
 test('UpdateSettings writes no audit rows when settings values are unchanged', function (): void {
@@ -97,17 +97,17 @@ test('UpdateSettings writes exactly one audit row when changing only one setting
         SettingKey::ApplicationTimezone->value => 'Europe/Paris',
     ]);
 
-    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated)->get();
+    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
     expect($audits)->toHaveCount(1);
 
     $audit = $audits->first();
     expect($audit)->not->toBeNull()
-        ->and($audit->user_id)->toBe($actor->id)
-        ->and($audit->old_values['key'])->toBe(SettingKey::ApplicationTimezone->value)
-        ->and($audit->old_values['value'])->toBe('UTC')
-        ->and($audit->new_values['key'])->toBe(SettingKey::ApplicationTimezone->value)
-        ->and($audit->new_values['value'])->toBe('Europe/Paris');
+        ->and($audit->causer_id)->toBe($actor->id)
+        ->and($audit->attribute_changes?->get('old')['key'])->toBe(SettingKey::ApplicationTimezone->value)
+        ->and($audit->attribute_changes?->get('old')['value'])->toBe('UTC')
+        ->and($audit->attribute_changes?->get('attributes')['key'])->toBe(SettingKey::ApplicationTimezone->value)
+        ->and($audit->attribute_changes?->get('attributes')['value'])->toBe('Europe/Paris');
 });
 
 test('UpdateSettings set method writes no audit rows when setting value is unchanged', function (): void {
@@ -147,13 +147,13 @@ test('UpdateSettings records recovered oldValue when setting is concurrently cre
 
     expect($inserted)->toBeTrue();
 
-    $audit = Activity::query()->where('event', AuditEvent::SettingsUpdated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->first();
 
     expect($audit)->not->toBeNull()
-        ->and($audit->old_values['key'])->toBe(SettingKey::ApplicationName->value)
-        ->and($audit->old_values['value'])->toBe('Concurrent Value')
-        ->and($audit->new_values['key'])->toBe(SettingKey::ApplicationName->value)
-        ->and($audit->new_values['value'])->toBe('Final Value');
+        ->and($audit->attribute_changes?->get('old')['key'])->toBe(SettingKey::ApplicationName->value)
+        ->and($audit->attribute_changes?->get('old')['value'])->toBe('Concurrent Value')
+        ->and($audit->attribute_changes?->get('attributes')['key'])->toBe(SettingKey::ApplicationName->value)
+        ->and($audit->attribute_changes?->get('attributes')['value'])->toBe('Final Value');
 });
 
 test('UpdateSettings writes no audit rows when concurrent insert matches submitted value', function (): void {
@@ -212,7 +212,7 @@ test('UpdateSettings uses the latest recovered value for comparison and auditing
     $setting = Setting::query()->where('key', SettingKey::ApplicationName->value)->first();
     expect($setting?->value)->toBe('Final Value');
 
-    expect(Activity::query()->where('event', AuditEvent::SettingsUpdated)->get()->pluck('old_values.value')->all())
+    expect(Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get()->map(fn (Activity $a) => $a->attribute_changes?->get('old')['value'] ?? null)->filter()->values()->all())
         ->toBe($expectedOldValues);
 
     Cache::shouldHaveReceived('forget')->with('settings.all')->once();

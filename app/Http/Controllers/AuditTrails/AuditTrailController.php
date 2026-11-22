@@ -23,24 +23,24 @@ final readonly class AuditTrailController
 
         $auditTrails = $paginated->through(fn (Activity $audit): array => [
             'id' => $audit->id,
-            'user_id' => $audit->user_id,
-            'user' => $audit->user instanceof User ? [
-                'id' => $audit->user->id,
-                'name' => $audit->user->name,
-                'email' => $audit->user->email,
+            'user_id' => $audit->causer_id,
+            'user' => $audit->causer instanceof User ? [
+                'id' => $audit->causer->id,
+                'name' => $audit->causer->name,
+                'email' => $audit->causer->email,
             ] : null,
-            'actor_name' => $audit->actor_name,
-            'actor_email' => $audit->actor_email,
-            'event' => $audit->event instanceof AuditEvent ? $audit->event->value : (is_string($audit->event) ? $audit->event : ''),
-            'event_label' => $audit->event instanceof AuditEvent ? $audit->event->label() : (is_string($audit->event) ? (AuditEvent::tryFrom($audit->event)?->label() ?? $audit->event) : ''),
-            'auditable_type' => $audit->auditable_type,
-            'auditable_id' => $audit->auditable_id,
-            'old_values' => $audit->old_values,
-            'new_values' => $audit->new_values,
-            'url' => $audit->url,
+            'actor_name' => $audit->getProperty('actor.name') ?? ($audit->causer instanceof User ? $audit->causer->name : null),
+            'actor_email' => $audit->getProperty('actor.email') ?? ($audit->causer instanceof User ? $audit->causer->email : null),
+            'event' => $audit->event ?? '',
+            'event_label' => $this->formatEventLabel($audit->event),
+            'auditable_type' => $audit->subject_type,
+            'auditable_id' => $audit->subject_id,
+            'old_values' => $audit->attribute_changes?->get('old'),
+            'new_values' => $audit->attribute_changes?->get('attributes'),
+            'url' => $audit->getProperty('request.url'),
             'ip_address' => $audit->ip_address,
             'user_agent' => $audit->user_agent,
-            'tags' => $audit->tags,
+            'tags' => $audit->getProperty('tags'),
             'created_at' => $audit->created_at?->toISOString(),
         ]);
 
@@ -57,5 +57,19 @@ final readonly class AuditTrailController
             'filters' => $filters,
             'availableEvents' => $availableEvents,
         ]);
+    }
+
+    private function formatEventLabel(?string $event): string
+    {
+        if ($event === null || $event === '') {
+            return '';
+        }
+
+        return match ($event) {
+            'updated' => __('audit.events.user_updated'),
+            'created' => __('audit.events.user_created'),
+            'deleted' => __('audit.events.user_deleted'),
+            default => AuditEvent::tryFrom($event)?->label() ?? (string) str($event)->headline(),
+        };
     }
 }

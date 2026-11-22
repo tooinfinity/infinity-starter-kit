@@ -54,8 +54,8 @@ test('audit trails can be filtered by user id', function (): void {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
-    Activity::factory()->create(['user_id' => $userA->id]);
-    Activity::factory()->create(['user_id' => $userB->id]);
+    Activity::factory()->forUser($userA)->create();
+    Activity::factory()->forUser($userB)->create();
 
     $response = $this->actingAs($admin)
         ->get(route('audit-trails.index', ['user_id' => $userA->id]));
@@ -94,14 +94,13 @@ test('audit trails can be searched by ip address, auditable id, or user name', f
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
     $specificUser = User::factory()->create(['name' => 'Alice Auditor']);
-    Activity::factory()->create([
-        'user_id' => $specificUser->id,
+    Activity::factory()->forUser($specificUser)->create([
         'ip_address' => '10.0.0.1',
-        'auditable_id' => 'target-12345',
+        'subject_id' => 'target-12345',
     ]);
     Activity::factory()->create([
         'ip_address' => '192.168.1.1',
-        'auditable_id' => 'other-99999',
+        'subject_id' => 'other-99999',
     ]);
 
     // Search by user name
@@ -125,7 +124,7 @@ test('audit trails can be searched by ip address, auditable id, or user name', f
 
 test('treats % in the search box as a literal character', function (): void {
     Activity::factory()->create(['ip_address' => '10.0.0.1']);
-    $literal = Activity::factory()->create(['auditable_id' => '%literal-target']);
+    $literal = Activity::factory()->create(['subject_id' => '%literal-target']);
 
     $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '%'])->items())->pluck('id');
 
@@ -133,8 +132,8 @@ test('treats % in the search box as a literal character', function (): void {
 });
 
 test('treats _ in the search box as a literal character', function (): void {
-    Activity::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
-    $literal = Activity::factory()->create(['auditable_id' => '_literal_target']);
+    Activity::factory()->create(['ip_address' => '10.0.0.1', 'subject_id' => 'abc-123']);
+    $literal = Activity::factory()->create(['subject_id' => '_literal_target']);
 
     $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '_'])->items())->pluck('id');
 
@@ -142,8 +141,8 @@ test('treats _ in the search box as a literal character', function (): void {
 });
 
 test('treats backslash in the search box as a literal character', function (): void {
-    Activity::factory()->create(['ip_address' => '10.0.0.1', 'auditable_id' => 'abc-123']);
-    $literal = Activity::factory()->create(['auditable_id' => '\\literal\\target']);
+    Activity::factory()->create(['ip_address' => '10.0.0.1', 'subject_id' => 'abc-123']);
+    $literal = Activity::factory()->create(['subject_id' => '\\literal\\target']);
 
     $ids = collect(resolve(AuditTrailListingQuery::class)->handle(['search' => '\\'])->items())->pluck('id');
 
@@ -154,16 +153,8 @@ test('search matches deleted user via actor_name and actor_email', function (): 
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
-    $deletedActor = Activity::factory()->create([
-        'user_id' => null,
-        'actor_name' => 'Former Admin',
-        'actor_email' => 'former@example.com',
-    ]);
-    Activity::factory()->create([
-        'user_id' => null,
-        'actor_name' => 'Other Person',
-        'actor_email' => 'other@example.com',
-    ]);
+    $deletedActor = Activity::factory()->anonymous()->withActor('Former Admin', 'former@example.com')->create();
+    Activity::factory()->anonymous()->withActor('Other Person', 'other@example.com')->create();
 
     $responseName = $this->actingAs($admin)
         ->get(route('audit-trails.index', ['search' => 'Former Admin']));
@@ -183,19 +174,15 @@ test('search matches deleted user via actor_name and actor_email', function (): 
 });
 
 test('finds audit record by literal underscore in actor email when no related user or subject matches', function (): void {
-    Activity::factory()->create([
-        'user_id' => null,
-        'actor_email' => 'johnXdoe@example.com',
-        'auditable_type' => null,
-        'auditable_id' => 'target-other',
+    Activity::factory()->anonymous()->withActor(null, 'johnXdoe@example.com')->create([
+        'subject_type' => null,
+        'subject_id' => 'target-other',
         'ip_address' => '10.0.0.1',
     ]);
 
-    $matched = Activity::factory()->create([
-        'user_id' => null,
-        'actor_email' => 'john_doe@example.com',
-        'auditable_type' => null,
-        'auditable_id' => 'target-none',
+    $matched = Activity::factory()->anonymous()->withActor(null, 'john_doe@example.com')->create([
+        'subject_type' => null,
+        'subject_id' => 'target-none',
         'ip_address' => '10.0.0.2',
     ]);
 
@@ -222,7 +209,7 @@ test('audit trails pagination per_page works correctly', function (): void {
 });
 
 test('jsonLikeEscapeSql formats correctly for all database drivers and throws on unsupported path', function (): void {
-    foreach (['actor.name', 'actor.email', 'request.ip_address'] as $path) {
+    foreach (['actor.name', 'actor.email'] as $path) {
         expect(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'sqlite'))->toContain('json_extract')
             ->and(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'pgsql'))->toContain('->>')
             ->and(AuditTrailListingQuery::jsonLikeEscapeSql($path, 'sqlsrv'))->toContain('JSON_VALUE')
