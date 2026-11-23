@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Actions\AuditTrails\UpdateUserAuditTrails;
 use App\Enums\AuditEvent;
+use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\User;
 
@@ -49,6 +50,17 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
             ->and($record->tags)->toContain('anonymized');
     }
 
+    $activities = Activity::query()->where('causer_id', $user->id)->get();
+    expect($activities)->toHaveCount(2);
+
+    foreach ($activities as $activity) {
+        expect($activity->getProperty('actor.name'))->toBeNull()
+            ->and($activity->getProperty('actor.email'))->toBeNull()
+            ->and($activity->ip_address)->toBeNull()
+            ->and($activity->user_agent)->toBeNull()
+            ->and($activity->getProperty('tags'))->toContain('anonymized');
+    }
+
     $updatedRecord = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
     expect($updatedRecord)->not->toBeNull()
         ->and($updatedRecord->old_values)->not->toHaveKey('name')
@@ -57,6 +69,15 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
         ->and($updatedRecord->new_values)->not->toHaveKey('name')
         ->and($updatedRecord->new_values)->not->toHaveKey('email')
         ->and($updatedRecord->new_values['is_active'])->toBeTrue();
+
+    $updatedActivity = Activity::query()->where('event', AuditEvent::UserUpdated->value)->first();
+    expect($updatedActivity)->not->toBeNull()
+        ->and($updatedActivity->attribute_changes?->get('old'))->not->toHaveKey('name')
+        ->and($updatedActivity->attribute_changes?->get('old'))->not->toHaveKey('email')
+        ->and($updatedActivity->attribute_changes?->get('old')['is_active'])->toBeTrue()
+        ->and($updatedActivity->attribute_changes?->get('attributes'))->not->toHaveKey('name')
+        ->and($updatedActivity->attribute_changes?->get('attributes'))->not->toHaveKey('email')
+        ->and($updatedActivity->attribute_changes?->get('attributes')['is_active'])->toBeTrue();
 });
 
 test('UpdateUserAuditTrails scrubs target PII while preserving admin actor details', function (): void {
@@ -92,6 +113,16 @@ test('UpdateUserAuditTrails scrubs target PII while preserving admin actor detai
         ->and($createdRecord->new_values)->not->toHaveKey('name')
         ->and($createdRecord->new_values)->not->toHaveKey('email')
         ->and($createdRecord->new_values['is_active'])->toBeTrue();
+
+    $createdActivity = Activity::query()->where('event', AuditEvent::UserCreated->value)->first();
+    expect($createdActivity)->not->toBeNull()
+        ->and($createdActivity->causer_id)->toBe($admin->id)
+        ->and($createdActivity->getProperty('actor.name'))->toBe('Admin Boss')
+        ->and($createdActivity->getProperty('actor.email'))->toBe('admin@example.com')
+        ->and($createdActivity->getProperty('tags'))->toContain('anonymized')
+        ->and($createdActivity->attribute_changes?->get('attributes'))->not->toHaveKey('name')
+        ->and($createdActivity->attribute_changes?->get('attributes'))->not->toHaveKey('email')
+        ->and($createdActivity->attribute_changes?->get('attributes')['is_active'])->toBeTrue();
 });
 
 test('UpdateUserAuditTrails respects disabled anonymize_on_delete configuration', function (): void {
@@ -118,6 +149,12 @@ test('UpdateUserAuditTrails respects disabled anonymize_on_delete configuration'
         ->and($record->actor_name)->toBe('Charlie User')
         ->and($record->actor_email)->toBe('charlie@example.com')
         ->and($record->tags)->not->toContain('anonymized');
+
+    $activity = Activity::query()->where('causer_id', $user->id)->first();
+    expect($activity)->not->toBeNull()
+        ->and($activity->getProperty('actor.name'))->toBe('Charlie User')
+        ->and($activity->getProperty('actor.email'))->toBe('charlie@example.com')
+        ->and($activity->getProperty('tags'))->not->toContain('anonymized');
 });
 
 test('UpdateUserAuditTrails allows explicit anonymize parameter override', function (): void {
@@ -144,4 +181,10 @@ test('UpdateUserAuditTrails allows explicit anonymize parameter override', funct
         ->and($record->actor_name)->toBe('Diana User')
         ->and($record->actor_email)->toBe('diana@example.com')
         ->and($record->tags)->not->toContain('anonymized');
+
+    $activity = Activity::query()->where('causer_id', $user->id)->first();
+    expect($activity)->not->toBeNull()
+        ->and($activity->getProperty('actor.name'))->toBe('Diana User')
+        ->and($activity->getProperty('actor.email'))->toBe('diana@example.com')
+        ->and($activity->getProperty('tags'))->not->toContain('anonymized');
 });

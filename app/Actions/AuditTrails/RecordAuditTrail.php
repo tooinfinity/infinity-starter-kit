@@ -8,10 +8,13 @@ use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Config\Repository as ConfigRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Spatie\Activitylog\Contracts\Activity as ActivityContract;
+use Spatie\Activitylog\Support\ActivityLogStatus;
 use Throwable;
 
 final readonly class RecordAuditTrail
@@ -52,7 +55,7 @@ final readonly class RecordAuditTrail
         ?string $auditableId = null,
         ?string $url = null,
         ?string $description = null,
-    ): ?Activity {
+    ): AuditTrail {
         $request = $this->request ?? (app()->bound('request') ? request() : null);
 
         $actor = $user;
@@ -77,6 +80,10 @@ final readonly class RecordAuditTrail
 
         $activityLogger = activity(config()->string('activitylog.default_log_name', 'default'))
             ->event($event->value);
+
+        if (resolve(ActivityLogStatus::class)->disabled()) {
+            $activityLogger->setLogStatus(new ActivityLogStatus(new ConfigRepository(['activitylog' => ['enabled' => true]])));
+        }
 
         if ($auditable instanceof Model) {
             $activityLogger->performedOn($auditable);
@@ -135,17 +142,16 @@ final readonly class RecordAuditTrail
             $resolvedUrl,
             $request,
             $tags,
-        ): ?Activity {
+        ): AuditTrail {
             /** @var Activity|null $activityRecord */
             $activityRecord = $activityLogger->log($description ?? $event->label());
 
-            if ($activityRecord === null) {
-                return null;
-            }
+            throw_unless($activityRecord instanceof Activity, RuntimeException::class, 'Failed to record activity log via Spatie Activitylog.');
 
             // Maintain legacy AuditTrail record to preserve retrieval, reporting, and anonymization
             // until PR #3 (query migration) and PR #4 (legacy removal).
-            AuditTrail::query()->create([
+            /** @var AuditTrail $auditTrailRecord */
+            $auditTrailRecord = AuditTrail::query()->create([
                 'id' => $activityRecord->id,
                 'user_id' => $actor?->id,
                 'actor_name' => $actor?->name,
@@ -162,7 +168,7 @@ final readonly class RecordAuditTrail
                 'created_at' => $activityRecord->created_at ?? now(),
             ]);
 
-            return $activityRecord;
+            return $auditTrailRecord;
         });
     }
 
