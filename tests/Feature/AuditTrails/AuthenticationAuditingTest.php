@@ -6,6 +6,7 @@ namespace Tests\Feature\AuditTrails;
 
 /* @chisel-login */
 use App\Enums\AuditEvent;
+use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -37,9 +38,11 @@ test('successful login records auth.login audit trail with IP and user agent', f
 
     $response->assertRedirectToRoute('dashboard');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::AuthLogin)->count())->toBe(1);
+    expect(AuditTrail::query()->where('event', AuditEvent::AuthLogin)->count())->toBe(1)
+        ->and(Activity::query()->where('event', AuditEvent::AuthLogin->value)->count())->toBe(1);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::AuthLogin)->first();
+    $activity = Activity::query()->where('event', AuditEvent::AuthLogin->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -47,7 +50,12 @@ test('successful login records auth.login audit trail with IP and user agent', f
         ->and($audit->actor_email)->toBe($user->email)
         ->and($audit->ip_address)->toBe('198.51.100.42')
         ->and($audit->user_agent)->toBe('AuditBrowser/1.0')
-        ->and($audit->tags)->toBe(['auth', 'login']);
+        ->and($audit->tags)->toBe(['auth', 'login'])
+        ->and($activity)->not->toBeNull()
+        ->and($activity->causer_id)->toBe($user->id)
+        ->and($activity->ip_address)->toBe('198.51.100.42')
+        ->and($activity->user_agent)->toBe('AuditBrowser/1.0')
+        ->and($activity->getProperty('tags'))->toBe(['auth', 'login']);
 });
 
 test('failed login with registered email records auth.login_failed with user_id and throttle info', function (): void {

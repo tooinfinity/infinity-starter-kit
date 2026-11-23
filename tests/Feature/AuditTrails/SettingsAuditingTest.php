@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\UpdateSettings;
 use App\Enums\AuditEvent;
 use App\Enums\SettingKey;
+use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\Setting;
 use App\Models\User;
@@ -27,8 +28,10 @@ test('UpdateSettings records settings.updated audit trail for each setting chang
     ]);
 
     $audits = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get();
+    $activities = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
-    expect($audits)->toHaveCount(2);
+    expect($audits)->toHaveCount(2)
+        ->and($activities)->toHaveCount(2);
 
     $nameAudit = $audits->firstWhere('new_values.key', SettingKey::ApplicationName->value);
     expect($nameAudit)->not->toBeNull()

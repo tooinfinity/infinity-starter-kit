@@ -5,10 +5,17 @@ declare(strict_types=1);
 namespace App\Actions\AuditTrails;
 
 use App\Enums\AuditEvent;
+use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\User;
+use Illuminate\Config\Repository as ConfigRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
+use Spatie\Activitylog\Contracts\Activity as ActivityContract;
+use Spatie\Activitylog\Support\ActivityLogStatus;
+use Throwable;
 
 final readonly class RecordAuditTrail
 {
@@ -47,9 +54,21 @@ final readonly class RecordAuditTrail
         ?string $auditableType = null,
         ?string $auditableId = null,
         ?string $url = null,
+        ?string $description = null,
     ): AuditTrail {
         $request = $this->request ?? (app()->bound('request') ? request() : null);
-        $actor = $user ?? (auth()->user() instanceof User ? auth()->user() : null);
+
+        $actor = $user;
+        if (! $actor instanceof User && app()->bound('auth')) {
+            try {
+                $authUser = auth()->user();
+                if ($authUser instanceof User) {
+                    $actor = $authUser;
+                }
+            } catch (Throwable) {
+                // Ignore auth resolution failures outside HTTP context.
+            }
+        }
 
         $redactedOld = $oldValues !== null ? $this->redact($oldValues) : null;
         $redactedNew = $newValues !== null ? $this->redact($newValues) : null;
@@ -57,25 +76,100 @@ final readonly class RecordAuditTrail
         $type = $auditable?->getMorphClass() ?? $auditableType;
         $key = $auditable?->getKey();
         $id = is_string($key) || is_int($key) ? (string) $key : $auditableId;
+        $resolvedUrl = $url ?? $request?->fullUrl();
 
-        /** @var AuditTrail $record */
-        $record = AuditTrail::query()->create([
-            'user_id' => $actor?->id,
-            'actor_name' => $actor?->name,
-            'actor_email' => $actor?->email,
-            'event' => $event,
-            'auditable_type' => $type,
-            'auditable_id' => $id,
-            'old_values' => $redactedOld,
-            'new_values' => $redactedNew,
-            'url' => $url ?? $request?->fullUrl(),
-            'ip_address' => $request?->ip(),
-            'user_agent' => $request?->userAgent(),
-            'tags' => $tags,
-            'created_at' => now(),
-        ]);
+        $activityLogger = activity(config()->string('activitylog.default_log_name', 'default'))
+            ->event($event->value);
 
-        return $record;
+        if (resolve(ActivityLogStatus::class)->disabled()) {
+            $activityLogger->setLogStatus(new ActivityLogStatus(new ConfigRepository(['activitylog' => ['enabled' => true]])));
+        }
+
+        if ($auditable instanceof Model) {
+            $activityLogger->performedOn($auditable);
+        }
+
+        if ($actor instanceof User) {
+            $activityLogger->causedBy($actor);
+        } else {
+            $activityLogger->causedByAnonymous();
+        }
+
+        $changes = [];
+        if ($redactedOld !== null) {
+            $changes['old'] = $redactedOld;
+        }
+
+        if ($redactedNew !== null) {
+            $changes['attributes'] = $redactedNew;
+        }
+
+        $activityLogger->withChanges($changes);
+
+        $properties = [
+            'actor' => [
+                'name' => $actor?->name,
+                'email' => $actor?->email,
+            ],
+            'request' => [
+                'url' => $resolvedUrl,
+            ],
+            'tags' => $tags ?? [],
+        ];
+        $activityLogger->withProperties($properties);
+
+        $activityLogger->tap(function (ActivityContract $activity) use ($request, $type, $id): void {
+            if ($activity instanceof Activity) {
+                $activity->ip_address = $request?->ip();
+                $activity->user_agent = $request?->userAgent();
+
+                if ($activity->subject_type === null && $type !== null) {
+                    $activity->subject_type = $type;
+                    $activity->subject_id = $id;
+                }
+            }
+        });
+
+        return DB::transaction(function () use (
+            $activityLogger,
+            $description,
+            $event,
+            $actor,
+            $type,
+            $id,
+            $redactedOld,
+            $redactedNew,
+            $resolvedUrl,
+            $request,
+            $tags,
+        ): AuditTrail {
+            /** @var Activity|null $activityRecord */
+            $activityRecord = $activityLogger->log($description ?? $event->label());
+
+            throw_unless($activityRecord instanceof Activity, RuntimeException::class, 'Failed to record activity log via Spatie Activitylog.');
+
+            // Maintain legacy AuditTrail record to preserve retrieval, reporting, and anonymization
+            // until PR #3 (query migration) and PR #4 (legacy removal).
+            /** @var AuditTrail $auditTrailRecord */
+            $auditTrailRecord = AuditTrail::query()->create([
+                'id' => $activityRecord->id,
+                'user_id' => $actor?->id,
+                'actor_name' => $actor?->name,
+                'actor_email' => $actor?->email,
+                'event' => $event,
+                'auditable_type' => $type,
+                'auditable_id' => $id,
+                'old_values' => $redactedOld,
+                'new_values' => $redactedNew,
+                'url' => $resolvedUrl,
+                'ip_address' => $request?->ip(),
+                'user_agent' => $request?->userAgent(),
+                'tags' => $tags,
+                'created_at' => $activityRecord->created_at ?? now(),
+            ]);
+
+            return $auditTrailRecord;
+        });
     }
 
     /**

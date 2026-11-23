@@ -16,6 +16,7 @@ use App\Actions\Users\UpdateUserStatus;
 use App\Data\Users\CreateUserData;
 use App\Data\Users\UpdateUserData;
 use App\Enums\AuditEvent;
+use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\User;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -36,13 +37,18 @@ test('CreateUser records user.created audit trail', function (): void {
     $createdUser = $action->handle($data);
 
     $audit = AuditTrail::query()->where('event', AuditEvent::UserCreated)->first();
+    $activity = Activity::query()->where('event', AuditEvent::UserCreated->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($actor->id)
         ->and($audit->auditable_id)->toBe($createdUser->id)
         ->and($audit->new_values['name'])->toBe('Jane Doe')
         ->and($audit->new_values['email'])->toBe('jane@example.com')
-        ->and($audit->new_values['is_active'])->toBeTrue();
+        ->and($audit->new_values['is_active'])->toBeTrue()
+        ->and($activity)->not->toBeNull()
+        ->and($activity->causer_id)->toBe($actor->id)
+        ->and($activity->subject_id)->toBe($createdUser->id)
+        ->and($activity->attribute_changes?->get('attributes')['name'])->toBe('Jane Doe');
 });
 
 test('UpdateUser records user.updated audit trail with diff', function (): void {
