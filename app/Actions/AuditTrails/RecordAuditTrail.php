@@ -10,6 +10,7 @@ use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Contracts\Activity as ActivityContract;
 use Throwable;
 
@@ -122,33 +123,47 @@ final readonly class RecordAuditTrail
             }
         });
 
-        /** @var Activity|null $activityRecord */
-        $activityRecord = $activityLogger->log($description ?? $event->label());
+        return DB::transaction(function () use (
+            $activityLogger,
+            $description,
+            $event,
+            $actor,
+            $type,
+            $id,
+            $redactedOld,
+            $redactedNew,
+            $resolvedUrl,
+            $request,
+            $tags,
+        ): ?Activity {
+            /** @var Activity|null $activityRecord */
+            $activityRecord = $activityLogger->log($description ?? $event->label());
 
-        if ($activityRecord === null) {
-            return null;
-        }
+            if ($activityRecord === null) {
+                return null;
+            }
 
-        // Maintain legacy AuditTrail record to preserve retrieval, reporting, and anonymization
-        // until PR #3 (query migration) and PR #4 (legacy removal).
-        AuditTrail::query()->create([
-            'id' => $activityRecord->id,
-            'user_id' => $actor?->id,
-            'actor_name' => $actor?->name,
-            'actor_email' => $actor?->email,
-            'event' => $event,
-            'auditable_type' => $type,
-            'auditable_id' => $id,
-            'old_values' => $redactedOld,
-            'new_values' => $redactedNew,
-            'url' => $resolvedUrl,
-            'ip_address' => $request?->ip(),
-            'user_agent' => $request?->userAgent(),
-            'tags' => $tags,
-            'created_at' => $activityRecord->created_at ?? now(),
-        ]);
+            // Maintain legacy AuditTrail record to preserve retrieval, reporting, and anonymization
+            // until PR #3 (query migration) and PR #4 (legacy removal).
+            AuditTrail::query()->create([
+                'id' => $activityRecord->id,
+                'user_id' => $actor?->id,
+                'actor_name' => $actor?->name,
+                'actor_email' => $actor?->email,
+                'event' => $event,
+                'auditable_type' => $type,
+                'auditable_id' => $id,
+                'old_values' => $redactedOld,
+                'new_values' => $redactedNew,
+                'url' => $resolvedUrl,
+                'ip_address' => $request?->ip(),
+                'user_agent' => $request?->userAgent(),
+                'tags' => $tags,
+                'created_at' => $activityRecord->created_at ?? now(),
+            ]);
 
-        return $activityRecord;
+            return $activityRecord;
+        });
     }
 
     /**
