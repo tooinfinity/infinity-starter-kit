@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Synchronized user deletion anonymization to `activity_log` in `UpdateUserAuditTrails` when `audit.anonymize_on_delete` is enabled.
+- Synchronized user deletion anonymization to `activity_log` in `UpdateUserAuditTrails` when `audit.anonymize_on_delete` is enabled, clearing `causer_id`, `causer_type`, actor properties, and request metadata while preserving subject records and administrator causer identity.
 
 ### Changed
 - Preserved `RecordAuditTrail` return type contract by returning the legacy `AuditTrail` model while Spatie Activitylog records `Activity`.

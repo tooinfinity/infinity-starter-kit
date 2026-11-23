@@ -95,6 +95,8 @@ final readonly class UpdateUserAuditTrails
                 $activityUpdates = [];
 
                 if ($isCauser) {
+                    $activityUpdates['causer_id'] = null;
+                    $activityUpdates['causer_type'] = null;
                     $activityUpdates['ip_address'] = null;
                     $activityUpdates['user_agent'] = null;
                 }
