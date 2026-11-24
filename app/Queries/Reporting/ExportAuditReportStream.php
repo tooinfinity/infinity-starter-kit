@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Queries\Reporting;
 
 use App\Data\Reporting\ReportDateRange;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -23,7 +23,7 @@ final readonly class ExportAuditReportStream
     {
         $range = ReportDateRange::fromFilters($filters);
 
-        /** @var Builder<AuditTrail> $query */
+        /** @var Builder<Activity> $query */
         $query = $this->reportQuery->buildFilteredQuery($filters, $range->from, $range->to)->latest('created_at');
 
         $fileName = sprintf('audit-report-%s.csv', Date::now()->format('Y-m-d-His'));
@@ -48,7 +48,7 @@ final readonly class ExportAuditReportStream
                 escape: '\\');
 
             foreach ($query->lazy(500) as $audit) {
-                /** @var AuditTrail $audit */
+                /** @var Activity $audit */
                 $isAnonymized = ! $audit->user && ! $audit->actor_name && in_array('anonymized', (array) $audit->tags, true);
                 $fallbackActor = $isAnonymized ? __('reports.common.anonymized_user') : __('reports.common.system');
 
@@ -57,7 +57,7 @@ final readonly class ExportAuditReportStream
 
                 fputcsv($handle, [
                     $audit->id,
-                    $this->sanitizeValue($audit->event->value),
+                    $this->sanitizeValue((string) ($audit->event ?? '')),
                     $this->sanitizeValue($actorName),
                     $this->sanitizeValue($actorEmail),
                     $this->sanitizeValue($audit->auditable_type ?? ''),

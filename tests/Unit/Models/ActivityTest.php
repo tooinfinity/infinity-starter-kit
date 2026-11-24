@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Models;
 
+use App\Enums\AuditEvent;
 use App\Models\Activity;
+use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\Unguarded;
@@ -198,6 +200,74 @@ test('activity model supports spatie query scopes', function (): void {
         ->and(Activity::query()->causedBy($user)->where('id', $activity->id)->exists())->toBeTrue()
         ->and(Activity::query()->forSubject($user)->where('id', $activity->id)->exists())->toBeTrue()
         ->and(Activity::query()->forEvent('updated')->where('id', $activity->id)->exists())->toBeTrue();
+});
+
+test('activity model provides compatibility accessors for presentation and export layers', function (): void {
+    $user = User::factory()->create(['name' => 'Bob Builder', 'email' => 'bob@example.com']);
+
+    $activity = Activity::query()->create([
+        'event' => AuditEvent::UserUpdated->value,
+        'description' => 'User updated',
+        'causer_type' => $user->getMorphClass(),
+        'causer_id' => $user->id,
+        'subject_type' => $user->getMorphClass(),
+        'subject_id' => $user->id,
+        'attribute_changes' => [
+            'old' => ['name' => 'Old Bob'],
+            'attributes' => ['name' => 'New Bob'],
+        ],
+        'properties' => [
+            'actor' => [
+                'name' => 'Bob Builder',
+                'email' => 'bob@example.com',
+            ],
+            'request' => [
+                'url' => 'http://localhost/users/update',
+            ],
+            'tags' => ['users', 'profile'],
+        ],
+        'ip_address' => '192.168.1.50',
+        'user_agent' => 'TestBrowser/1.0',
+    ]);
+
+    expect($activity->user)->toBeInstanceOf(User::class)
+        ->and($activity->user?->id)->toBe($user->id)
+        ->and($activity->user_id)->toBe($user->id)
+        ->and($activity->actor_name)->toBe('Bob Builder')
+        ->and($activity->actor_email)->toBe('bob@example.com')
+        ->and($activity->url)->toBe('http://localhost/users/update')
+        ->and($activity->tags)->toBe(['users', 'profile'])
+        ->and($activity->old_values)->toBe(['name' => 'Old Bob'])
+        ->and($activity->new_values)->toBe(['name' => 'New Bob'])
+        ->and($activity->auditable_type)->toBe($user->getMorphClass())
+        ->and($activity->auditable_id)->toBe($user->id)
+        ->and($activity->event_label)->toBe(AuditEvent::UserUpdated->label())
+        ->and($activity->audit_event)->toBe(AuditEvent::UserUpdated);
+});
+
+test('activity withHistorical combines activity_log and audit_trails', function (): void {
+    $user = User::factory()->create();
+
+    $legacy = AuditTrail::factory()->create([
+        'user_id' => $user->id,
+        'actor_name' => $user->name,
+        'actor_email' => $user->email,
+        'event' => AuditEvent::UserCreated,
+    ]);
+
+    $spatie = Activity::factory()->forUser($user)->create([
+        'event' => AuditEvent::UserUpdated->value,
+    ]);
+
+    $results = Activity::withHistorical()->get();
+
+    expect($results->pluck('id')->all())->toContain($legacy->id, $spatie->id);
+
+    $legacyRecord = $results->firstWhere('id', $legacy->id);
+    expect($legacyRecord)->not->toBeNull()
+        ->and($legacyRecord?->event)->toBe(AuditEvent::UserCreated->value)
+        ->and($legacyRecord?->actor_name)->toBe($user->name)
+        ->and($legacyRecord?->actor_email)->toBe($user->email);
 });
 
 test('activity log migration executes cleanly and establishes expected schema and indexes', function (): void {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\AuditEvent;
+use App\Models\Activity;
 use App\Models\AuditTrail;
 use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
@@ -122,7 +123,8 @@ test('audit report query filters by event, user_id and search', function (): voi
         'event' => AuditEvent::UserCreated->value,
     ]);
     expect($eventResult['paginated']->total())->toBe(1)
-        ->and($eventResult['paginated']->first()?->event)->toBe(AuditEvent::UserCreated);
+        ->and($eventResult['paginated']->first()?->event)->toBe(AuditEvent::UserCreated->value)
+        ->and($eventResult['paginated']->first()?->audit_event)->toBe(AuditEvent::UserCreated);
 
     // Filter by user_id
     $userResult = $query->handle([
@@ -306,4 +308,123 @@ it('correctly attributes events for whole-hour timezones like Europe/Paris', fun
     $summaryTotalEvents = collect($result['summary'])->firstWhere('id', 'total_events')?->value;
     expect($seriesTotal)->toBe(2)
         ->and($seriesTotal)->toBe($summaryTotalEvents);
+});
+
+test('audit report query aggregates metrics across historical audit trails and spatie activities', function (): void {
+    AuditTrail::query()->delete();
+    Activity::query()->delete();
+
+    $user1 = User::factory()->create(['name' => 'Historical Actor', 'email' => 'historical@example.com']);
+    $user2 = User::factory()->create(['name' => 'Spatie Actor', 'email' => 'spatie@example.com']);
+
+    $today = Date::now();
+
+    // 1. Historical record in audit_trails
+    AuditTrail::factory()->create([
+        'user_id' => $user1->id,
+        'event' => AuditEvent::UserCreated,
+        'auditable_type' => User::class,
+        'auditable_id' => $user1->id,
+        'ip_address' => '10.0.0.1',
+        'created_at' => $today->copy()->subHours(2),
+    ]);
+
+    // 2. Spatie activity in activity_log
+    Activity::factory()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user2->id,
+        'event' => AuditEvent::UserUpdated->value,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
+        'properties' => [
+            'ip_address' => '10.0.0.2',
+            'user_agent' => 'Mozilla/5.0',
+        ],
+        'created_at' => $today->copy()->subHour(),
+    ]);
+
+    $query = new AuditReportQuery;
+    $result = $query->handle([
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+    ]);
+
+    // Total events: 2, Unique actors: 2
+    expect($result['summary'][0]->value)->toBe(2)
+        ->and($result['summary'][1]->value)->toBe(2)
+        ->and($result['paginated']->total())->toBe(2);
+
+    // Breakdown contains both events
+    expect($result['breakdown'])->toHaveCount(2);
+    $userCreated = collect($result['breakdown'])->firstWhere('key', AuditEvent::UserCreated->value);
+    $userUpdated = collect($result['breakdown'])->firstWhere('key', AuditEvent::UserUpdated->value);
+    expect($userCreated?->count)->toBe(1)
+        ->and($userCreated?->percentage)->toBe(50.0)
+        ->and($userUpdated?->count)->toBe(1)
+        ->and($userUpdated?->percentage)->toBe(50.0);
+
+    // Series sum equals total events
+    $seriesTotal = collect($result['series'])->sum('value');
+    expect($seriesTotal)->toBe(2);
+});
+
+test('export audit report stream exports both historical records and spatie activities', function (): void {
+    AuditTrail::query()->delete();
+    Activity::query()->delete();
+
+    $user1 = User::factory()->create(['name' => 'Historical User', 'email' => 'historical@example.com']);
+    $user2 = User::factory()->create(['name' => 'Spatie User', 'email' => 'spatie@example.com']);
+
+    $today = Date::now();
+
+    // 1. Historical record
+    $historical = AuditTrail::factory()->create([
+        'user_id' => $user1->id,
+        'event' => AuditEvent::UserCreated,
+        'auditable_type' => User::class,
+        'auditable_id' => $user1->id,
+        'ip_address' => '192.168.1.50',
+        'created_at' => $today->copy()->subHours(3),
+    ]);
+
+    // 2. Spatie activity
+    $spatie = Activity::factory()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user2->id,
+        'event' => AuditEvent::UserUpdated->value,
+        'subject_type' => User::class,
+        'subject_id' => $user2->id,
+        'ip_address' => '192.168.1.60',
+        'properties' => [
+            'actor' => [
+                'name' => 'Spatie User',
+                'email' => 'spatie@example.com',
+            ],
+        ],
+        'created_at' => $today->copy()->subHour(),
+    ]);
+
+    $stream = resolve(ExportAuditReportStream::class);
+    $response = $stream->handle([
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+    ]);
+
+    expect($response)->toBeInstanceOf(StreamedResponse::class);
+
+    ob_start();
+    $response->sendContent();
+    $csv = ob_get_clean();
+
+    expect($csv)->toBeString()
+        ->and(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue()
+        ->and($csv)->toContain(__('reports.export.columns.event'))
+        ->and($csv)->toContain($historical->id)
+        ->and($csv)->toContain('Historical User')
+        ->and($csv)->toContain('historical@example.com')
+        ->and($csv)->toContain('192.168.1.50')
+        ->and($csv)->toContain($spatie->id)
+        ->and($csv)->toContain('Spatie User')
+        ->and($csv)->toContain('spatie@example.com')
+        ->and($csv)->toContain('192.168.1.60');
 });
