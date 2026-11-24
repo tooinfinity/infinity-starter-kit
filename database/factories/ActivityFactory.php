@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -47,6 +48,16 @@ final class ActivityFactory extends Factory
             ],
             'created_at' => now(),
         ];
+    }
+
+    public function forEvent(AuditEvent|string $event): self
+    {
+        $value = $event instanceof AuditEvent ? $event->value : $event;
+
+        return $this->state(fn (array $attributes): array => [
+            'event' => $value,
+            'description' => $event instanceof AuditEvent ? $event->label() : $value,
+        ]);
     }
 
     public function forUser(User $user): self

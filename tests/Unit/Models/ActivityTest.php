@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Models;
 
+use App\Enums\AuditEvent;
 use App\Models\Activity;
+use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Attributes\Unguarded;
@@ -200,6 +202,74 @@ test('activity model supports spatie query scopes', function (): void {
         ->and(Activity::query()->forEvent('updated')->where('id', $activity->id)->exists())->toBeTrue();
 });
 
+test('activity model provides compatibility accessors for presentation and export layers', function (): void {
+    $user = User::factory()->create(['name' => 'Bob Builder', 'email' => 'bob@example.com']);
+
+    $activity = Activity::query()->create([
+        'event' => AuditEvent::UserUpdated->value,
+        'description' => 'User updated',
+        'causer_type' => $user->getMorphClass(),
+        'causer_id' => $user->id,
+        'subject_type' => $user->getMorphClass(),
+        'subject_id' => $user->id,
+        'attribute_changes' => [
+            'old' => ['name' => 'Old Bob'],
+            'attributes' => ['name' => 'New Bob'],
+        ],
+        'properties' => [
+            'actor' => [
+                'name' => 'Bob Builder',
+                'email' => 'bob@example.com',
+            ],
+            'request' => [
+                'url' => 'http://localhost/users/update',
+            ],
+            'tags' => ['users', 'profile'],
+        ],
+        'ip_address' => '192.168.1.50',
+        'user_agent' => 'TestBrowser/1.0',
+    ]);
+
+    expect($activity->user)->toBeInstanceOf(User::class)
+        ->and($activity->user?->id)->toBe($user->id)
+        ->and($activity->user_id)->toBe($user->id)
+        ->and($activity->actor_name)->toBe('Bob Builder')
+        ->and($activity->actor_email)->toBe('bob@example.com')
+        ->and($activity->url)->toBe('http://localhost/users/update')
+        ->and($activity->tags)->toBe(['users', 'profile'])
+        ->and($activity->old_values)->toBe(['name' => 'Old Bob'])
+        ->and($activity->new_values)->toBe(['name' => 'New Bob'])
+        ->and($activity->auditable_type)->toBe($user->getMorphClass())
+        ->and($activity->auditable_id)->toBe($user->id)
+        ->and($activity->event_label)->toBe(AuditEvent::UserUpdated->label())
+        ->and($activity->audit_event)->toBe(AuditEvent::UserUpdated);
+});
+
+test('activity withHistorical combines activity_log and audit_trails', function (): void {
+    $user = User::factory()->create();
+
+    $legacy = AuditTrail::factory()->create([
+        'user_id' => $user->id,
+        'actor_name' => $user->name,
+        'actor_email' => $user->email,
+        'event' => AuditEvent::UserCreated,
+    ]);
+
+    $spatie = Activity::factory()->forUser($user)->create([
+        'event' => AuditEvent::UserUpdated->value,
+    ]);
+
+    $results = Activity::withHistorical()->get();
+
+    expect($results->pluck('id')->all())->toContain($legacy->id, $spatie->id);
+
+    $legacyRecord = $results->firstWhere('id', $legacy->id);
+    expect($legacyRecord)->not->toBeNull()
+        ->and($legacyRecord?->event)->toBe(AuditEvent::UserCreated->value)
+        ->and($legacyRecord?->actor_name)->toBe($user->name)
+        ->and($legacyRecord?->actor_email)->toBe($user->email);
+});
+
 test('activity log migration executes cleanly and establishes expected schema and indexes', function (): void {
     Schema::dropIfExists('activity_log');
     expect(Schema::hasTable('activity_log'))->toBeFalse();
@@ -231,4 +301,84 @@ test('activity log migration executes cleanly and establishes expected schema an
         ->and($indexes)->toContain(['causer_type', 'causer_id'])
         ->and($indexes)->toContain(['event', 'created_at'])
         ->and($indexes)->toContain(['causer_id', 'created_at']);
+});
+
+test('actorName and actorEmail accessors prefer recorded snapshot properties over live causer', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Alice Original',
+        'email' => 'alice-original@example.com',
+    ]);
+
+    $activity = Activity::query()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'properties' => [
+            'actor' => [
+                'name' => 'Alice Snapshot',
+                'email' => 'alice-snapshot@example.com',
+            ],
+        ],
+    ]);
+
+    // Rename live causer user
+    $user->update([
+        'name' => 'Alice Renamed',
+        'email' => 'alice-renamed@example.com',
+    ]);
+
+    $freshActivity = Activity::query()->with('causer')->findOrFail($activity->id);
+
+    expect($freshActivity->actor_name)->toBe('Alice Snapshot')
+        ->and($freshActivity->actor_email)->toBe('alice-snapshot@example.com');
+});
+
+test('withHistorical query falls back cleanly when audit_trails table does not exist', function (): void {
+    Schema::dropIfExists('audit_trails');
+
+    Activity::query()->create([
+        'description' => 'Test activity',
+    ]);
+
+    $results = Activity::withHistorical()->get();
+
+    expect($results)->toHaveCount(1)
+        ->and($results->first()?->description)->toBe('Test activity');
+
+    // Restore table for subsequent tests
+    /** @var Migration $migration */
+    $migration = require database_path('migrations/2026_09_20_000000_create_audit_trails_table.php');
+    $migration->up();
+    /** @var Migration $actorFieldsMigration */
+    $actorFieldsMigration = require database_path('migrations/2026_10_20_234750_add_actor_fields_to_audit_trails_table.php');
+    $actorFieldsMigration->up();
+});
+
+test('actorName and actorEmail accessors fall back to live causer when no snapshot exists', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Bob User',
+        'email' => 'bob@example.com',
+    ]);
+
+    $activity = Activity::query()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'properties' => null,
+    ]);
+
+    $freshActivity = Activity::query()->with('causer')->findOrFail($activity->id);
+
+    expect($freshActivity->actor_name)->toBe('Bob User')
+        ->and($freshActivity->actor_email)->toBe('bob@example.com');
+});
+
+test('withHistorical query correctly decodes legacy old_values and new_values from historical audit records', function (): void {
+    $audit = AuditTrail::factory()->create([
+        'old_values' => ['name' => 'Old Name'],
+        'new_values' => ['name' => 'New Name'],
+    ]);
+
+    $record = Activity::withHistorical()->where('id', $audit->id)->firstOrFail();
+
+    expect($record->old_values)->toBe(['name' => 'Old Name'])
+        ->and($record->new_values)->toBe(['name' => 'New Name']);
 });

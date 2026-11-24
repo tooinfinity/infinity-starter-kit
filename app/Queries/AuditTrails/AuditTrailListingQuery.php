@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Queries\AuditTrails;
 
-use App\Models\AuditTrail;
+use App\Models\Activity;
+use App\Models\User;
 use App\Services\LikePattern;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -14,12 +15,12 @@ final readonly class AuditTrailListingQuery
 {
     /**
      * @param  array{search?: string|null, event?: string|null, user_id?: string|null, date_from?: string|null, date_to?: string|null}  $filters
-     * @return LengthAwarePaginator<int, AuditTrail>
+     * @return LengthAwarePaginator<int, Activity>
      */
     public function handle(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        /** @var Builder<AuditTrail> $query */
-        $query = AuditTrail::query()->with('user');
+        /** @var Builder<Activity> $query */
+        $query = HistoricalAuditTrailQuery::build()->with('causer');
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
@@ -28,12 +29,27 @@ final readonly class AuditTrailListingQuery
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
                 LikePattern::where($q, 'ip_address', $prefix);
-                LikePattern::orWhere($q, 'auditable_id', $prefix);
-                LikePattern::orWhere($q, 'actor_name', $contains);
-                LikePattern::orWhere($q, 'actor_email', $contains);
-                $q->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
-                    LikePattern::where($userQuery, 'name', $contains);
-                    LikePattern::orWhere($userQuery, 'email', $contains);
+                LikePattern::orWhere($q, 'subject_id', $prefix);
+                LikePattern::orWhere($q, 'legacy_actor_name', $contains);
+                LikePattern::orWhere($q, 'legacy_actor_email', $contains);
+                LikePattern::orWhereJson($q, 'properties', 'actor.name', $contains);
+                LikePattern::orWhereJson($q, 'properties', 'actor.email', $contains);
+
+                $userMorphs = array_values(array_unique([
+                    User::class,
+                    (new User)->getMorphClass(),
+                ]));
+                $q->orWhere(function (Builder $causerQuery) use ($userMorphs, $contains): void {
+                    $causerQuery->whereIn('causer_type', $userMorphs)
+                        ->whereExists(
+                            User::query()
+                                ->selectRaw('1')
+                                ->whereRaw('CAST(users.id AS CHAR(36)) = activity_log.causer_id')
+                                ->where(function (Builder $userQuery) use ($contains): void {
+                                    LikePattern::where($userQuery, 'name', $contains);
+                                    LikePattern::orWhere($userQuery, 'email', $contains);
+                                })
+                        );
                 });
             });
         }
@@ -43,7 +59,7 @@ final readonly class AuditTrailListingQuery
         }
 
         if (! empty($filters['user_id'])) {
-            $query->where('user_id', $filters['user_id']);
+            $query->where('causer_id', $filters['user_id']);
         }
 
         if (! empty($filters['date_from'])) {

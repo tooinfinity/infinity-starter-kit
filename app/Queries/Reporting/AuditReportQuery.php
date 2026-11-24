@@ -9,7 +9,9 @@ use App\Data\Reporting\ReportDateRange;
 use App\Data\Reporting\ReportSummaryCardData;
 use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
-use App\Models\AuditTrail;
+use App\Models\Activity;
+use App\Models\User;
+use App\Queries\AuditTrails\HistoricalAuditTrailQuery;
 use App\Services\LikePattern;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -33,7 +35,7 @@ final readonly class AuditReportQuery
      *     summary: list<ReportSummaryCardData>,
      *     series: list<ReportTimeSeriesPointData>,
      *     breakdown: list<ReportBreakdownItemData>,
-     *     paginated: LengthAwarePaginator<int, AuditTrail>,
+     *     paginated: LengthAwarePaginator<int, Activity>,
      *     date_from: string,
      *     date_to: string
      * }
@@ -45,15 +47,15 @@ final readonly class AuditReportQuery
         $to = $range->to;
 
         // 1. Summary Cards
-        $totalEvents = AuditTrail::query()->whereBetween('created_at', [$from, $to])->count();
-        $uniqueActors = AuditTrail::query()
+        $totalEvents = HistoricalAuditTrailQuery::build()->whereBetween('created_at', [$from, $to])->count();
+        $uniqueActors = HistoricalAuditTrailQuery::build()
             ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('user_id')
-            ->distinct('user_id')
-            ->count('user_id');
+            ->whereNotNull('causer_id')
+            ->distinct('causer_id')
+            ->count('causer_id');
 
         /** @var object{event: string, count: int|string}|null $topEventRecord */
-        $topEventRecord = DB::table('audit_trails')
+        $topEventRecord = HistoricalAuditTrailQuery::build()
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
             ->groupBy('event')
@@ -64,17 +66,17 @@ final readonly class AuditReportQuery
             ? (AuditEvent::tryFrom((string) $topEventRecord->event)?->label() ?? (string) $topEventRecord->event)
             : __('reports.common.none');
 
-        /** @var object{auditable_type: string, count: int|string}|null $topResourceRecord */
-        $topResourceRecord = DB::table('audit_trails')
-            ->selectRaw('auditable_type, count(*) as count')
+        /** @var object{subject_type: string, count: int|string}|null $topResourceRecord */
+        $topResourceRecord = HistoricalAuditTrailQuery::build()
+            ->selectRaw('subject_type, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('auditable_type')
-            ->groupBy('auditable_type')
+            ->whereNotNull('subject_type')
+            ->groupBy('subject_type')
             ->orderByDesc('count')
             ->first();
 
         $topResourceLabel = $topResourceRecord !== null
-            ? class_basename((string) $topResourceRecord->auditable_type)
+            ? class_basename((string) $topResourceRecord->subject_type)
             : __('reports.common.none');
 
         $summary = [
@@ -114,7 +116,7 @@ final readonly class AuditReportQuery
         $bucketSql = TimeBucketSql::forDriver(column: 'created_at');
 
         /** @var list<object{bucket: string, count: int|string}> $rawSeries */
-        $rawSeries = DB::table('audit_trails')
+        $rawSeries = HistoricalAuditTrailQuery::build()
             ->selectRaw("{$bucketSql} as bucket, count(*) as count")
             ->whereBetween('created_at', [$from, $to])
             ->groupBy(DB::raw($bucketSql))
@@ -139,8 +141,8 @@ final readonly class AuditReportQuery
         }
 
         // 3. Breakdown by event type
-        /** @var list<object{event: string, count: int|string}> $rawBreakdown */
-        $rawBreakdown = DB::table('audit_trails')
+        /** @var list<object{event: string|null, count: int|string}> $rawBreakdown */
+        $rawBreakdown = HistoricalAuditTrailQuery::build()
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
             ->groupBy('event')
@@ -152,10 +154,12 @@ final readonly class AuditReportQuery
         foreach ($rawBreakdown as $row) {
             $count = (int) $row->count;
             $percentage = $totalEvents > 0 ? round(($count / $totalEvents) * 100, 1) : 0.0;
-            $eventEnum = AuditEvent::tryFrom($row->event);
+            $eventEnum = $row->event !== null ? AuditEvent::tryFrom($row->event) : null;
+            $key = $row->event ?? 'unknown';
+            $label = $eventEnum?->label() ?? ($row->event !== null && $row->event !== '' ? $row->event : __('reports.common.none'));
             $breakdown[] = new ReportBreakdownItemData(
-                key: $row->event,
-                label: $eventEnum?->label() ?? $row->event,
+                key: $key,
+                label: $label,
                 count: $count,
                 percentage: $percentage,
             );
@@ -181,12 +185,12 @@ final readonly class AuditReportQuery
 
     /**
      * @param  array{date_from?: string|null, date_to?: string|null, event?: string|null, user_id?: string|null, search?: string|null, sort?: string|null, direction?: string|null}  $filters
-     * @return Builder<AuditTrail>
+     * @return Builder<Activity>
      */
     public function buildFilteredQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
-        /** @var Builder<AuditTrail> $query */
-        $query = AuditTrail::query()->with('user');
+        /** @var Builder<Activity> $query */
+        $query = HistoricalAuditTrailQuery::build()->with('causer');
 
         $query->whereBetween('created_at', [$from, $to]);
 
@@ -195,7 +199,7 @@ final readonly class AuditReportQuery
         }
 
         if (! empty($filters['user_id'])) {
-            $query->where('user_id', $filters['user_id']);
+            $query->where('causer_id', $filters['user_id']);
         }
 
         if (! empty($filters['search'])) {
@@ -205,13 +209,28 @@ final readonly class AuditReportQuery
 
             $query->where(function (Builder $q) use ($prefix, $contains): void {
                 LikePattern::where($q, 'ip_address', $prefix);
-                LikePattern::orWhere($q, 'auditable_id', $prefix);
-                LikePattern::orWhere($q, 'auditable_type', $prefix);
-                LikePattern::orWhere($q, 'actor_name', $contains);
-                LikePattern::orWhere($q, 'actor_email', $contains);
-                $q->orWhereHas('user', function (Builder $userQuery) use ($contains): void {
-                    LikePattern::where($userQuery, 'name', $contains);
-                    LikePattern::orWhere($userQuery, 'email', $contains);
+                LikePattern::orWhere($q, 'subject_id', $prefix);
+                LikePattern::orWhere($q, 'subject_type', $prefix);
+                LikePattern::orWhere($q, 'legacy_actor_name', $contains);
+                LikePattern::orWhere($q, 'legacy_actor_email', $contains);
+                LikePattern::orWhereJson($q, 'properties', 'actor.name', $contains);
+                LikePattern::orWhereJson($q, 'properties', 'actor.email', $contains);
+
+                $userMorphs = array_values(array_unique([
+                    User::class,
+                    (new User)->getMorphClass(),
+                ]));
+                $q->orWhere(function (Builder $causerQuery) use ($userMorphs, $contains): void {
+                    $causerQuery->whereIn('causer_type', $userMorphs)
+                        ->whereExists(
+                            User::query()
+                                ->selectRaw('1')
+                                ->whereRaw('CAST(users.id AS CHAR(36)) = activity_log.causer_id')
+                                ->where(function (Builder $userQuery) use ($contains): void {
+                                    LikePattern::where($userQuery, 'name', $contains);
+                                    LikePattern::orWhere($userQuery, 'email', $contains);
+                                })
+                        );
                 });
             });
         }

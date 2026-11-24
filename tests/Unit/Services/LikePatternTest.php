@@ -57,3 +57,30 @@ test('orWhere applies raw or-like clause with escape character on eloquent build
             LikePattern::ESCAPE_CHARACTER,
         ]);
 });
+
+test('jsonPath formats extraction sql correctly across drivers', function (): void {
+    // pgsql
+    expect(LikePattern::jsonPath('properties', 'actor.name', 'pgsql'))->toBe('("properties"->\'actor\'->>\'name\')')
+        ->and(LikePattern::jsonPath('properties', 'actor.email', 'pgsql'))->toBe('("properties"->\'actor\'->>\'email\')');
+
+    // mysql and mariadb
+    expect(LikePattern::jsonPath('properties', 'actor.name', 'mysql'))->toBe('json_unquote(json_extract(`properties`, \'$."actor"."name"\'))')
+        ->and(LikePattern::jsonPath('properties', 'actor.email', 'mysql'))->toBe('json_unquote(json_extract(`properties`, \'$."actor"."email"\'))')
+        ->and(LikePattern::jsonPath('properties', 'actor.name', 'mariadb'))->toBe('json_unquote(json_extract(`properties`, \'$."actor"."name"\'))');
+
+    // sqlite / default
+    expect(LikePattern::jsonPath('properties', 'actor.name', 'sqlite'))->toBe('json_extract("properties", \'$."actor"."name"\')')
+        ->and(LikePattern::jsonPath('properties', 'actor.email', 'sqlite'))->toBe('json_extract("properties", \'$."actor"."email"\')')
+        ->and(LikePattern::jsonPath('properties', 'actor.name'))->toBe('json_extract("properties", \'$."actor"."name"\')');
+});
+
+test('orWhereJson applies raw or-like clause with escape character and json column on eloquent builder', function (): void {
+    $eloquentQuery = User::query();
+    LikePattern::orWhereJson($eloquentQuery, 'properties', 'actor.name', LikePattern::contains('test'));
+
+    expect($eloquentQuery->toSql())->toContain('json_extract("properties", \'$."actor"."name"\') LIKE ? ESCAPE ?')
+        ->and($eloquentQuery->getBindings())->toEqual([
+            '%test%',
+            LikePattern::ESCAPE_CHARACTER,
+        ]);
+});
