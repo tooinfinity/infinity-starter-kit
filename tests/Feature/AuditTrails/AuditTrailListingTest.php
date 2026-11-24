@@ -290,6 +290,47 @@ test('spatie activities can be searched by ip address, subject id, or causer nam
         ->get(route('audit-trails.index', ['search' => 'target-12345']));
     $responseId->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
+
+    $responseEmail = $this->actingAs($admin)
+        ->get(route('audit-trails.index', ['search' => $specificUser->email]));
+    $responseEmail->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
+});
+
+test('spatie activities and historical records can be searched by causer name and email with real UUID user ids', function (): void {
+    $admin = User::factory()->create();
+    $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
+
+    $user1 = User::factory()->create(['name' => 'Audited Actor One', 'email' => 'actor.one@example.com']);
+    $user2 = User::factory()->create(['name' => 'Audited Actor Two', 'email' => 'actor.two@example.com']);
+
+    // Spatie activity with user1 as causer (no snapshot properties, forcing users table join)
+    Activity::factory()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user1->id,
+        'properties' => null,
+    ]);
+
+    // Historical record with user2 (no legacy snapshot fields, forcing users table join)
+    AuditTrail::factory()->create([
+        'user_id' => $user2->id,
+        'actor_name' => null,
+        'actor_email' => null,
+    ]);
+
+    // Search by causer name
+    $nameOne = $this->actingAs($admin)->get(route('audit-trails.index', ['search' => 'Audited Actor One']));
+    $nameOne->assertOk()->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
+
+    $nameTwo = $this->actingAs($admin)->get(route('audit-trails.index', ['search' => 'Audited Actor Two']));
+    $nameTwo->assertOk()->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
+
+    // Search by causer email
+    $emailOne = $this->actingAs($admin)->get(route('audit-trails.index', ['search' => 'actor.one@example.com']));
+    $emailOne->assertOk()->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
+
+    $emailTwo = $this->actingAs($admin)->get(route('audit-trails.index', ['search' => 'actor.two@example.com']));
+    $emailTwo->assertOk()->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
 });
 
 test('spatie activities search matches deleted user snapshot via properties actor name and email', function (): void {

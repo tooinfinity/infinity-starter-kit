@@ -151,6 +151,14 @@ test('audit report query filters by event, user_id and search', function (): voi
         'search' => 'Specific Actor',
     ]);
     expect($actorResult['paginated']->total())->toBe(1);
+
+    // Search by user email
+    $emailResult = $query->handle([
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+        'search' => 'actor@example.com',
+    ]);
+    expect($emailResult['paginated']->total())->toBe(1);
 });
 
 test('audit report query treats literal wildcard and backslash characters in search', function (): void {
@@ -474,4 +482,56 @@ test('audit report query safely handles null events in breakdown loop', function
         ->and($result['breakdown'][0]->key)->toBe('unknown')
         ->and($result['breakdown'][0]->count)->toBe(1)
         ->and($result['breakdown'][0]->percentage)->toBe(100.0);
+});
+
+test('audit report query search matches spatie activity causer and historical user by real UUID user id, name, and email', function (): void {
+    AuditTrail::query()->delete();
+    Activity::query()->delete();
+
+    $today = Date::now();
+
+    $user1 = User::factory()->create(['name' => 'Report Actor One', 'email' => 'report.one@example.com']);
+    $user2 = User::factory()->create(['name' => 'Report Actor Two', 'email' => 'report.two@example.com']);
+
+    // Spatie activity with user1 as causer (no snapshot properties, forcing users table join with real UUID)
+    Activity::factory()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user1->id,
+        'properties' => null,
+        'created_at' => $today,
+    ]);
+
+    // Historical record with user2 (no legacy snapshot fields, forcing users table join with real UUID)
+    AuditTrail::factory()->create([
+        'user_id' => $user2->id,
+        'actor_name' => null,
+        'actor_email' => null,
+        'created_at' => $today,
+    ]);
+
+    $query = new AuditReportQuery;
+    $dateParams = [
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+    ];
+
+    // Search causer name (Spatie)
+    $resName1 = $query->handle(array_merge($dateParams, ['search' => 'Report Actor One']));
+    expect($resName1['paginated']->total())->toBe(1)
+        ->and($resName1['paginated']->first()?->causer_id)->toBe($user1->id);
+
+    // Search causer name (Historical)
+    $resName2 = $query->handle(array_merge($dateParams, ['search' => 'Report Actor Two']));
+    expect($resName2['paginated']->total())->toBe(1)
+        ->and($resName2['paginated']->first()?->user_id)->toBe($user2->id);
+
+    // Search causer email (Spatie)
+    $resEmail1 = $query->handle(array_merge($dateParams, ['search' => 'report.one@example.com']));
+    expect($resEmail1['paginated']->total())->toBe(1)
+        ->and($resEmail1['paginated']->first()?->causer_id)->toBe($user1->id);
+
+    // Search causer email (Historical)
+    $resEmail2 = $query->handle(array_merge($dateParams, ['search' => 'report.two@example.com']));
+    expect($resEmail2['paginated']->total())->toBe(1)
+        ->and($resEmail2['paginated']->first()?->user_id)->toBe($user2->id);
 });

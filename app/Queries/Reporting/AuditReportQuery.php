@@ -219,9 +219,17 @@ final readonly class AuditReportQuery
                     User::class,
                     (new User)->getMorphClass(),
                 ]));
-                $q->orWhereHasMorph('causer', $userMorphs, function (Builder $userQuery) use ($contains): void {
-                    LikePattern::where($userQuery, 'name', $contains);
-                    LikePattern::orWhere($userQuery, 'email', $contains);
+                $q->orWhere(function (Builder $causerQuery) use ($userMorphs, $contains): void {
+                    $causerQuery->whereIn('causer_type', $userMorphs)
+                        ->whereExists(
+                            User::query()
+                                ->selectRaw('1')
+                                ->whereRaw('CAST(users.id AS CHAR(36)) = activity_log.causer_id')
+                                ->where(function (Builder $userQuery) use ($contains): void {
+                                    LikePattern::where($userQuery, 'name', $contains);
+                                    LikePattern::orWhere($userQuery, 'email', $contains);
+                                })
+                        );
                 });
             });
         }
