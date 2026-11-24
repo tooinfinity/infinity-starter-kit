@@ -20,7 +20,7 @@ final readonly class AuditTrailListingQuery
     public function handle(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         /** @var Builder<Activity> $query */
-        $query = Activity::withHistorical()->with('causer');
+        $query = HistoricalAuditTrailQuery::build()->with('causer');
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);

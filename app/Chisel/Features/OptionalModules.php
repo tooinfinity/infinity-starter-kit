@@ -460,6 +460,7 @@ final class OptionalModules
                     'app/Models/Activity.php',
                     'app/Models/AuditTrail.php',
                     'app/Queries/AuditTrails/AuditTrailListingQuery.php',
+                    'app/Queries/AuditTrails/HistoricalAuditTrailQuery.php',
                     'app/Data/AuditTrails/UserAuditData.php',
                     'config/activitylog.php',
                     'config/audit.php',
@@ -487,6 +488,7 @@ final class OptionalModules
                     'tests/Unit/Listeners/AuditTrails/AuditAuthenticationEventsTest.php',
                     'tests/Unit/Models/ActivityTest.php',
                     'tests/Unit/Models/AuditTrailTest.php',
+                    'tests/Unit/Queries/AuditTrails/HistoricalAuditTrailQueryTest.php',
                 ],
                 emptyDirectories: [
                     'app/Actions/AuditTrails',
@@ -497,6 +499,7 @@ final class OptionalModules
                     'app/Queries/AuditTrails',
                     'resources/js/components/audit-trails',
                     'resources/js/pages/audit-trails',
+                    'tests/Unit/Queries/AuditTrails',
                     'tests/Feature/AuditTrails',
                     'tests/Unit/Actions/AuditTrails',
                     'tests/Unit/Data/AuditTrails',
