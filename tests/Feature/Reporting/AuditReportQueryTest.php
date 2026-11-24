@@ -417,14 +417,61 @@ test('export audit report stream exports both historical records and spatie acti
     $csv = ob_get_clean();
 
     expect($csv)->toBeString()
-        ->and(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue()
-        ->and($csv)->toContain(__('reports.export.columns.event'))
-        ->and($csv)->toContain($historical->id)
-        ->and($csv)->toContain('Historical User')
-        ->and($csv)->toContain('historical@example.com')
-        ->and($csv)->toContain('192.168.1.50')
-        ->and($csv)->toContain($spatie->id)
-        ->and($csv)->toContain('Spatie User')
-        ->and($csv)->toContain('spatie@example.com')
-        ->and($csv)->toContain('192.168.1.60');
+        ->and(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue();
+
+    $cleanCsv = preg_replace('/^\xEF\xBB\xBF/', '', $csv) ?? $csv;
+    $rows = array_values(array_filter(array_map(str_getcsv(...), explode("\n", mb_trim($cleanCsv)))));
+
+    expect($rows[0])->toBe([
+        __('reports.export.columns.id'),
+        __('reports.export.columns.event'),
+        __('reports.export.columns.actor_name'),
+        __('reports.export.columns.actor_email'),
+        __('reports.export.columns.target_type'),
+        __('reports.export.columns.target_id'),
+        __('reports.export.columns.ip_address'),
+        __('reports.export.columns.created_at'),
+    ]);
+
+    // Spatie activity (latest)
+    expect($rows[1][0])->toBe($spatie->id)
+        ->and($rows[1][1])->toBe(AuditEvent::UserUpdated->value)
+        ->and($rows[1][2])->toBe('Spatie User')
+        ->and($rows[1][3])->toBe('spatie@example.com')
+        ->and($rows[1][4])->toBe(User::class)
+        ->and($rows[1][5])->toBe($user2->id)
+        ->and($rows[1][6])->toBe('192.168.1.60');
+
+    // Historical record
+    expect($rows[2][0])->toBe($historical->id)
+        ->and($rows[2][1])->toBe(AuditEvent::UserCreated->value)
+        ->and($rows[2][2])->toBe('Historical User')
+        ->and($rows[2][3])->toBe('historical@example.com')
+        ->and($rows[2][4])->toBe(User::class)
+        ->and($rows[2][5])->toBe($user1->id)
+        ->and($rows[2][6])->toBe('192.168.1.50');
+});
+
+test('audit report query safely handles null events in breakdown loop', function (): void {
+    AuditTrail::query()->delete();
+    Activity::query()->delete();
+
+    $today = Date::now();
+
+    Activity::factory()->create([
+        'event' => null,
+        'created_at' => $today,
+    ]);
+
+    $query = new AuditReportQuery;
+    $result = $query->handle([
+        'date_from' => $today->copy()->subDay()->toDateString(),
+        'date_to' => $today->copy()->addDay()->toDateString(),
+    ]);
+
+    expect($result['paginated']->total())->toBe(1)
+        ->and($result['breakdown'])->toHaveCount(1)
+        ->and($result['breakdown'][0]->key)->toBe('unknown')
+        ->and($result['breakdown'][0]->count)->toBe(1)
+        ->and($result['breakdown'][0]->percentage)->toBe(100.0);
 });

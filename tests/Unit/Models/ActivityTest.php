@@ -302,3 +302,83 @@ test('activity log migration executes cleanly and establishes expected schema an
         ->and($indexes)->toContain(['event', 'created_at'])
         ->and($indexes)->toContain(['causer_id', 'created_at']);
 });
+
+test('actorName and actorEmail accessors prefer recorded snapshot properties over live causer', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Alice Original',
+        'email' => 'alice-original@example.com',
+    ]);
+
+    $activity = Activity::query()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'properties' => [
+            'actor' => [
+                'name' => 'Alice Snapshot',
+                'email' => 'alice-snapshot@example.com',
+            ],
+        ],
+    ]);
+
+    // Rename live causer user
+    $user->update([
+        'name' => 'Alice Renamed',
+        'email' => 'alice-renamed@example.com',
+    ]);
+
+    $freshActivity = Activity::query()->with('causer')->findOrFail($activity->id);
+
+    expect($freshActivity->actor_name)->toBe('Alice Snapshot')
+        ->and($freshActivity->actor_email)->toBe('alice-snapshot@example.com');
+});
+
+test('withHistorical query falls back cleanly when audit_trails table does not exist', function (): void {
+    Schema::dropIfExists('audit_trails');
+
+    Activity::query()->create([
+        'description' => 'Test activity',
+    ]);
+
+    $results = Activity::withHistorical()->get();
+
+    expect($results)->toHaveCount(1)
+        ->and($results->first()?->description)->toBe('Test activity');
+
+    // Restore table for subsequent tests
+    /** @var Migration $migration */
+    $migration = require database_path('migrations/2026_09_20_000000_create_audit_trails_table.php');
+    $migration->up();
+    /** @var Migration $actorFieldsMigration */
+    $actorFieldsMigration = require database_path('migrations/2026_10_20_234750_add_actor_fields_to_audit_trails_table.php');
+    $actorFieldsMigration->up();
+});
+
+test('actorName and actorEmail accessors fall back to live causer when no snapshot exists', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Bob User',
+        'email' => 'bob@example.com',
+    ]);
+
+    $activity = Activity::query()->create([
+        'causer_type' => User::class,
+        'causer_id' => $user->id,
+        'properties' => null,
+    ]);
+
+    $freshActivity = Activity::query()->with('causer')->findOrFail($activity->id);
+
+    expect($freshActivity->actor_name)->toBe('Bob User')
+        ->and($freshActivity->actor_email)->toBe('bob@example.com');
+});
+
+test('withHistorical query correctly decodes legacy old_values and new_values from historical audit records', function (): void {
+    $audit = AuditTrail::factory()->create([
+        'old_values' => ['name' => 'Old Name'],
+        'new_values' => ['name' => 'New Name'],
+    ]);
+
+    $record = Activity::withHistorical()->where('id', $audit->id)->firstOrFail();
+
+    expect($record->old_values)->toBe(['name' => 'Old Name'])
+        ->and($record->new_values)->toBe(['name' => 'New Name']);
+});

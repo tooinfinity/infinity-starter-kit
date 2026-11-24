@@ -85,16 +85,31 @@ final class Activity extends SpatieActivity implements ActivityContract
      */
     public static function withHistorical(): Builder
     {
-        if (! Schema::hasTable('activity_log')) {
-            /** @var Builder<self> $query */
-            $query = self::query();
-
-            return $query;
-        }
-
         if (! Schema::hasTable('audit_trails')) {
+            $spatieQuery = DB::table('activity_log')->selectRaw('
+                id,
+                log_name,
+                description,
+                subject_type,
+                subject_id,
+                event,
+                causer_type,
+                causer_id,
+                attribute_changes,
+                properties,
+                ip_address,
+                user_agent,
+                created_at,
+                NULL as legacy_old_values,
+                NULL as legacy_new_values,
+                NULL as legacy_actor_name,
+                NULL as legacy_actor_email,
+                NULL as legacy_url,
+                NULL as legacy_tags
+            ');
+
             /** @var Builder<self> $query */
-            $query = self::query();
+            $query = self::query()->fromSub($spatieQuery, 'activity_log');
 
             return $query;
         }
@@ -131,7 +146,7 @@ final class Activity extends SpatieActivity implements ActivityContract
             auditable_id as subject_id,
             event,
             CASE WHEN user_id IS NOT NULL THEN ? ELSE NULL END as causer_type,
-            user_id as causer_id,
+            CAST(user_id AS CHAR(36)) as causer_id,
             NULL as attribute_changes,
             NULL as properties,
             ip_address,
@@ -222,19 +237,21 @@ final class Activity extends SpatieActivity implements ActivityContract
     public function actorName(): Attribute
     {
         return Attribute::make(get: function (): ?string {
-            if ($this->causer instanceof User) {
-                return $this->causer->name;
-            }
-
             /** @var string|null $actorName */
             $actorName = $this->getProperty('actor.name');
             if ($actorName !== null && $actorName !== '') {
                 return $actorName;
             }
 
-            return isset($this->attributes['legacy_actor_name']) && is_string($this->attributes['legacy_actor_name'])
-                ? $this->attributes['legacy_actor_name']
-                : null;
+            if (isset($this->attributes['legacy_actor_name']) && is_string($this->attributes['legacy_actor_name'])) {
+                return $this->attributes['legacy_actor_name'];
+            }
+
+            if ($this->causer instanceof User) {
+                return $this->causer->name;
+            }
+
+            return null;
         });
     }
 
@@ -244,19 +261,21 @@ final class Activity extends SpatieActivity implements ActivityContract
     public function actorEmail(): Attribute
     {
         return Attribute::make(get: function (): ?string {
-            if ($this->causer instanceof User) {
-                return $this->causer->email;
-            }
-
             /** @var string|null $actorEmail */
             $actorEmail = $this->getProperty('actor.email');
             if ($actorEmail !== null && $actorEmail !== '') {
                 return $actorEmail;
             }
 
-            return isset($this->attributes['legacy_actor_email']) && is_string($this->attributes['legacy_actor_email'])
-                ? $this->attributes['legacy_actor_email']
-                : null;
+            if (isset($this->attributes['legacy_actor_email']) && is_string($this->attributes['legacy_actor_email'])) {
+                return $this->attributes['legacy_actor_email'];
+            }
+
+            if ($this->causer instanceof User) {
+                return $this->causer->email;
+            }
+
+            return null;
         });
     }
 

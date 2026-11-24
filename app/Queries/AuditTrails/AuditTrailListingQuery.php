@@ -10,7 +10,6 @@ use App\Services\LikePattern;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
 
 final readonly class AuditTrailListingQuery
 {
@@ -33,21 +32,8 @@ final readonly class AuditTrailListingQuery
                 LikePattern::orWhere($q, 'subject_id', $prefix);
                 LikePattern::orWhere($q, 'legacy_actor_name', $contains);
                 LikePattern::orWhere($q, 'legacy_actor_email', $contains);
-
-                $driver = DB::connection()->getDriverName();
-                $actorNameSql = match ($driver) {
-                    'pgsql' => "(\"properties\"->'actor'->>'name') LIKE ? ESCAPE '\\'",
-                    'mysql', 'mariadb' => "json_unquote(json_extract(`properties`, '$.\"actor\".\"name\"')) LIKE ? ESCAPE '\\'",
-                    default => "json_extract(\"properties\", '$.\"actor\".\"name\"') LIKE ? ESCAPE '\\'",
-                };
-                $q->orWhereRaw($actorNameSql, [$contains]);
-
-                $actorEmailSql = match ($driver) {
-                    'pgsql' => "(\"properties\"->'actor'->>'email') LIKE ? ESCAPE '\\'",
-                    'mysql', 'mariadb' => "json_unquote(json_extract(`properties`, '$.\"actor\".\"email\"')) LIKE ? ESCAPE '\\'",
-                    default => "json_extract(\"properties\", '$.\"actor\".\"email\"') LIKE ? ESCAPE '\\'",
-                };
-                $q->orWhereRaw($actorEmailSql, [$contains]);
+                LikePattern::orWhereJson($q, 'properties', 'actor.name', $contains);
+                LikePattern::orWhereJson($q, 'properties', 'actor.email', $contains);
 
                 $userMorphs = array_values(array_unique([
                     User::class,

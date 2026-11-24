@@ -140,7 +140,7 @@ final readonly class AuditReportQuery
         }
 
         // 3. Breakdown by event type
-        /** @var list<object{event: string, count: int|string}> $rawBreakdown */
+        /** @var list<object{event: string|null, count: int|string}> $rawBreakdown */
         $rawBreakdown = Activity::withHistorical()
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
@@ -153,10 +153,12 @@ final readonly class AuditReportQuery
         foreach ($rawBreakdown as $row) {
             $count = (int) $row->count;
             $percentage = $totalEvents > 0 ? round(($count / $totalEvents) * 100, 1) : 0.0;
-            $eventEnum = AuditEvent::tryFrom($row->event);
+            $eventEnum = $row->event !== null ? AuditEvent::tryFrom($row->event) : null;
+            $key = $row->event ?? 'unknown';
+            $label = $eventEnum?->label() ?? ($row->event !== null && $row->event !== '' ? $row->event : __('reports.common.none'));
             $breakdown[] = new ReportBreakdownItemData(
-                key: $row->event,
-                label: $eventEnum?->label() ?? $row->event,
+                key: $key,
+                label: $label,
                 count: $count,
                 percentage: $percentage,
             );
@@ -210,21 +212,8 @@ final readonly class AuditReportQuery
                 LikePattern::orWhere($q, 'subject_type', $prefix);
                 LikePattern::orWhere($q, 'legacy_actor_name', $contains);
                 LikePattern::orWhere($q, 'legacy_actor_email', $contains);
-
-                $driver = DB::connection()->getDriverName();
-                $actorNameSql = match ($driver) {
-                    'pgsql' => "(\"properties\"->'actor'->>'name') LIKE ? ESCAPE '\\'",
-                    'mysql', 'mariadb' => "json_unquote(json_extract(`properties`, '$.\"actor\".\"name\"')) LIKE ? ESCAPE '\\'",
-                    default => "json_extract(\"properties\", '$.\"actor\".\"name\"') LIKE ? ESCAPE '\\'",
-                };
-                $q->orWhereRaw($actorNameSql, [$contains]);
-
-                $actorEmailSql = match ($driver) {
-                    'pgsql' => "(\"properties\"->'actor'->>'email') LIKE ? ESCAPE '\\'",
-                    'mysql', 'mariadb' => "json_unquote(json_extract(`properties`, '$.\"actor\".\"email\"')) LIKE ? ESCAPE '\\'",
-                    default => "json_extract(\"properties\", '$.\"actor\".\"email\"') LIKE ? ESCAPE '\\'",
-                };
-                $q->orWhereRaw($actorEmailSql, [$contains]);
+                LikePattern::orWhereJson($q, 'properties', 'actor.name', $contains);
+                LikePattern::orWhereJson($q, 'properties', 'actor.email', $contains);
 
                 $userMorphs = array_values(array_unique([
                     User::class,
