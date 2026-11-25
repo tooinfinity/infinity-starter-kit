@@ -496,6 +496,7 @@ it('handles user-management ON with reporting OFF and audit-trails OFF', functio
             ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
             ->and(file_exists($dir.'/config/activitylog.php'))->toBeFalse()
             ->and(file_exists($dir.'/config/audit.php'))->toBeFalse()
+            ->and(file_exists($dir.'/database/migrations/2026_11_20_000000_create_activity_log_table.php'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeFalse();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
@@ -551,6 +552,7 @@ it('handles user-management without audit-trails (notifications ON)', function (
         expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Models/NotificationPreference.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
+            ->and(file_exists($dir.'/database/migrations/2026_11_20_000000_create_activity_log_table.php'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeFalse();
 
         assertNoOrphanedMarkersInSandbox($dir);

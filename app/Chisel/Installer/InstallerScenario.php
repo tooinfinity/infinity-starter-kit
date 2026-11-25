@@ -864,6 +864,7 @@ final readonly class InstallerScenario
         if ($this->hasAuditTrails()) {
             $paths[] = 'config/activitylog.php';
             $paths[] = 'config/audit.php';
+            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
             $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
             $paths[] = 'resources/js/pages/audit-trails/index.tsx';
@@ -924,6 +925,7 @@ final readonly class InstallerScenario
         if (! $this->hasAuditTrails()) {
             $paths[] = 'config/activitylog.php';
             $paths[] = 'config/audit.php';
+            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
             $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails';
             $paths[] = 'resources/js/pages/audit-trails';

@@ -95,7 +95,7 @@ test('minimal profile provides core auth with no optional modules', function ():
         ->and($profile->expectedPresentTables())->toBe(['users'])
         ->and($profile->expectedAbsentTables())->toContain('activity_log', 'roles', 'permissions', 'settings', 'notifications')
         ->and($profile->expectedPresentPaths())->toContain('app/Models/User.php', 'routes/web.php')
-        ->and($profile->expectedAbsentPaths())->toContain('config/permission.php', 'config/activitylog.php', 'config/audit.php', 'app/Models/Activity.php')
+        ->and($profile->expectedAbsentPaths())->toContain('config/permission.php', 'config/activitylog.php', 'config/audit.php', 'database/migrations/2026_11_20_000000_create_activity_log_table.php', 'app/Models/Activity.php')
         ->and($profile->expectedForbiddenTokens())->toContain('AuditTrail', 'NotificationPreference', 'ReportIndexController', 'HandleLocale')
         ->and($profile->expectedAbsentColumns()['users'])->toContain('two_factor_secret', 'locale');
 });
@@ -115,7 +115,7 @@ test('default profile provides default application features', function (): void 
         ->and($defaultProfile->hasLocalization())->toBeFalse()
         ->and($defaultProfile->expectedPresentTables())->toContain('users', 'roles', 'permissions', 'settings', 'notifications')
         ->and($defaultProfile->expectedPresentPaths())->toContain('config/permission.php', 'app/Models/Setting.php', 'config/data.php')
-        ->and($defaultProfile->expectedAbsentPaths())->toContain('config/activitylog.php', 'config/audit.php', 'app/Models/Activity.php')
+        ->and($defaultProfile->expectedAbsentPaths())->toContain('config/activitylog.php', 'config/audit.php', 'database/migrations/2026_11_20_000000_create_activity_log_table.php', 'app/Models/Activity.php')
         ->and($defaultProfile->expectedAbsentPaths())->not->toContain('config/data.php')
         ->and($defaultProfile->expectedAbsentColumns()['users'])->toContain('two_factor_secret', 'locale');
 });
@@ -134,7 +134,7 @@ test('full profile provides all available features', function (): void {
         ->and($profile->hasLocalization())->toBeTrue()
         ->and($profile->expectedPresentTables())->toContain('users', 'roles', 'permissions', 'settings', 'notifications', 'activity_log')
         ->and($profile->expectedAbsentTables())->toBe([])
-        ->and($profile->expectedPresentPaths())->toContain('config/permission.php', 'config/activitylog.php', 'config/audit.php', 'app/Models/Activity.php', 'config/data.php')
+        ->and($profile->expectedPresentPaths())->toContain('config/permission.php', 'config/activitylog.php', 'config/audit.php', 'database/migrations/2026_11_20_000000_create_activity_log_table.php', 'app/Models/Activity.php', 'config/data.php')
         ->and($profile->expectedAbsentPaths())->toBe([])
         ->and($profile->expectedForbiddenTokens())->toBe([])
         ->and($profile->expectedPresentColumns()['users'])->toContain('two_factor_secret', 'locale')
