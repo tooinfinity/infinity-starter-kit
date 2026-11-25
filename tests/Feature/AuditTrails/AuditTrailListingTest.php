@@ -286,7 +286,7 @@ test('spatie activities can be searched by ip address, subject id, or causer nam
         ->assertInertia(fn (Assert $page): Assert => $page->has('auditTrails.data', 1));
 });
 
-test('spatie activities and historical records can be searched by causer name and email with real UUID user ids', function (): void {
+test('spatie activities can be searched by causer name and email with real UUID user ids', function (): void {
     $admin = User::factory()->create();
     $admin->givePermissionTo(PermissionModel::findOrCreate(Permission::AuditView->value));
 
