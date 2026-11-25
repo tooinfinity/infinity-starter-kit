@@ -197,6 +197,14 @@ final class GeneratedApplicationValidator
             );
         }
 
+        if (! in_array('audit-trails', $context->selectedModules, true)) {
+            throw_if(
+                isset($composerRequire['spatie/laravel-activitylog']),
+                RuntimeException::class,
+                'Post-cleanup validation failed: spatie/laravel-activitylog was not removed when audit-trails is disabled.',
+            );
+        }
+
         if (! in_array('localization', $context->selectedModules, true)) {
             throw_if(
                 isset($composerRequire['erag/laravel-lang-sync-inertia']),

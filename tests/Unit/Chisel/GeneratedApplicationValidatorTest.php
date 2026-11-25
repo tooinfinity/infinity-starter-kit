@@ -235,6 +235,31 @@ test('validatePostCleanup checks spatie/laravel-permission removal when authoriz
     }
 });
 
+test('validatePostCleanup checks spatie/laravel-activitylog removal when audit-trails is disabled', function (): void {
+    $tempDir = sys_get_temp_dir().'/chisel_val_auditpkg_'.uniqid();
+    makeTestProject($tempDir);
+
+    try {
+        $context = makeContext(selectedModules: ['authorization']); // authorization on, audit-trails off
+
+        // spatie/laravel-activitylog still present
+        File::put($tempDir.'/composer.json', json_encode([
+            'require' => ['php' => '^8.2', 'spatie/laravel-permission' => '^6.0', 'spatie/laravel-activitylog' => '^5.1.5'],
+        ]));
+        expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir))
+            ->toThrow(RuntimeException::class, 'spatie/laravel-activitylog was not removed when audit-trails is disabled.');
+
+        // Cleaned up passes
+        File::put($tempDir.'/composer.json', json_encode([
+            'require' => ['php' => '^8.2', 'spatie/laravel-permission' => '^6.0'],
+        ]));
+        expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir))
+            ->not->toThrow(Throwable::class);
+    } finally {
+        File::deleteDirectory($tempDir);
+    }
+});
+
 test('validatePostCleanup checks localization package removal when localization is disabled', function (): void {
 
     $tempDir = sys_get_temp_dir().'/chisel_val_locale_'.uniqid();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Chisel\FeatureDefinition;
 use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\Cleanup;
+use App\Models\Activity;
 use Symfony\Component\Process\Process;
 
 if (! function_exists('runChiselSandbox')) {
@@ -276,6 +277,7 @@ it('handles all features enabled', function (): void {
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
         expect(isset($composer['require']['spatie/laravel-permission']))->toBeTrue()
+            ->and(isset($composer['require']['spatie/laravel-activitylog']))->toBeTrue()
             ->and(isset($composer['require']['spatie/laravel-data']))->toBeTrue()
             ->and(isset($composer['require']['erag/laravel-lang-sync-inertia']))->toBeTrue();
 
@@ -331,6 +333,7 @@ it('handles all optional modules disabled and all auth features disabled', funct
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
         expect(isset($composer['require']['spatie/laravel-permission']))->toBeFalse()
+            ->and(isset($composer['require']['spatie/laravel-activitylog']))->toBeFalse()
             ->and(isset($composer['require']['spatie/laravel-data']))->toBeFalse()
             ->and(isset($composer['require']['erag/laravel-lang-sync-inertia']))->toBeFalse();
 
@@ -462,12 +465,15 @@ it('handles audit-trails ON with reporting OFF', function (): void {
         $dir = $sandbox['dir'];
 
         expect(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
+            ->and(file_exists($dir.'/config/activitylog.php'))->toBeTrue()
+            ->and(file_exists($dir.'/config/audit.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/AuditTrails/AuditTrailController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Queries/Reporting/AuditReportQuery.php'))->toBeFalse();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
-        expect(isset($composer['require']['spatie/laravel-data']))->toBeTrue();
+        expect(isset($composer['require']['spatie/laravel-activitylog']))->toBeTrue()
+            ->and(isset($composer['require']['spatie/laravel-data']))->toBeTrue();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);
@@ -487,10 +493,14 @@ it('handles user-management ON with reporting OFF and audit-trails OFF', functio
 
         expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Data/Users/CreateUserData.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
+            ->and(file_exists($dir.'/config/activitylog.php'))->toBeFalse()
+            ->and(file_exists($dir.'/config/audit.php'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeFalse();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
-        expect(isset($composer['require']['spatie/laravel-data']))->toBeTrue();
+        expect(isset($composer['require']['spatie/laravel-activitylog']))->toBeFalse()
+            ->and(isset($composer['require']['spatie/laravel-data']))->toBeTrue();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);
@@ -510,7 +520,17 @@ it('handles user-management ON with audit-trails ON', function (): void {
 
         expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
+            ->and(file_exists($dir.'/config/activitylog.php'))->toBeTrue()
+            ->and(file_exists($dir.'/config/audit.php'))->toBeTrue()
+            ->and(file_exists($dir.'/database/migrations/2026_11_20_000000_create_activity_log_table.php'))->toBeTrue()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeTrue();
+
+        $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
+        expect(isset($composer['require']['spatie/laravel-activitylog']))->toBeTrue();
+
+        // Verify configuration registers the custom Activity model
+        $activityConfig = require $dir.'/config/activitylog.php';
+        expect($activityConfig['activity_model'])->toBe(Activity::class);
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

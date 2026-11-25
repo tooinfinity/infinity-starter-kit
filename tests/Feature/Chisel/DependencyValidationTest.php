@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Chisel\FeatureRegistry;
+
 require_once __DIR__.'/../../../chisel.php';
 
 beforeEach(function (): void {
@@ -23,6 +25,13 @@ test('dependency map is properly defined and has expected structure', function (
         ->and($this->dependencies['audit-trails'])->toContain('authorization')
         ->and($this->dependencies['user-management'])->toContain('authorization')
         ->and($this->dependencies['settings'])->toContain('authorization');
+});
+
+test('audit-trails declares spatie/laravel-activitylog as exclusive package dependency in feature definition', function (): void {
+    $feature = FeatureRegistry::get('audit-trails');
+
+    expect($feature->composerPackages)->toBe(['spatie/laravel-activitylog'])
+        ->and($feature->dependencies)->toBe(['authorization']);
 });
 
 test('chiselValidateDependencies rejects missing required dependencies', function (array $modules, string $expectedMessage): void {

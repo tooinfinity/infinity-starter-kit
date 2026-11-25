@@ -232,6 +232,8 @@ final readonly class Profile
         }
 
         if ($this->hasAuditTrails()) {
+            $paths[] = 'config/activitylog.php';
+            $paths[] = 'config/audit.php';
             $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
             $paths[] = 'resources/js/pages/audit-trails/index.tsx';
@@ -291,6 +293,8 @@ final readonly class Profile
         }
 
         if (! $this->hasAuditTrails()) {
+            $paths[] = 'config/activitylog.php';
+            $paths[] = 'config/audit.php';
             $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails';
             $paths[] = 'resources/js/pages/audit-trails';
