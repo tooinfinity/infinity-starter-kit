@@ -276,3 +276,66 @@ test('UpdateUserAuditTrails handles activity log records with null properties, n
         ->and($raw2Props['attributes']['status'])->toBe('active')
         ->and($raw2Props['tags'])->toBe(['anonymized']);
 });
+
+test('UpdateUserAuditTrails scrubs nested array values and handles null values', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Frank User',
+        'email' => 'frank@example.com',
+    ]);
+
+    $id = (string) Str::uuid();
+
+    DB::table('activity_log')->insert([
+        'id' => $id,
+        'log_name' => 'default',
+        'description' => 'Test nested changes',
+        'event' => 'user.updated',
+        'subject_id' => $user->id,
+        'subject_type' => $user->getMorphClass(),
+        'properties' => json_encode([
+            'old' => [
+                'profile' => [
+                    'name' => 'Frank User',
+                    'email' => 'frank@example.com',
+                    'meta' => [
+                        'actor_name' => 'Frank',
+                        'city' => 'Metropolis',
+                    ],
+                ],
+                'status' => 'active',
+            ],
+            'attributes' => [
+                'profile' => [
+                    'name' => 'Frank Updated',
+                    'email' => 'frank.new@example.com',
+                    'meta' => [
+                        'actor_email' => 'frank.new@example.com',
+                        'city' => 'Gotham',
+                    ],
+                ],
+                'status' => 'inactive',
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'attribute_changes' => null,
+        'created_at' => now(),
+    ]);
+
+    $action = resolve(UpdateUserAuditTrails::class);
+    $action->handle($user);
+
+    $raw = DB::table('activity_log')->where('id', $id)->first();
+    expect($raw)->not->toBeNull();
+
+    $props = json_decode((string) $raw->properties, true);
+    expect($props['old']['profile'])->not->toHaveKey('name')
+        ->and($props['old']['profile'])->not->toHaveKey('email')
+        ->and($props['old']['profile']['meta'])->not->toHaveKey('actor_name')
+        ->and($props['old']['profile']['meta']['city'])->toBe('Metropolis')
+        ->and($props['old']['status'])->toBe('active')
+        ->and($props['attributes']['profile'])->not->toHaveKey('name')
+        ->and($props['attributes']['profile'])->not->toHaveKey('email')
+        ->and($props['attributes']['profile']['meta'])->not->toHaveKey('actor_email')
+        ->and($props['attributes']['profile']['meta']['city'])->toBe('Gotham')
+        ->and($props['attributes']['status'])->toBe('inactive')
+        ->and($props['tags'])->toBe(['anonymized']);
+});

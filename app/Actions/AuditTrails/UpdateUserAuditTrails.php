@@ -108,15 +108,11 @@ final readonly class UpdateUserAuditTrails
     }
 
     /**
-     * @param  array<mixed, mixed>|null  $values
-     * @return array<string, mixed>|null
+     * @param  array<mixed, mixed>  $values
+     * @return array<string, mixed>
      */
-    private function scrubValues(?array $values): ?array
+    private function scrubValues(array $values): array
     {
-        if ($values === null) {
-            return null;
-        }
-
         $result = [];
 
         foreach ($values as $key => $value) {
