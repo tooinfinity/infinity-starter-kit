@@ -9,7 +9,7 @@ use App\Enums\Permission;
 use App\Enums\SettingKey;
 use App\Http\Middleware\HandleSettings;
 /* @chisel-audit-trails */
-use App\Models\AuditTrail;
+use App\Models\Activity;
 /* @end-chisel-audit-trails */
 use App\Models\Setting;
 use App\Models\User;
@@ -289,7 +289,7 @@ it('writes no audit rows when saving unchanged settings', function (): void {
 
     $response->assertRedirectToRoute('settings.edit');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->count())->toBe(0);
+    expect(Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->count())->toBe(0);
 });
 
 it('writes exactly one audit row when changing only one setting', function (): void {
@@ -317,7 +317,7 @@ it('writes exactly one audit row when changing only one setting', function (): v
 
     $response->assertRedirectToRoute('settings.edit');
 
-    $audits = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get();
+    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
     expect($audits)->toHaveCount(1);
 

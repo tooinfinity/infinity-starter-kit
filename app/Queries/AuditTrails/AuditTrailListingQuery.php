@@ -20,7 +20,7 @@ final readonly class AuditTrailListingQuery
     public function handle(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         /** @var Builder<Activity> $query */
-        $query = HistoricalAuditTrailQuery::build()->with('causer');
+        $query = Activity::query()->with('causer');
 
         if (! empty($filters['search'])) {
             $search = mb_trim($filters['search']);
@@ -30,8 +30,6 @@ final readonly class AuditTrailListingQuery
             $query->where(function (Builder $q) use ($prefix, $contains): void {
                 LikePattern::where($q, 'ip_address', $prefix);
                 LikePattern::orWhere($q, 'subject_id', $prefix);
-                LikePattern::orWhere($q, 'legacy_actor_name', $contains);
-                LikePattern::orWhere($q, 'legacy_actor_email', $contains);
                 LikePattern::orWhereJson($q, 'properties', 'actor.name', $contains);
                 LikePattern::orWhereJson($q, 'properties', 'actor.email', $contains);
 

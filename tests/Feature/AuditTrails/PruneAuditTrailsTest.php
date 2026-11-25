@@ -2,36 +2,36 @@
 
 declare(strict_types=1);
 
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
 
 it('prunes audit rows older than the retention window', function (): void {
-    AuditTrail::factory()->create(['created_at' => now()->subDays(400)]);
-    $recent = AuditTrail::factory()->create(['created_at' => now()->subDays(5)]);
+    Activity::factory()->create(['created_at' => now()->subDays(400)]);
+    $recent = Activity::factory()->create(['created_at' => now()->subDays(5)]);
 
     Artisan::call('audit:prune', ['--days' => 365]);
 
-    expect(AuditTrail::query()->pluck('id')->all())->toBe([$recent->id]);
+    expect(Activity::query()->pluck('id')->all())->toBe([$recent->id]);
 });
 
 it('uses configured default retention days when option is omitted', function (): void {
     config(['audit.retention_days' => 90]);
 
-    AuditTrail::factory()->create(['created_at' => now()->subDays(120)]);
-    $recent = AuditTrail::factory()->create(['created_at' => now()->subDays(30)]);
+    Activity::factory()->create(['created_at' => now()->subDays(120)]);
+    $recent = Activity::factory()->create(['created_at' => now()->subDays(30)]);
 
     Artisan::call('audit:prune');
 
-    expect(AuditTrail::query()->pluck('id')->all())->toBe([$recent->id]);
+    expect(Activity::query()->pluck('id')->all())->toBe([$recent->id]);
 });
 
 it('does not prune when retention days is zero or negative', function (): void {
-    $record = AuditTrail::factory()->create(['created_at' => now()->subDays(1000)]);
+    $record = Activity::factory()->create(['created_at' => now()->subDays(1000)]);
 
     Artisan::call('audit:prune', ['--days' => 0]);
 
-    expect(AuditTrail::query()->pluck('id')->all())->toBe([$record->id]);
+    expect(Activity::query()->pluck('id')->all())->toBe([$record->id]);
 });
 
 it('schedules audit:prune daily with withoutOverlapping and onOneServer', function (): void {

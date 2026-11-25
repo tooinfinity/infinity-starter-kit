@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use App\Models\AuditTrail;
+use App\Models\Activity;
 
 enum ReportType: string
 {
@@ -28,7 +28,7 @@ enum ReportType: string
             self::cases(),
             fn (self $case): bool => match ($case) {
                 self::UserActivity => true,
-                self::AuditActivity => class_exists(AuditTrail::class),
+                self::AuditActivity => class_exists(Activity::class),
             },
         );
     }

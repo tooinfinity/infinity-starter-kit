@@ -265,7 +265,7 @@ it('handles all features enabled', function (): void {
             ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LocaleController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/NotificationController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
@@ -323,7 +323,7 @@ it('handles all optional modules disabled and all auth features disabled', funct
             ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/LocaleController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/NotificationController.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeFalse()
             ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeFalse()
@@ -461,7 +461,7 @@ it('handles audit-trails ON with reporting OFF', function (): void {
     try {
         $dir = $sandbox['dir'];
 
-        expect(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue()
+        expect(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/AuditTrails/AuditTrailController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Queries/Reporting/AuditReportQuery.php'))->toBeFalse();
@@ -509,7 +509,7 @@ it('handles user-management ON with audit-trails ON', function (): void {
         $dir = $sandbox['dir'];
 
         expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeTrue();
 
         assertNoOrphanedMarkersInSandbox($dir);
@@ -530,7 +530,7 @@ it('handles user-management without audit-trails (notifications ON)', function (
 
         expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Models/NotificationPreference.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeFalse();
 
         assertNoOrphanedMarkersInSandbox($dir);
@@ -550,7 +550,7 @@ it('handles user-management with audit-trails and notifications', function (): v
         $dir = $sandbox['dir'];
 
         expect(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Models/NotificationPreference.php'))->toBeTrue()
             ->and(file_exists($dir.'/tests/Feature/AuditTrails/UserAuditingTest.php'))->toBeTrue();
 
@@ -887,7 +887,7 @@ it('correctly prunes unselected cross-feature tests when test-support classes ar
     try {
         $dir = $sandbox['dir'];
         expect(file_exists($dir.'/tests/Feature/AuditTrails/SettingsAuditingTest.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeTrue();
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

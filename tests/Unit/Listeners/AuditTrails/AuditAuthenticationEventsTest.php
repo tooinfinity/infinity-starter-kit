@@ -6,7 +6,7 @@ namespace Tests\Unit\Listeners\AuditTrails;
 
 use App\Enums\AuditEvent;
 use App\Listeners\AuditTrails\AuditAuthenticationEvents;
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
@@ -47,7 +47,7 @@ it('records auth.login event with actor and guard', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLogin($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLogin)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogin->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -71,7 +71,7 @@ it('records auth.login_failed with known user and throttle outcome without crede
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -103,7 +103,7 @@ it('uses configured rate limit when determining throttled state on failed login'
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->new_values['throttled'])->toBeTrue()
@@ -121,7 +121,7 @@ it('records auth.login_failed with unknown user without storing submitted email 
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBeNull()
@@ -141,7 +141,7 @@ it('resolves user by email in handleFailed if event user is null but user exists
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -156,7 +156,7 @@ it('records auth.lockout with known user', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLockout($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLockout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLockout->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -173,7 +173,7 @@ it('records auth.lockout with unknown user without storing submitted email', fun
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLockout($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLockout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLockout->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBeNull()
@@ -190,7 +190,7 @@ it('records auth.logout event with actor', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onLogout($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLogout)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLogout->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -207,7 +207,7 @@ it('records auth.password_reset event with actor and without credentials', funct
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onPasswordReset($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthPasswordReset)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthPasswordReset->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -224,7 +224,7 @@ it('records auth.two_factor_enabled event on confirmation', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorConfirmed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -243,7 +243,7 @@ it('ignores TwoFactorAuthenticationEnabled when confirmation is required', funct
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorEnabled($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
     expect($audit)->toBeNull();
 });
 
@@ -258,7 +258,7 @@ it('records auth.two_factor_enabled when confirmation is not required', function
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorEnabled($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorEnabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorEnabled->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id);
@@ -271,7 +271,7 @@ it('records auth.two_factor_disabled event', function (): void {
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorDisabled($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthTwoFactorDisabled)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthTwoFactorDisabled->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -286,7 +286,7 @@ it('records auth.recovery_codes_used without storing recovery code', function ()
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onRecoveryCodeReplaced($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthRecoveryCodesUsed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthRecoveryCodesUsed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -302,7 +302,7 @@ it('records auth.login_failed on TwoFactorAuthenticationFailed', function (): vo
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onTwoFactorAuthenticationFailed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->user_id)->toBe($user->id)
@@ -318,7 +318,7 @@ it('omits query strings from URLs recorded for authentication events', function 
     $listener = resolve(AuditAuthenticationEvents::class);
     $listener->onFailed($event);
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::AuthLoginFailed)->first();
+    $audit = Activity::query()->where('event', AuditEvent::AuthLoginFailed->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->url)->toBe('http://localhost/login')
@@ -329,7 +329,7 @@ it('omits query strings from URLs recorded for authentication events', function 
 it('catches and reports audit write exceptions without interrupting authentication', function (): void {
     Exceptions::fake();
 
-    AuditTrail::creating(fn (): never => throw new RuntimeException('Audit DB down'));
+    Activity::creating(fn (): never => throw new RuntimeException('Audit DB down'));
 
     try {
         $listener = resolve(AuditAuthenticationEvents::class);
@@ -338,6 +338,6 @@ it('catches and reports audit write exceptions without interrupting authenticati
 
         Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'Audit DB down');
     } finally {
-        AuditTrail::flushEventListeners();
+        Activity::flushEventListeners();
     }
 });

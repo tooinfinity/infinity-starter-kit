@@ -11,7 +11,6 @@ use App\Data\Reporting\ReportTimeSeriesPointData;
 use App\Enums\AuditEvent;
 use App\Models\Activity;
 use App\Models\User;
-use App\Queries\AuditTrails\HistoricalAuditTrailQuery;
 use App\Services\LikePattern;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -47,15 +46,15 @@ final readonly class AuditReportQuery
         $to = $range->to;
 
         // 1. Summary Cards
-        $totalEvents = HistoricalAuditTrailQuery::build()->whereBetween('created_at', [$from, $to])->count();
-        $uniqueActors = HistoricalAuditTrailQuery::build()
+        $totalEvents = Activity::query()->whereBetween('created_at', [$from, $to])->count();
+        $uniqueActors = Activity::query()
             ->whereBetween('created_at', [$from, $to])
             ->whereNotNull('causer_id')
             ->distinct('causer_id')
             ->count('causer_id');
 
         /** @var object{event: string, count: int|string}|null $topEventRecord */
-        $topEventRecord = HistoricalAuditTrailQuery::build()
+        $topEventRecord = Activity::query()
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
             ->groupBy('event')
@@ -67,7 +66,7 @@ final readonly class AuditReportQuery
             : __('reports.common.none');
 
         /** @var object{subject_type: string, count: int|string}|null $topResourceRecord */
-        $topResourceRecord = HistoricalAuditTrailQuery::build()
+        $topResourceRecord = Activity::query()
             ->selectRaw('subject_type, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
             ->whereNotNull('subject_type')
@@ -116,7 +115,7 @@ final readonly class AuditReportQuery
         $bucketSql = TimeBucketSql::forDriver(column: 'created_at');
 
         /** @var list<object{bucket: string, count: int|string}> $rawSeries */
-        $rawSeries = HistoricalAuditTrailQuery::build()
+        $rawSeries = Activity::query()
             ->selectRaw("{$bucketSql} as bucket, count(*) as count")
             ->whereBetween('created_at', [$from, $to])
             ->groupBy(DB::raw($bucketSql))
@@ -142,7 +141,7 @@ final readonly class AuditReportQuery
 
         // 3. Breakdown by event type
         /** @var list<object{event: string|null, count: int|string}> $rawBreakdown */
-        $rawBreakdown = HistoricalAuditTrailQuery::build()
+        $rawBreakdown = Activity::query()
             ->selectRaw('event, count(*) as count')
             ->whereBetween('created_at', [$from, $to])
             ->groupBy('event')
@@ -190,7 +189,7 @@ final readonly class AuditReportQuery
     public function buildFilteredQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
     {
         /** @var Builder<Activity> $query */
-        $query = HistoricalAuditTrailQuery::build()->with('causer');
+        $query = Activity::query()->with('causer');
 
         $query->whereBetween('created_at', [$from, $to]);
 
@@ -211,8 +210,6 @@ final readonly class AuditReportQuery
                 LikePattern::where($q, 'ip_address', $prefix);
                 LikePattern::orWhere($q, 'subject_id', $prefix);
                 LikePattern::orWhere($q, 'subject_type', $prefix);
-                LikePattern::orWhere($q, 'legacy_actor_name', $contains);
-                LikePattern::orWhere($q, 'legacy_actor_email', $contains);
                 LikePattern::orWhereJson($q, 'properties', 'actor.name', $contains);
                 LikePattern::orWhereJson($q, 'properties', 'actor.email', $contains);
 

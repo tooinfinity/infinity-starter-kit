@@ -272,7 +272,7 @@ When authorization is disabled, Chisel removes:
 
 ### 📊 Reporting & Analytics Module
 
-A **production-ready, read-only** reporting engine designed to extract actionable insights directly from existing application models (`users` and `audit_trails`) without redundant tables or schema overhead.
+A **production-ready, read-only** reporting engine designed to extract actionable insights directly from existing application models (`users` and `activity_log`) without redundant tables or schema overhead.
 
 #### Implemented Reports
 
@@ -580,7 +580,7 @@ The starter kit enforces structural and architectural boundaries through executa
 │   │   │   └── Users/
 │   │   ├── Middleware/           # HandleInertiaRequests (shares auth data)
 │   │   └── Requests/            # Form Requests with authorize() & validation
-│   ├── Models/                   # Eloquent models (User, AuditTrail, Setting)
+│   ├── Models/                   # Eloquent models (User, Activity, Setting)
 │   ├── Queries/                  # Read-only query & export services
 │   │   ├── AuditTrails/
 │   │   ├── Reporting/            # UserReportQuery, AuditReportQuery, CSV streams
