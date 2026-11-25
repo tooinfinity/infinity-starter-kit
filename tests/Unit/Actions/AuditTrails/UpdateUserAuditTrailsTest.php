@@ -6,7 +6,6 @@ use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Actions\AuditTrails\UpdateUserAuditTrails;
 use App\Enums\AuditEvent;
 use App\Models\Activity;
-use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,7 +40,7 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $records = AuditTrail::query()->where('user_id', $user->id)->get();
+    $records = Activity::query()->whereIn('id', [$r1->id, $r2->id])->get();
     expect($records)->toHaveCount(2);
 
     foreach ($records as $record) {
@@ -76,7 +75,7 @@ test('UpdateUserAuditTrails anonymizes actor fields and scrubs PII from user aud
         ->and($raw2Props['actor']['email'])->toBeNull()
         ->and($raw2Props['tags'])->toContain('anonymized');
 
-    $updatedRecord = AuditTrail::query()->where('event', AuditEvent::UserUpdated)->first();
+    $updatedRecord = Activity::query()->where('event', AuditEvent::UserUpdated->value)->first();
     expect($updatedRecord)->not->toBeNull()
         ->and($updatedRecord->old_values)->not->toHaveKey('name')
         ->and($updatedRecord->old_values)->not->toHaveKey('email')
@@ -119,7 +118,7 @@ test('UpdateUserAuditTrails scrubs target PII while preserving admin actor detai
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($targetUser);
 
-    $createdRecord = AuditTrail::query()->where('event', AuditEvent::UserCreated)->first();
+    $createdRecord = Activity::query()->where('event', AuditEvent::UserCreated->value)->first();
     expect($createdRecord)->not->toBeNull()
         ->and($createdRecord->user_id)->toBe($admin->id)
         ->and($createdRecord->actor_name)->toBe('Admin Boss')
@@ -170,7 +169,7 @@ test('UpdateUserAuditTrails respects disabled anonymize_on_delete configuration'
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user);
 
-    $record = AuditTrail::query()->where('user_id', $user->id)->first();
+    $record = Activity::query()->where('causer_id', $user->id)->first();
     expect($record)->not->toBeNull()
         ->and($record->actor_name)->toBe('Charlie User')
         ->and($record->actor_email)->toBe('charlie@example.com')
@@ -202,7 +201,7 @@ test('UpdateUserAuditTrails allows explicit anonymize parameter override', funct
     $action = resolve(UpdateUserAuditTrails::class);
     $action->handle($user, anonymize: false);
 
-    $record = AuditTrail::query()->where('user_id', $user->id)->first();
+    $record = Activity::query()->where('causer_id', $user->id)->first();
     expect($record)->not->toBeNull()
         ->and($record->actor_name)->toBe('Diana User')
         ->and($record->actor_email)->toBe('diana@example.com')
@@ -276,4 +275,67 @@ test('UpdateUserAuditTrails handles activity log records with null properties, n
         ->and($raw2Props['attributes'])->not->toHaveKey('name')
         ->and($raw2Props['attributes']['status'])->toBe('active')
         ->and($raw2Props['tags'])->toBe(['anonymized']);
+});
+
+test('UpdateUserAuditTrails scrubs nested array values and handles null values', function (): void {
+    $user = User::factory()->create([
+        'name' => 'Frank User',
+        'email' => 'frank@example.com',
+    ]);
+
+    $id = (string) Str::uuid();
+
+    DB::table('activity_log')->insert([
+        'id' => $id,
+        'log_name' => 'default',
+        'description' => 'Test nested changes',
+        'event' => 'user.updated',
+        'subject_id' => $user->id,
+        'subject_type' => $user->getMorphClass(),
+        'properties' => json_encode([
+            'old' => [
+                'profile' => [
+                    'name' => 'Frank User',
+                    'email' => 'frank@example.com',
+                    'meta' => [
+                        'actor_name' => 'Frank',
+                        'city' => 'Metropolis',
+                    ],
+                ],
+                'status' => 'active',
+            ],
+            'attributes' => [
+                'profile' => [
+                    'name' => 'Frank Updated',
+                    'email' => 'frank.new@example.com',
+                    'meta' => [
+                        'actor_email' => 'frank.new@example.com',
+                        'city' => 'Gotham',
+                    ],
+                ],
+                'status' => 'inactive',
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'attribute_changes' => null,
+        'created_at' => now(),
+    ]);
+
+    $action = resolve(UpdateUserAuditTrails::class);
+    $action->handle($user);
+
+    $raw = DB::table('activity_log')->where('id', $id)->first();
+    expect($raw)->not->toBeNull();
+
+    $props = json_decode((string) $raw->properties, true);
+    expect($props['old']['profile'])->not->toHaveKey('name')
+        ->and($props['old']['profile'])->not->toHaveKey('email')
+        ->and($props['old']['profile']['meta'])->not->toHaveKey('actor_name')
+        ->and($props['old']['profile']['meta']['city'])->toBe('Metropolis')
+        ->and($props['old']['status'])->toBe('active')
+        ->and($props['attributes']['profile'])->not->toHaveKey('name')
+        ->and($props['attributes']['profile'])->not->toHaveKey('email')
+        ->and($props['attributes']['profile']['meta'])->not->toHaveKey('actor_email')
+        ->and($props['attributes']['profile']['meta']['city'])->toBe('Gotham')
+        ->and($props['attributes']['status'])->toBe('inactive')
+        ->and($props['tags'])->toBe(['anonymized']);
 });

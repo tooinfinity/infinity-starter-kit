@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AuditEvent;
-use App\Queries\AuditTrails\HistoricalAuditTrailQuery;
 use Carbon\CarbonInterface;
 use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -69,22 +67,6 @@ final class Activity extends SpatieActivity implements ActivityContract
         self::deleting(function (): never {
             throw new RuntimeException('Audit trail records cannot be individually deleted. Use the retention prune command instead.');
         });
-    }
-
-    /**
-     * Build an Eloquent query for Activity that combines Spatie's activity_log with
-     * any historical records in legacy audit_trails that have not yet been migrated.
-     *
-     * TEMPORARY COMPATIBILITY MECHANISM:
-     * Delegates to App\Queries\AuditTrails\HistoricalAuditTrailQuery to maintain
-     * read-visibility for historical records. Can be removed in PR #4 once legacy
-     * audit_trails is retired and data backfill is complete.
-     *
-     * @return Builder<self>
-     */
-    public static function withHistorical(): Builder
-    {
-        return HistoricalAuditTrailQuery::build();
     }
 
     /**
@@ -162,10 +144,6 @@ final class Activity extends SpatieActivity implements ActivityContract
                 return $actorName;
             }
 
-            if (isset($this->attributes['legacy_actor_name']) && is_string($this->attributes['legacy_actor_name'])) {
-                return $this->attributes['legacy_actor_name'];
-            }
-
             if ($this->causer instanceof User) {
                 return $this->causer->name;
             }
@@ -186,10 +164,6 @@ final class Activity extends SpatieActivity implements ActivityContract
                 return $actorEmail;
             }
 
-            if (isset($this->attributes['legacy_actor_email']) && is_string($this->attributes['legacy_actor_email'])) {
-                return $this->attributes['legacy_actor_email'];
-            }
-
             if ($this->causer instanceof User) {
                 return $this->causer->email;
             }
@@ -206,13 +180,8 @@ final class Activity extends SpatieActivity implements ActivityContract
         return Attribute::make(get: function (): ?string {
             /** @var string|null $url */
             $url = $this->getProperty('request.url');
-            if ($url !== null && $url !== '') {
-                return $url;
-            }
 
-            return isset($this->attributes['legacy_url']) && is_string($this->attributes['legacy_url'])
-                ? $this->attributes['legacy_url']
-                : null;
+            return $url !== null && $url !== '' ? $url : null;
         });
     }
 
@@ -224,18 +193,8 @@ final class Activity extends SpatieActivity implements ActivityContract
         return Attribute::make(get: function (): ?array {
             /** @var array<int, string>|null $tags */
             $tags = $this->getProperty('tags');
-            if (is_array($tags)) {
-                return array_values($tags);
-            }
 
-            if (isset($this->attributes['legacy_tags'])) {
-                $raw = $this->attributes['legacy_tags'];
-                $decoded = is_string($raw) ? json_decode($raw, true) : (is_array($raw) ? $raw : null);
-
-                return is_array($decoded) ? array_values(array_filter($decoded, is_string(...))) : null;
-            }
-
-            return null;
+            return is_array($tags) ? array_values($tags) : null;
         });
     }
 
@@ -249,13 +208,6 @@ final class Activity extends SpatieActivity implements ActivityContract
                 $old = $this->attribute_changes->get('old');
 
                 return is_array($old) ? $old : null;
-            }
-
-            if (isset($this->attributes['legacy_old_values'])) {
-                $raw = $this->attributes['legacy_old_values'];
-                $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
-
-                return is_array($decoded) ? $decoded : null;
             }
 
             return null;
@@ -272,13 +224,6 @@ final class Activity extends SpatieActivity implements ActivityContract
                 $attrs = $this->attribute_changes->get('attributes');
 
                 return is_array($attrs) ? $attrs : null;
-            }
-
-            if (isset($this->attributes['legacy_new_values'])) {
-                $raw = $this->attributes['legacy_new_values'];
-                $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
-
-                return is_array($decoded) ? $decoded : null;
             }
 
             return null;

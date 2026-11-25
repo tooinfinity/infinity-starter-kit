@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Actions\AuditTrails\RecordAuditTrail;
 use App\Enums\AuditEvent;
 use App\Models\Activity;
-use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -31,11 +30,11 @@ test('RecordAuditTrail stores an activity log record with all provided attribute
         tags: ['users', 'management'],
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->id)->toBeString()
         ->and(Str::isUuid($record->id))->toBeTrue()
         ->and($record->user_id)->toBe($actor->id)
-        ->and($record->event)->toBe(AuditEvent::UserUpdated)
+        ->and($record->event)->toBe(AuditEvent::UserUpdated->value)->and($record->audit_event)->toBe(AuditEvent::UserUpdated)
         ->and($record->auditable_type)->toBe($target->getMorphClass())
         ->and($record->auditable_id)->toBe($target->id)
         ->and($record->old_values)->toBe(['name' => 'Old Name'])
@@ -99,7 +98,7 @@ test('RecordAuditTrail automatically redacts sensitive fields from old and new v
         ],
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class);
+    expect($record)->toBeInstanceOf(Activity::class);
 
     $activity = Activity::query()->find($record->id);
     expect($activity)->not->toBeNull();
@@ -136,7 +135,7 @@ test('RecordAuditTrail handles anonymous or system actions without an actor', fu
         newValues: ['app.name' => 'New'],
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->user_id)->toBeNull()
         ->and($record->user)->toBeNull();
 
@@ -160,7 +159,7 @@ test('RecordAuditTrail falls back to authenticated user when actor is not passed
         event: AuditEvent::UserActivated,
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->user_id)->toBe($user->id);
 
     $activity = Activity::query()->find($record->id);
@@ -176,12 +175,12 @@ test('keeps the actor identity after the actor is deleted', function (): void {
     $this->actingAs($actor);
 
     $record = resolve(RecordAuditTrail::class)->handle(event: AuditEvent::SettingsUpdated);
-    expect($record)->toBeInstanceOf(AuditTrail::class);
+    expect($record)->toBeInstanceOf(Activity::class);
 
     $actor->delete();
 
     $record->refresh();
-    expect($record->user_id)->toBeNull()
+    expect($record->user_id)->toBe($actor->id)
         ->and($record->actor_email)->toBe('ada@example.com')
         ->and($record->actor_name)->toBe('Ada');
 
@@ -206,9 +205,9 @@ test('RecordAuditTrail guarantees activity recording even when activitylog.enabl
         newValues: ['key' => 'new'],
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->id)->toBeString()
-        ->and(AuditTrail::query()->count())->toBe(1)
+        ->and(Activity::query()->count())->toBe(1)
         ->and(Activity::query()->count())->toBe(1);
 
     $activity = Activity::query()->find($record->id);
@@ -227,7 +226,7 @@ test('RecordAuditTrail handles custom auditableType and auditableId strings', fu
         auditableId: $uuid,
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->auditable_type)->toBe(User::class)
         ->and($record->auditable_id)->toBe($uuid);
 
@@ -247,7 +246,7 @@ test('RecordAuditTrail handles console execution without bound request', functio
         event: AuditEvent::SettingsUpdated,
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and($record->ip_address)->toBeNull()
         ->and($record->user_agent)->toBeNull()
         ->and($record->url)->toBeNull();
@@ -268,7 +267,7 @@ test('RecordAuditTrail creates exactly one activity log record per invocation wi
     $action = resolve(RecordAuditTrail::class);
 
     $initialActivityCount = Activity::query()->count();
-    $initialAuditTrailCount = AuditTrail::query()->count();
+    $initialAuditTrailCount = Activity::query()->count();
 
     $record = $action->handle(
         event: AuditEvent::UserUpdated,
@@ -278,9 +277,9 @@ test('RecordAuditTrail creates exactly one activity log record per invocation wi
         user: $actor,
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class)
+    expect($record)->toBeInstanceOf(Activity::class)
         ->and(Activity::query()->count())->toBe($initialActivityCount + 1)
-        ->and(AuditTrail::query()->count())->toBe($initialAuditTrailCount + 1);
+        ->and(Activity::query()->count())->toBe($initialAuditTrailCount + 1);
 
     $activity = Activity::query()->find($record->id);
     expect($activity)->not->toBeNull()
@@ -297,7 +296,7 @@ test('activity model hides properties and attribute_changes upon serialization',
         newValues: ['secret_token' => 'newsecret'],
     );
 
-    expect($record)->toBeInstanceOf(AuditTrail::class);
+    expect($record)->toBeInstanceOf(Activity::class);
 
     $activity = Activity::query()->find($record->id);
     expect($activity)->not->toBeNull();

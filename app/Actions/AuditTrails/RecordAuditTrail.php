@@ -6,7 +6,6 @@ namespace App\Actions\AuditTrails;
 
 use App\Enums\AuditEvent;
 use App\Models\Activity;
-use App\Models\AuditTrail;
 use App\Models\User;
 use Illuminate\Config\Repository as ConfigRepository;
 use Illuminate\Database\Eloquent\Model;
@@ -55,7 +54,7 @@ final readonly class RecordAuditTrail
         ?string $auditableId = null,
         ?string $url = null,
         ?string $description = null,
-    ): AuditTrail {
+    ): Activity {
         $request = $this->request ?? (app()->bound('request') ? request() : null);
 
         $actor = $user;
@@ -134,41 +133,13 @@ final readonly class RecordAuditTrail
             $activityLogger,
             $description,
             $event,
-            $actor,
-            $type,
-            $id,
-            $redactedOld,
-            $redactedNew,
-            $resolvedUrl,
-            $request,
-            $tags,
-        ): AuditTrail {
+        ): Activity {
             /** @var Activity|null $activityRecord */
             $activityRecord = $activityLogger->log($description ?? $event->label());
 
             throw_unless($activityRecord instanceof Activity, RuntimeException::class, 'Failed to record activity log via Spatie Activitylog.');
 
-            // Maintain legacy AuditTrail record to preserve retrieval, reporting, and anonymization
-            // until PR #3 (query migration) and PR #4 (legacy removal).
-            /** @var AuditTrail $auditTrailRecord */
-            $auditTrailRecord = AuditTrail::query()->create([
-                'id' => $activityRecord->id,
-                'user_id' => $actor?->id,
-                'actor_name' => $actor?->name,
-                'actor_email' => $actor?->email,
-                'event' => $event,
-                'auditable_type' => $type,
-                'auditable_id' => $id,
-                'old_values' => $redactedOld,
-                'new_values' => $redactedNew,
-                'url' => $resolvedUrl,
-                'ip_address' => $request?->ip(),
-                'user_agent' => $request?->userAgent(),
-                'tags' => $tags,
-                'created_at' => $activityRecord->created_at ?? now(),
-            ]);
-
-            return $auditTrailRecord;
+            return $activityRecord;
         });
     }
 

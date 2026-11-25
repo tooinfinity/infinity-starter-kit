@@ -27,56 +27,6 @@ final readonly class UpdateUserAuditTrails
         ]));
 
         DB::transaction(function () use ($userId, $userMorphs): void {
-            $records = DB::table('audit_trails')
-                ->where(function (Builder $query) use ($userId, $userMorphs): void {
-                    $query->where('user_id', $userId)
-                        ->orWhere(function (Builder $sub) use ($userId, $userMorphs): void {
-                            $sub->whereIn('auditable_type', $userMorphs)
-                                ->where('auditable_id', $userId);
-                        });
-                })
-                ->get();
-
-            foreach ($records as $record) {
-                $isActor = ($record->user_id === $userId);
-
-                $updates = [];
-
-                if ($isActor) {
-                    $updates['actor_name'] = null;
-                    $updates['actor_email'] = null;
-                    $updates['ip_address'] = null;
-                    $updates['user_agent'] = null;
-                }
-
-                /** @var array<string, mixed>|null $oldValues */
-                $oldValues = is_string($record->old_values)
-                    ? json_decode($record->old_values, true)
-                    : null;
-
-                /** @var array<string, mixed>|null $newValues */
-                $newValues = is_string($record->new_values)
-                    ? json_decode($record->new_values, true)
-                    : null;
-
-                $scrubbedOld = $this->scrubValues($oldValues);
-                $scrubbedNew = $this->scrubValues($newValues);
-
-                $updates['old_values'] = $scrubbedOld !== null ? json_encode($scrubbedOld, JSON_THROW_ON_ERROR) : null;
-                $updates['new_values'] = $scrubbedNew !== null ? json_encode($scrubbedNew, JSON_THROW_ON_ERROR) : null;
-
-                $rawTags = is_string($record->tags) ? json_decode($record->tags, true) : null;
-                /** @var list<string> $tags */
-                $tags = is_array($rawTags) ? array_values(array_filter($rawTags, is_string(...))) : [];
-                if (! in_array('anonymized', $tags, true)) {
-                    $tags[] = 'anonymized';
-                }
-
-                $updates['tags'] = json_encode($tags, JSON_THROW_ON_ERROR);
-
-                DB::table('audit_trails')->where('id', $record->id)->update($updates);
-            }
-
             $activityRecords = DB::table('activity_log')
                 ->where(function (Builder $query) use ($userId, $userMorphs): void {
                     $query->where(function (Builder $causerQuery) use ($userId, $userMorphs): void {
@@ -158,15 +108,11 @@ final readonly class UpdateUserAuditTrails
     }
 
     /**
-     * @param  array<mixed, mixed>|null  $values
-     * @return array<string, mixed>|null
+     * @param  array<mixed, mixed>  $values
+     * @return array<string, mixed>
      */
-    private function scrubValues(?array $values): ?array
+    private function scrubValues(array $values): array
     {
-        if ($values === null) {
-            return null;
-        }
-
         $result = [];
 
         foreach ($values as $key => $value) {

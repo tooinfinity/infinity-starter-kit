@@ -6,7 +6,6 @@ use App\Actions\UpdateSettings;
 use App\Enums\AuditEvent;
 use App\Enums\SettingKey;
 use App\Models\Activity;
-use App\Models\AuditTrail;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -27,11 +26,9 @@ test('UpdateSettings records settings.updated audit trail for each setting chang
         SettingKey::ApplicationTimezone->value => 'America/New_York',
     ]);
 
-    $audits = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get();
-    $activities = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
+    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
-    expect($audits)->toHaveCount(2)
-        ->and($activities)->toHaveCount(2);
+    expect($audits)->toHaveCount(2);
 
     $nameAudit = $audits->firstWhere('new_values.key', SettingKey::ApplicationName->value);
     expect($nameAudit)->not->toBeNull()
@@ -53,7 +50,7 @@ test('UpdateSettings set method records settings.updated audit trail', function 
     $action = resolve(UpdateSettings::class);
     $action->set(SettingKey::ApplicationName, 'Custom Name Via Set');
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->new_values['value'])->toBe('Custom Name Via Set');
@@ -78,7 +75,7 @@ test('UpdateSettings writes no audit rows when settings values are unchanged', f
         SettingKey::ApplicationTimezone->value => 'UTC',
     ]);
 
-    expect(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->count())->toBe(0);
+    expect(Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->count())->toBe(0);
 });
 
 test('UpdateSettings writes exactly one audit row when changing only one setting', function (): void {
@@ -100,7 +97,7 @@ test('UpdateSettings writes exactly one audit row when changing only one setting
         SettingKey::ApplicationTimezone->value => 'Europe/Paris',
     ]);
 
-    $audits = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get();
+    $audits = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get();
 
     expect($audits)->toHaveCount(1);
 
@@ -125,7 +122,7 @@ test('UpdateSettings set method writes no audit rows when setting value is uncha
     $action = resolve(UpdateSettings::class);
     $action->set(SettingKey::ApplicationName, 'Current Name');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->count())->toBe(0);
+    expect(Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->count())->toBe(0);
 });
 
 test('UpdateSettings records recovered oldValue when setting is concurrently created', function (): void {
@@ -150,7 +147,7 @@ test('UpdateSettings records recovered oldValue when setting is concurrently cre
 
     expect($inserted)->toBeTrue();
 
-    $audit = AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->first();
+    $audit = Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->first();
 
     expect($audit)->not->toBeNull()
         ->and($audit->old_values['key'])->toBe(SettingKey::ApplicationName->value)
@@ -180,7 +177,7 @@ test('UpdateSettings writes no audit rows when concurrent insert matches submitt
     ]);
 
     expect($inserted)->toBeTrue()
-        ->and(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->count())->toBe(0);
+        ->and(Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->count())->toBe(0);
 });
 
 test('UpdateSettings uses the latest recovered value for comparison and auditing', function (string $recoveredValue, string $latestValue, array $expectedOldValues): void {
@@ -215,7 +212,7 @@ test('UpdateSettings uses the latest recovered value for comparison and auditing
     $setting = Setting::query()->where('key', SettingKey::ApplicationName->value)->first();
     expect($setting?->value)->toBe('Final Value');
 
-    expect(AuditTrail::query()->where('event', AuditEvent::SettingsUpdated)->get()->pluck('old_values.value')->all())
+    expect(Activity::query()->where('event', AuditEvent::SettingsUpdated->value)->get()->pluck('old_values.value')->all())
         ->toBe($expectedOldValues);
 
     Cache::shouldHaveReceived('forget')->with('settings.all')->once();

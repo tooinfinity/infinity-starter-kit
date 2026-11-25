@@ -64,7 +64,6 @@ test('audited domain models strictly adhere to the HasUuids contract when instal
     $models = [
         User::class,
         'App\\Models\\'.'Setting',
-        'App\\Models\\'.'AuditTrail',
         'App\\Models\\'.'Activity',
         'App\\Models\\'.'NotificationPreference',
     ];
@@ -81,23 +80,23 @@ test('audited domain models strictly adhere to the HasUuids contract when instal
     }
 });
 
-test('audit trail model declares null updated_at and immutability handlers when installed', function (): void {
-    $auditTrailClass = 'App\\Models\\'.'AuditTrail';
-    if (! class_exists($auditTrailClass)) {
+test('activity model declares null updated_at and immutability handlers when installed', function (): void {
+    $activityClass = 'App\\Models\\'.'Activity';
+    if (! class_exists($activityClass)) {
         return;
     }
 
-    expect($auditTrailClass::UPDATED_AT)->toBeNull();
+    expect($activityClass::UPDATED_AT)->toBeNull();
 
-    $dispatcher = $auditTrailClass::getEventDispatcher();
+    $dispatcher = $activityClass::getEventDispatcher();
     expect($dispatcher)->not->toBeNull();
 
-    $auditTrail = new $auditTrailClass;
+    $activity = new $activityClass;
 
-    expect(fn () => $dispatcher->until('eloquent.updating: '.$auditTrailClass, $auditTrail))
+    expect(fn () => $dispatcher->until('eloquent.updating: '.$activityClass, $activity))
         ->toThrow(RuntimeException::class, 'Audit trail records are immutable and cannot be updated.');
 
-    expect(fn () => $dispatcher->until('eloquent.deleting: '.$auditTrailClass, $auditTrail))
+    expect(fn () => $dispatcher->until('eloquent.deleting: '.$activityClass, $activity))
         ->toThrow(RuntimeException::class, 'Audit trail records cannot be individually deleted. Use the retention prune command instead.');
 });
 

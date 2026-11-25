@@ -887,7 +887,7 @@ test('cascading removal prunes full dependent tree when root authorization is om
         expect(file_exists($dir.'/app/Enums/Permission.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Models/Setting.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeFalse()
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse();
 
         // Verify independent features remain intact
@@ -925,7 +925,7 @@ test('intermediate cascade removes reporting when audit-trails is disabled but r
         $dir = $sandbox['dir'];
 
         // Pruned
-        expect(file_exists($dir.'/app/Models/AuditTrail.php'))->toBeFalse()
+        expect(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse();
 
         // Retained

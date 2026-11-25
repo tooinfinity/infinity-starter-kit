@@ -232,7 +232,7 @@ final readonly class Profile
         }
 
         if ($this->hasAuditTrails()) {
-            $paths[] = 'app/Models/AuditTrail.php';
+            $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
             $paths[] = 'resources/js/pages/audit-trails/index.tsx';
         }
@@ -291,7 +291,7 @@ final readonly class Profile
         }
 
         if (! $this->hasAuditTrails()) {
-            $paths[] = 'app/Models/AuditTrail.php';
+            $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails';
             $paths[] = 'resources/js/pages/audit-trails';
         }
@@ -338,7 +338,7 @@ final readonly class Profile
         }
 
         if ($this->hasAuditTrails()) {
-            $tables[] = 'audit_trails';
+            $tables[] = 'activity_log';
         }
 
         return $tables;
@@ -366,7 +366,7 @@ final readonly class Profile
         }
 
         if (! $this->hasAuditTrails()) {
-            $tables[] = 'audit_trails';
+            $tables[] = 'activity_log';
         }
 
         return $tables;

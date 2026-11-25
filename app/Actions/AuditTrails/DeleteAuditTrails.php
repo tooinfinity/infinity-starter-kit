@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\AuditTrails;
 
-use App\Models\AuditTrail;
+use App\Models\Activity;
 use Illuminate\Support\Facades\Date;
 
 final readonly class DeleteAuditTrails
@@ -14,7 +14,7 @@ final readonly class DeleteAuditTrails
         $cutoff = Date::now()->subDays($days);
 
         do {
-            $deleted = AuditTrail::query()
+            $deleted = Activity::query()
                 ->where('created_at', '<', $cutoff)
                 ->limit($chunkSize)
                 ->delete();

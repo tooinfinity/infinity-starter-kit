@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\AuditEvent;
 use App\Models\Activity;
-use App\Models\AuditTrail;
 use App\Models\User;
 use App\Queries\Reporting\AuditReportQuery;
 use App\Queries\Reporting\ExportAuditReportStream;
@@ -13,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 test('audit report query handles empty dataset gracefully', function (): void {
-    AuditTrail::query()->delete();
 
     $query = new AuditReportQuery;
     $result = $query->handle([
@@ -32,43 +30,42 @@ test('audit report query handles empty dataset gracefully', function (): void {
 });
 
 test('audit report query computes accurate summary metrics and event breakdown', function (): void {
-    AuditTrail::query()->delete();
 
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
 
     $baseDate = Date::now()->subDays(2);
 
-    AuditTrail::factory()->create([
-        'user_id' => $user1->id,
+    Activity::factory()->create([
+        'causer_type' => User::class, 'causer_id' => $user1->id,
         'event' => AuditEvent::UserCreated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
         'created_at' => $baseDate->copy()->startOfDay()->addHours(1),
     ]);
 
-    AuditTrail::factory()->create([
-        'user_id' => $user1->id,
+    Activity::factory()->create([
+        'causer_type' => User::class, 'causer_id' => $user1->id,
         'event' => AuditEvent::UserCreated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user2->id,
+        'subject_type' => User::class,
+        'subject_id' => $user2->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(2),
     ]);
 
-    AuditTrail::factory()->create([
-        'user_id' => $user2->id,
+    Activity::factory()->create([
+        'causer_type' => User::class, 'causer_id' => $user2->id,
         'event' => AuditEvent::UserUpdated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(5),
     ]);
 
     // System audit event (user_id is null)
-    AuditTrail::factory()->create([
-        'user_id' => null,
+    Activity::factory()->create([
+        'causer_type' => null, 'causer_id' => null,
         'event' => AuditEvent::UserDeleted,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
+        'subject_type' => User::class,
+        'subject_id' => $user1->id,
         'created_at' => $baseDate->copy()->addDays(1)->startOfDay()->addHours(6),
     ]);
 
@@ -93,22 +90,21 @@ test('audit report query computes accurate summary metrics and event breakdown',
 });
 
 test('audit report query filters by event, user_id and search', function (): void {
-    AuditTrail::query()->delete();
 
     $user = User::factory()->create(['name' => 'Specific Actor', 'email' => 'actor@example.com']);
     $otherUser = User::factory()->create(['name' => 'Other Person', 'email' => 'other@example.com']);
 
     $today = Date::now();
 
-    AuditTrail::factory()->create([
-        'user_id' => $user->id,
+    Activity::factory()->create([
+        'causer_type' => User::class, 'causer_id' => $user->id,
         'event' => AuditEvent::UserCreated,
         'ip_address' => '192.168.1.100',
         'created_at' => $today,
     ]);
 
-    AuditTrail::factory()->create([
-        'user_id' => $otherUser->id,
+    Activity::factory()->create([
+        'causer_type' => User::class, 'causer_id' => $otherUser->id,
         'event' => AuditEvent::UserDeleted,
         'ip_address' => '10.0.0.1',
         'created_at' => $today,
@@ -162,27 +158,26 @@ test('audit report query filters by event, user_id and search', function (): voi
 });
 
 test('audit report query treats literal wildcard and backslash characters in search', function (): void {
-    AuditTrail::query()->delete();
 
     $today = Date::now();
 
-    $a1 = AuditTrail::factory()->create([
-        'auditable_id' => '_target-123',
+    $a1 = Activity::factory()->create([
+        'subject_id' => '_target-123',
         'ip_address' => '10.0.0.1',
         'created_at' => $today,
     ]);
-    AuditTrail::factory()->create([
-        'auditable_id' => 'targetx123',
+    Activity::factory()->create([
+        'subject_id' => 'targetx123',
         'ip_address' => '10.0.0.2',
         'created_at' => $today,
     ]);
-    $a3 = AuditTrail::factory()->create([
-        'auditable_id' => '%target-123',
+    $a3 = Activity::factory()->create([
+        'subject_id' => '%target-123',
         'ip_address' => '10.0.0.3',
         'created_at' => $today,
     ]);
-    $a4 = AuditTrail::factory()->create([
-        'auditable_id' => '\\target-123',
+    $a4 = Activity::factory()->create([
+        'subject_id' => '\\target-123',
         'ip_address' => '10.0.0.4',
         'created_at' => $today,
     ]);
@@ -206,9 +201,7 @@ test('audit report query treats literal wildcard and backslash characters in sea
 it('buckets report days in the configured display timezone', function (): void {
     config(['app.display_timezone' => 'Africa/Algiers']); // UTC+1
 
-    AuditTrail::query()->delete();
-
-    AuditTrail::factory()->create([
+    Activity::factory()->create([
         'created_at' => '2026-10-17 23:30:00', // 2026-10-18 00:30 local
     ]);
 
@@ -233,7 +226,7 @@ it('exports audit report stream with display timezone configurations', function 
 ]);
 
 it('does not load every row to build the time series', function (): void {
-    AuditTrail::factory()->count(50)->create();
+    Activity::factory()->count(50)->create();
     DB::enableQueryLog();
 
     resolve(AuditReportQuery::class)->handle([]);
@@ -251,14 +244,12 @@ it('does not load every row to build the time series', function (): void {
 it('correctly attributes events around midnight for half-hour timezones like Asia/Kolkata', function (): void {
     config(['app.display_timezone' => 'Asia/Kolkata']);
 
-    AuditTrail::query()->delete();
-
     // 18:29 UTC on Oct 17 -> 23:59 IST on Oct 17 (day N)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:29:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:29:00']);
     // 18:31 UTC on Oct 17 -> 00:01 IST on Oct 18 (day N+1)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:31:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:31:00']);
     // 18:59 UTC on Oct 17 -> 00:29 IST on Oct 18 (day N+1)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:59:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:59:00']);
 
     $result = resolve(AuditReportQuery::class)->handle([
         'date_from' => '2026-10-17',
@@ -277,12 +268,10 @@ it('correctly attributes events around midnight for half-hour timezones like Asi
 it('correctly attributes events around midnight for 45-minute timezones like Asia/Kathmandu', function (): void {
     config(['app.display_timezone' => 'Asia/Kathmandu']);
 
-    AuditTrail::query()->delete();
-
     // 18:14 UTC on Oct 17 -> 23:59 NPT on Oct 17 (day N)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:14:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:14:00']);
     // 18:16 UTC on Oct 17 -> 00:01 NPT on Oct 18 (day N+1)
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 18:16:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 18:16:00']);
 
     $result = resolve(AuditReportQuery::class)->handle([
         'date_from' => '2026-10-17',
@@ -301,10 +290,8 @@ it('correctly attributes events around midnight for 45-minute timezones like Asi
 it('correctly attributes events for whole-hour timezones like Europe/Paris', function (): void {
     config(['app.display_timezone' => 'Europe/Paris']);
 
-    AuditTrail::query()->delete();
-
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 21:59:00']);
-    AuditTrail::factory()->create(['created_at' => '2026-10-17 22:01:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 21:59:00']);
+    Activity::factory()->create(['created_at' => '2026-10-17 22:01:00']);
 
     $result = resolve(AuditReportQuery::class)->handle([
         'date_from' => '2026-10-17',
@@ -318,150 +305,7 @@ it('correctly attributes events for whole-hour timezones like Europe/Paris', fun
         ->and($seriesTotal)->toBe($summaryTotalEvents);
 });
 
-test('audit report query aggregates metrics across historical audit trails and spatie activities', function (): void {
-    AuditTrail::query()->delete();
-    Activity::query()->delete();
-
-    $user1 = User::factory()->create(['name' => 'Historical Actor', 'email' => 'historical@example.com']);
-    $user2 = User::factory()->create(['name' => 'Spatie Actor', 'email' => 'spatie@example.com']);
-
-    $today = Date::now();
-
-    // 1. Historical record in audit_trails
-    AuditTrail::factory()->create([
-        'user_id' => $user1->id,
-        'event' => AuditEvent::UserCreated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
-        'ip_address' => '10.0.0.1',
-        'created_at' => $today->copy()->subHours(2),
-    ]);
-
-    // 2. Spatie activity in activity_log
-    Activity::factory()->create([
-        'causer_type' => User::class,
-        'causer_id' => $user2->id,
-        'event' => AuditEvent::UserUpdated->value,
-        'subject_type' => User::class,
-        'subject_id' => $user1->id,
-        'properties' => [
-            'ip_address' => '10.0.0.2',
-            'user_agent' => 'Mozilla/5.0',
-        ],
-        'created_at' => $today->copy()->subHour(),
-    ]);
-
-    $query = new AuditReportQuery;
-    $result = $query->handle([
-        'date_from' => $today->copy()->subDay()->toDateString(),
-        'date_to' => $today->copy()->addDay()->toDateString(),
-    ]);
-
-    // Total events: 2, Unique actors: 2
-    expect($result['summary'][0]->value)->toBe(2)
-        ->and($result['summary'][1]->value)->toBe(2)
-        ->and($result['paginated']->total())->toBe(2);
-
-    // Breakdown contains both events
-    expect($result['breakdown'])->toHaveCount(2);
-    $userCreated = collect($result['breakdown'])->firstWhere('key', AuditEvent::UserCreated->value);
-    $userUpdated = collect($result['breakdown'])->firstWhere('key', AuditEvent::UserUpdated->value);
-    expect($userCreated?->count)->toBe(1)
-        ->and($userCreated?->percentage)->toBe(50.0)
-        ->and($userUpdated?->count)->toBe(1)
-        ->and($userUpdated?->percentage)->toBe(50.0);
-
-    // Series sum equals total events
-    $seriesTotal = collect($result['series'])->sum('value');
-    expect($seriesTotal)->toBe(2);
-});
-
-test('export audit report stream exports both historical records and spatie activities', function (): void {
-    AuditTrail::query()->delete();
-    Activity::query()->delete();
-
-    $user1 = User::factory()->create(['name' => 'Historical User', 'email' => 'historical@example.com']);
-    $user2 = User::factory()->create(['name' => 'Spatie User', 'email' => 'spatie@example.com']);
-
-    $today = Date::now();
-
-    // 1. Historical record
-    $historical = AuditTrail::factory()->create([
-        'user_id' => $user1->id,
-        'event' => AuditEvent::UserCreated,
-        'auditable_type' => User::class,
-        'auditable_id' => $user1->id,
-        'ip_address' => '192.168.1.50',
-        'created_at' => $today->copy()->subHours(3),
-    ]);
-
-    // 2. Spatie activity
-    $spatie = Activity::factory()->create([
-        'causer_type' => User::class,
-        'causer_id' => $user2->id,
-        'event' => AuditEvent::UserUpdated->value,
-        'subject_type' => User::class,
-        'subject_id' => $user2->id,
-        'ip_address' => '192.168.1.60',
-        'properties' => [
-            'actor' => [
-                'name' => 'Spatie User',
-                'email' => 'spatie@example.com',
-            ],
-        ],
-        'created_at' => $today->copy()->subHour(),
-    ]);
-
-    $stream = resolve(ExportAuditReportStream::class);
-    $response = $stream->handle([
-        'date_from' => $today->copy()->subDay()->toDateString(),
-        'date_to' => $today->copy()->addDay()->toDateString(),
-    ]);
-
-    expect($response)->toBeInstanceOf(StreamedResponse::class);
-
-    ob_start();
-    $response->sendContent();
-    $csv = ob_get_clean();
-
-    expect($csv)->toBeString()
-        ->and(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue();
-
-    $cleanCsv = preg_replace('/^\xEF\xBB\xBF/', '', $csv) ?? $csv;
-    $rows = array_values(array_filter(array_map(str_getcsv(...), explode("\n", mb_trim($cleanCsv)))));
-
-    expect($rows[0])->toBe([
-        __('reports.export.columns.id'),
-        __('reports.export.columns.event'),
-        __('reports.export.columns.actor_name'),
-        __('reports.export.columns.actor_email'),
-        __('reports.export.columns.target_type'),
-        __('reports.export.columns.target_id'),
-        __('reports.export.columns.ip_address'),
-        __('reports.export.columns.created_at'),
-    ]);
-
-    // Spatie activity (latest)
-    expect($rows[1][0])->toBe($spatie->id)
-        ->and($rows[1][1])->toBe(AuditEvent::UserUpdated->value)
-        ->and($rows[1][2])->toBe('Spatie User')
-        ->and($rows[1][3])->toBe('spatie@example.com')
-        ->and($rows[1][4])->toBe(User::class)
-        ->and($rows[1][5])->toBe($user2->id)
-        ->and($rows[1][6])->toBe('192.168.1.60');
-
-    // Historical record
-    expect($rows[2][0])->toBe($historical->id)
-        ->and($rows[2][1])->toBe(AuditEvent::UserCreated->value)
-        ->and($rows[2][2])->toBe('Historical User')
-        ->and($rows[2][3])->toBe('historical@example.com')
-        ->and($rows[2][4])->toBe(User::class)
-        ->and($rows[2][5])->toBe($user1->id)
-        ->and($rows[2][6])->toBe('192.168.1.50');
-});
-
 test('audit report query safely handles null events in breakdown loop', function (): void {
-    AuditTrail::query()->delete();
     Activity::query()->delete();
 
     $today = Date::now();
@@ -482,56 +326,4 @@ test('audit report query safely handles null events in breakdown loop', function
         ->and($result['breakdown'][0]->key)->toBe('unknown')
         ->and($result['breakdown'][0]->count)->toBe(1)
         ->and($result['breakdown'][0]->percentage)->toBe(100.0);
-});
-
-test('audit report query search matches spatie activity causer and historical user by real UUID user id, name, and email', function (): void {
-    AuditTrail::query()->delete();
-    Activity::query()->delete();
-
-    $today = Date::now();
-
-    $user1 = User::factory()->create(['name' => 'Report Actor One', 'email' => 'report.one@example.com']);
-    $user2 = User::factory()->create(['name' => 'Report Actor Two', 'email' => 'report.two@example.com']);
-
-    // Spatie activity with user1 as causer (no snapshot properties, forcing users table join with real UUID)
-    Activity::factory()->create([
-        'causer_type' => User::class,
-        'causer_id' => $user1->id,
-        'properties' => null,
-        'created_at' => $today,
-    ]);
-
-    // Historical record with user2 (no legacy snapshot fields, forcing users table join with real UUID)
-    AuditTrail::factory()->create([
-        'user_id' => $user2->id,
-        'actor_name' => null,
-        'actor_email' => null,
-        'created_at' => $today,
-    ]);
-
-    $query = new AuditReportQuery;
-    $dateParams = [
-        'date_from' => $today->copy()->subDay()->toDateString(),
-        'date_to' => $today->copy()->addDay()->toDateString(),
-    ];
-
-    // Search causer name (Spatie)
-    $resName1 = $query->handle(array_merge($dateParams, ['search' => 'Report Actor One']));
-    expect($resName1['paginated']->total())->toBe(1)
-        ->and($resName1['paginated']->first()?->causer_id)->toBe($user1->id);
-
-    // Search causer name (Historical)
-    $resName2 = $query->handle(array_merge($dateParams, ['search' => 'Report Actor Two']));
-    expect($resName2['paginated']->total())->toBe(1)
-        ->and($resName2['paginated']->first()?->user_id)->toBe($user2->id);
-
-    // Search causer email (Spatie)
-    $resEmail1 = $query->handle(array_merge($dateParams, ['search' => 'report.one@example.com']));
-    expect($resEmail1['paginated']->total())->toBe(1)
-        ->and($resEmail1['paginated']->first()?->causer_id)->toBe($user1->id);
-
-    // Search causer email (Historical)
-    $resEmail2 = $query->handle(array_merge($dateParams, ['search' => 'report.two@example.com']));
-    expect($resEmail2['paginated']->total())->toBe(1)
-        ->and($resEmail2['paginated']->first()?->user_id)->toBe($user2->id);
 });
