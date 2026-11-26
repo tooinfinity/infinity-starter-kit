@@ -79,6 +79,36 @@ final class FeatureRegistry
     }
 
     /**
+     * @param  array<string, FeatureDefinition>  $features
+     * @return array<string, string>
+     */
+    public static function options(array $features): array
+    {
+        $options = [];
+        foreach ($features as $feature) {
+            $options[$feature->key] = $feature->label;
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param  array<string, FeatureDefinition>  $features
+     * @return list<string>
+     */
+    public static function defaults(array $features): array
+    {
+        $defaults = [];
+        foreach ($features as $feature) {
+            if ($feature->default) {
+                $defaults[] = $feature->key;
+            }
+        }
+
+        return $defaults;
+    }
+
+    /**
      * Transform registry into the exact shape expected by chisel-paths.php and backward-compatible tests.
      *
      * @return array<string, mixed>
