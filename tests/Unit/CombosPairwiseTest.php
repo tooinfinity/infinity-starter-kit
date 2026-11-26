@@ -46,7 +46,6 @@ test('pairwise combinations cover every achievable pair derived from all valid c
         'localization',
         'notifications',
         'audit-trails',
-        'reporting',
     ];
     $n = count($allFeatures);
 
@@ -101,7 +100,6 @@ test('pairwise combinations partitioned across shards cover every achievable pai
         'localization',
         'notifications',
         'audit-trails',
-        'reporting',
     ];
     $n = count($allFeatures);
 

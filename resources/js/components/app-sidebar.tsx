@@ -6,9 +6,6 @@ import { Users } from 'lucide-react';
 /* @chisel-audit-trails */
 import { History } from 'lucide-react';
 /* @end-chisel-audit-trails */
-/* @chisel-reporting */
-import { BarChart3 } from 'lucide-react';
-/* @end-chisel-reporting */
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -26,9 +23,6 @@ import { dashboard } from '@/routes';
 /* @chisel-audit-trails */
 import { index as auditTrailsIndex } from '@/routes/audit-trails';
 /* @end-chisel-audit-trails */
-/* @chisel-reporting */
-import { index as reportsIndex } from '@/routes/reports';
-/* @end-chisel-reporting */
 /* @chisel-user-management */
 import { index as usersIndex } from '@/routes/users';
 /* @end-chisel-user-management */
@@ -56,14 +50,6 @@ const mainNavItems: NavItem[] = [
         permission: 'audit.view',
     },
     /* @end-chisel-audit-trails */
-    /* @chisel-reporting */
-    {
-        title: 'Reports',
-        href: reportsIndex(),
-        icon: BarChart3,
-        permission: 'reports.view',
-    },
-    /* @end-chisel-reporting */
 ];
 
 const footerNavItems: NavItem[] = [

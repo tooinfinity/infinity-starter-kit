@@ -135,7 +135,6 @@ test('command succeeds with --answers profile selections', function (array $answ
             'localization',
             'notifications',
             'audit-trails',
-            'reporting',
         ],
     ]],
 ]);
@@ -259,7 +258,6 @@ test('interactive installation prompts for admin credentials and creates adminis
             'localization' => 'Localization',
             'notifications' => 'Notifications',
             'audit-trails' => 'Audit Trails',
-            'reporting' => 'Reporting',
         ])
         ->expectsQuestion('Name', 'Interactive SuperAdmin')
         ->expectsQuestion('Email', 'superadmin@example.com')
@@ -294,7 +292,6 @@ test('interactive failure before admin creation followed by retry without answer
                 'localization' => 'Localization',
                 'notifications' => 'Notifications',
                 'audit-trails' => 'Audit Trails',
-                'reporting' => 'Reporting',
             ])
             ->run()
         )->toThrow(RuntimeException::class, 'deterministic test failure injected at stage [post_migration]');
@@ -1355,7 +1352,6 @@ function bindMockChiselScript(array $processFakes = []): Script
                     'localization' => 'Localization',
                     'notifications' => 'Notifications',
                     'audit-trails' => 'Audit Trails',
-                    'reporting' => 'Reporting',
                 ],
                 default: ['authorization'],
             ),

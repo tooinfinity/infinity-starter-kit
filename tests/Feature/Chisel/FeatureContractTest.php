@@ -855,14 +855,6 @@ test('disabled-feature contract detects injected orphaned backend and frontend r
 // Criterion 5: Dependency-Driven Combinations
 // =========================================================================
 
-test('reporting requires audit-trails, user-management, and authorization in dependency graph', function (): void {
-    $reporting = FeatureRegistry::optionalModules()['reporting'];
-
-    expect($reporting->dependencies)->toContain('audit-trails')
-        ->and($reporting->dependencies)->toContain('user-management')
-        ->and($reporting->dependencies)->toContain('authorization');
-});
-
 test('cascading removal prunes full dependent tree when root authorization is omitted', function (): void {
     $allOptional = array_keys(FeatureRegistry::optionalModules());
     $excluded = getDependentsForFeature('authorization');
@@ -872,7 +864,6 @@ test('cascading removal prunes full dependent tree when root authorization is om
         ->and($excluded)->toContain('settings')
         ->and($excluded)->toContain('user-management')
         ->and($excluded)->toContain('audit-trails')
-        ->and($excluded)->toContain('reporting')
         ->and($selectedModules)->toEqualCanonicalizing(['localization', 'notifications']);
 
     $sandbox = runChiselSandbox([
@@ -887,8 +878,7 @@ test('cascading removal prunes full dependent tree when root authorization is om
         expect(file_exists($dir.'/app/Enums/Permission.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Models/Setting.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse();
+            ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse();
 
         // Verify independent features remain intact
         expect(file_exists($dir.'/app/Http/Controllers/LocaleController.php'))->toBeTrue()
@@ -902,48 +892,7 @@ test('cascading removal prunes full dependent tree when root authorization is om
     }
 });
 
-test('intermediate cascade removes reporting when audit-trails is disabled but retains siblings', function (): void {
-    $allOptional = array_keys(FeatureRegistry::optionalModules());
-    $excluded = getDependentsForFeature('audit-trails');
-    $selectedModules = array_values(array_diff($allOptional, $excluded));
-
-    expect($excluded)->toEqualCanonicalizing(['audit-trails', 'reporting'])
-        ->and($selectedModules)->toEqualCanonicalizing([
-            'authorization',
-            'settings',
-            'user-management',
-            'localization',
-            'notifications',
-        ]);
-
-    $sandbox = runChiselSandbox([
-        'auth_features' => ['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'],
-        'optional_modules' => $selectedModules,
-    ]);
-
-    try {
-        $dir = $sandbox['dir'];
-
-        // Pruned
-        expect(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse();
-
-        // Retained
-        expect(file_exists($dir.'/app/Enums/Permission.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Models/Setting.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/LocaleController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/NotificationController.php'))->toBeTrue();
-
-        assertNoOrphanedMarkersInSandbox($dir);
-        assertPhpSyntaxValid($dir);
-        assertSandboxBootsCleanly($dir);
-    } finally {
-        ($sandbox['cleanup'])();
-    }
-});
-
 test('selecting module without required dependencies throws RuntimeException', function (): void {
-    expect(fn () => DependencyValidator::validate(['optional_modules' => ['reporting']]))
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['audit-trails']]))
         ->toThrow(RuntimeException::class, 'requires');
 });

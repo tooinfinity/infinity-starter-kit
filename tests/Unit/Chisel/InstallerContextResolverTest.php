@@ -51,7 +51,6 @@ $makeScript = (fn (): Script => Chisel::script(base_path())
             'localization' => 'Localization',
             'notifications' => 'Notifications',
             'audit-trails' => 'Audit Trails',
-            'reporting' => 'Reporting',
         ], []),
     ]));
 

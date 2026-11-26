@@ -88,7 +88,6 @@ test('minimal profile provides core auth with no optional modules', function ():
         ->and($profile->hasTwoFactor())->toBeFalse()
         ->and($profile->hasAuditTrails())->toBeFalse()
         ->and($profile->hasNotifications())->toBeFalse()
-        ->and($profile->hasReporting())->toBeFalse()
         ->and($profile->hasLocalization())->toBeFalse()
         ->and($profile->hasUserManagement())->toBeFalse()
         ->and($profile->hasSettings())->toBeFalse()
@@ -96,7 +95,7 @@ test('minimal profile provides core auth with no optional modules', function ():
         ->and($profile->expectedAbsentTables())->toContain('activity_log', 'roles', 'permissions', 'settings', 'notifications')
         ->and($profile->expectedPresentPaths())->toContain('app/Models/User.php', 'routes/web.php')
         ->and($profile->expectedAbsentPaths())->toContain('config/permission.php', 'config/activitylog.php', 'config/audit.php', 'database/migrations/2026_11_20_000000_create_activity_log_table.php', 'app/Models/Activity.php')
-        ->and($profile->expectedForbiddenTokens())->toContain('AuditTrail', 'NotificationPreference', 'ReportIndexController', 'HandleLocale')
+        ->and($profile->expectedForbiddenTokens())->toContain('AuditTrail', 'NotificationPreference', 'HandleLocale')
         ->and($profile->expectedAbsentColumns()['users'])->toContain('two_factor_secret', 'locale');
 });
 
@@ -111,7 +110,6 @@ test('default profile provides default application features', function (): void 
         ->and($defaultProfile->hasNotifications())->toBeTrue()
         ->and($defaultProfile->hasTwoFactor())->toBeFalse()
         ->and($defaultProfile->hasAuditTrails())->toBeFalse()
-        ->and($defaultProfile->hasReporting())->toBeFalse()
         ->and($defaultProfile->hasLocalization())->toBeFalse()
         ->and($defaultProfile->expectedPresentTables())->toContain('users', 'roles', 'permissions', 'settings', 'notifications')
         ->and($defaultProfile->expectedPresentPaths())->toContain('config/permission.php', 'app/Models/Setting.php', 'config/data.php')
@@ -130,7 +128,6 @@ test('full profile provides all available features', function (): void {
         ->and($profile->hasNotifications())->toBeTrue()
         ->and($profile->hasTwoFactor())->toBeTrue()
         ->and($profile->hasAuditTrails())->toBeTrue()
-        ->and($profile->hasReporting())->toBeTrue()
         ->and($profile->hasLocalization())->toBeTrue()
         ->and($profile->expectedPresentTables())->toContain('users', 'roles', 'permissions', 'settings', 'notifications', 'activity_log')
         ->and($profile->expectedAbsentTables())->toBe([])

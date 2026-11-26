@@ -34,7 +34,7 @@ beforeEach(() => {
         auth: {
             user: { id: 1, name: 'Admin User' },
             roles: ['admin', 'manager'],
-            permissions: ['users.view', 'users.create', 'reports.export'],
+            permissions: ['users.view', 'users.create', 'audit.view'],
         },
     };
     harness.render(Probe, {});
@@ -58,7 +58,7 @@ test('canAny checks whether user has at least one permission', () => {
 
 test('canAll checks whether user has all requested permissions', () => {
     assert.equal(
-        currentAuth().canAll(['users.view', 'reports.export']),
+        currentAuth().canAll(['users.view', 'audit.view']),
         true,
     );
     assert.equal(

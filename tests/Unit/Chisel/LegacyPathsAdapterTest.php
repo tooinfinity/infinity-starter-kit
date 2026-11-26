@@ -17,7 +17,6 @@ test('LegacyPathsAdapter toArray produces expected structure matching FeatureReg
         'localization',
         'notifications',
         'audit_trails',
-        'reporting',
         'data',
         'dependencies',
         'cross_feature_tests',

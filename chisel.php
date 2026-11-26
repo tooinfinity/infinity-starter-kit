@@ -238,7 +238,6 @@ $script = Chisel::script(__DIR__)
                 'localization' => 'Localization',
                 'notifications' => 'Notifications',
                 'audit-trails' => 'Audit Trails',
-                'reporting' => 'Reporting',
             ],
             default: [
                 'authorization',
@@ -247,7 +246,6 @@ $script = Chisel::script(__DIR__)
                 'localization',
                 'notifications',
                 'audit-trails',
-                'reporting',
             ],
             hint: 'Use space to select, enter to confirm.',
         ),
@@ -452,18 +450,6 @@ $script = Chisel::script(__DIR__)
             // Marker: 'audit-trails'
             FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['audit-trails']);
         },
-    )
-    ->selected(
-        'optional_modules',
-        'reporting',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'reporting'
-            FeaturePruner::applySelected($chisel, $optionalModules['reporting']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
-            // Marker: 'reporting'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['reporting']);
-        },
     );
 
 foreach ($paths['cross_feature_tests'] ?? [] as $entry) {
@@ -507,7 +493,7 @@ return $script
     )
     ->selectedAny(
         'optional_modules',
-        ['user-management', 'reporting', 'audit-trails'],
+        ['user-management', 'audit-trails'],
         then: null,
         else: function (Chisel $chisel) use ($directory): void {
             $chisel->file('config/data.php')->delete();

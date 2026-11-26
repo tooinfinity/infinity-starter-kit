@@ -22,7 +22,6 @@ test('all expected features are registered in feature registry', function (): vo
             'localization',
             'notifications',
             'audit-trails',
-            'reporting',
         ])
         ->and(count($all))->toBe(count($auth) + count($optional));
 });
@@ -39,7 +38,6 @@ test('auth features and optional modules are grouped in dedicated classes', func
             'localization',
             'notifications',
             'audit-trails',
-            'reporting',
         ]);
 
     foreach ($auth as $definition) {
@@ -93,10 +91,10 @@ test('feature keys in registry are unique and match their definition key', funct
 });
 
 test('feature registry get returns correct feature definition or throws on unknown key', function (): void {
-    $reporting = FeatureRegistry::get('reporting');
-    expect($reporting->key)->toBe('reporting')
-        ->and($reporting->label)->toBe('Reporting')
-        ->and($reporting->sectionMarker)->toBe('reporting');
+    $auditTrails = FeatureRegistry::get('audit-trails');
+    expect($auditTrails->key)->toBe('audit-trails')
+        ->and($auditTrails->label)->toBe('Audit Trails')
+        ->and($auditTrails->sectionMarker)->toBe('audit-trails');
 
     expect(fn (): FeatureDefinition => FeatureRegistry::get('unknown-module'))->toThrow(InvalidArgumentException::class);
 });
@@ -112,8 +110,7 @@ test('feature registry returns correct composer packages and npm packages', func
 });
 
 test('registered feature definitions declare expected dependencies', function (): void {
-    expect(FeatureRegistry::get('reporting')->dependencies)->toBe(['audit-trails', 'user-management', 'authorization'])
-        ->and(FeatureRegistry::get('audit-trails')->dependencies)->toBe(['authorization'])
+    expect(FeatureRegistry::get('audit-trails')->dependencies)->toBe(['authorization'])
         ->and(FeatureRegistry::get('user-management')->dependencies)->toBe(['authorization'])
         ->and(FeatureRegistry::get('settings')->dependencies)->toBe(['authorization'])
         ->and(FeatureRegistry::get('authorization')->dependencies)->toBe([])
@@ -139,7 +136,6 @@ test('toPathsArray produces structure matching chisel-paths specification', func
         'localization',
         'notifications',
         'audit_trails',
-        'reporting',
         'data',
         'dependencies',
         'cross_feature_tests',

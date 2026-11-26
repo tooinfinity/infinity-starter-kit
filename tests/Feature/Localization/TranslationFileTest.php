@@ -45,10 +45,6 @@ test('all required translation files exist for English', function (): void {
     if (file_exists(app_path('Models/NotificationPreference.php'))) {
         expect(file_exists(lang_path('en/notifications.php')))->toBeTrue();
     }
-
-    if (file_exists(app_path('Enums/ReportType.php'))) {
-        expect(file_exists(lang_path('en/reports.php')))->toBeTrue();
-    }
 });
 
 test('all required translation files exist for French', function (): void {
@@ -67,10 +63,6 @@ test('all required translation files exist for French', function (): void {
     if (file_exists(lang_path('en/notifications.php'))) {
         expect(file_exists(lang_path('fr/notifications.php')))->toBeTrue();
     }
-
-    if (file_exists(lang_path('en/reports.php'))) {
-        expect(file_exists(lang_path('fr/reports.php')))->toBeTrue();
-    }
 });
 
 test('all required translation files exist for Arabic', function (): void {
@@ -88,10 +80,6 @@ test('all required translation files exist for Arabic', function (): void {
 
     if (file_exists(lang_path('en/notifications.php'))) {
         expect(file_exists(lang_path('ar/notifications.php')))->toBeTrue();
-    }
-
-    if (file_exists(lang_path('en/reports.php'))) {
-        expect(file_exists(lang_path('ar/reports.php')))->toBeTrue();
     }
 });
 
@@ -112,7 +100,6 @@ test('all supported locales have all PHP translation keys matching English', fun
         'validation.php',
         'audit.php',
         'notifications.php',
-        'reports.php',
     ];
 
     $langPath = dirname(__DIR__, 3).'/lang/en';

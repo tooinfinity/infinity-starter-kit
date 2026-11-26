@@ -255,7 +255,7 @@ if (! function_exists('assertFeatureRetained')) {
 it('handles all features enabled', function (): void {
     $sandbox = runChiselSandbox([
         'auth_features' => ['login', 'logout', 'registration', 'email-verification', 'password-reset', 'password-update', 'two-factor'],
-        'optional_modules' => ['authorization', 'settings', 'user-management', 'localization', 'notifications', 'audit-trails', 'reporting'],
+        'optional_modules' => ['authorization', 'settings', 'user-management', 'localization', 'notifications', 'audit-trails'],
     ]);
 
     try {
@@ -267,7 +267,6 @@ it('handles all features enabled', function (): void {
             ->and(file_exists($dir.'/app/Http/Controllers/LocaleController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/NotificationController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/RegisterController.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/LoginController.php'))->toBeTrue()
@@ -326,7 +325,6 @@ it('handles all optional modules disabled and all auth features disabled', funct
             ->and(file_exists($dir.'/app/Http/Controllers/LocaleController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/NotificationController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Models/Activity.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse()
             ->and(file_exists($dir.'/app/Actions/CreateUser.php'))->toBeFalse()
             ->and(file_exists($dir.'/resources/js/pages/user-email-verification-notification/create.tsx'))->toBeFalse()
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
@@ -388,7 +386,7 @@ it('handles authorization alone', function (): void {
         $permissionContent = (string) file_get_contents($dir.'/app/Enums/Permission.php');
         expect($permissionContent)->toContain('AuthorizationManage')
             ->and($permissionContent)->not->toContain('SettingsManage')
-            ->and($permissionContent)->not->toContain('ReportsView');
+            ->and($permissionContent)->not->toContain('AuditView');
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
         expect(isset($composer['require']['spatie/laravel-permission']))->toBeTrue()
@@ -455,7 +453,7 @@ it('handles notifications alone', function (): void {
     }
 });
 
-it('handles audit-trails ON with reporting OFF', function (): void {
+it('handles audit-trails ON with user-management OFF', function (): void {
     $sandbox = runChiselSandbox([
         'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'audit-trails'],
@@ -468,8 +466,7 @@ it('handles audit-trails ON with reporting OFF', function (): void {
             ->and(file_exists($dir.'/config/activitylog.php'))->toBeTrue()
             ->and(file_exists($dir.'/config/audit.php'))->toBeTrue()
             ->and(file_exists($dir.'/app/Http/Controllers/AuditTrails/AuditTrailController.php'))->toBeTrue()
-            ->and(file_exists($dir.'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeFalse()
-            ->and(file_exists($dir.'/app/Queries/Reporting/AuditReportQuery.php'))->toBeFalse();
+            ->and(file_exists($dir.'/app/Http/Controllers/Users/UserController.php'))->toBeFalse();
 
         $composer = json_decode((string) file_get_contents($dir.'/composer.json'), true);
         expect(isset($composer['require']['spatie/laravel-activitylog']))->toBeTrue()
@@ -482,7 +479,7 @@ it('handles audit-trails ON with reporting OFF', function (): void {
     }
 });
 
-it('handles user-management ON with reporting OFF and audit-trails OFF', function (): void {
+it('handles user-management ON with audit-trails OFF', function (): void {
     $sandbox = runChiselSandbox([
         'auth_features' => ['login', 'registration'],
         'optional_modules' => ['authorization', 'user-management'],
@@ -811,9 +808,9 @@ it('rejects invalid combinations with detailed exception', function (): void {
     expect(function (): void {
         runChiselSandbox([
             'auth_features' => ['login', 'registration'],
-            'optional_modules' => ['reporting'], // missing audit-trails, user-management, authorization
+            'optional_modules' => ['audit-trails'], // missing authorization
         ]);
-    })->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s):');
+    })->toThrow(RuntimeException::class, 'The "audit-trails" feature requires the following feature(s): authorization.');
 });
 
 it('handles cross-feature tests: audit-trails ON with settings ON vs OFF', function (): void {
@@ -864,31 +861,6 @@ it('handles cross-feature tests: notifications ON with localization ON vs OFF', 
             ->and(is_dir($withoutLocalization['dir'].'/lang/fr'))->toBeFalse()
             ->and(is_dir($withoutLocalization['dir'].'/lang/ar'))->toBeFalse()
             ->and(file_exists($withoutLocalization['dir'].'/app/Http/Controllers/NotificationController.php'))->toBeTrue();
-    } finally {
-        ($withoutLocalization['cleanup'])();
-    }
-});
-
-it('handles cross-feature tests: reporting ON with localization ON vs OFF', function (): void {
-    $withLocalization = runChiselSandbox([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'reporting', 'localization'],
-    ]);
-
-    try {
-        expect(file_exists($withLocalization['dir'].'/tests/Feature/Reporting/ReportingLocalizationTest.php'))->toBeTrue();
-    } finally {
-        ($withLocalization['cleanup'])();
-    }
-
-    $withoutLocalization = runChiselSandbox([
-        'auth_features' => ['login', 'registration'],
-        'optional_modules' => ['authorization', 'user-management', 'audit-trails', 'reporting'],
-    ]);
-
-    try {
-        expect(file_exists($withoutLocalization['dir'].'/tests/Feature/Reporting/ReportingLocalizationTest.php'))->toBeFalse()
-            ->and(file_exists($withoutLocalization['dir'].'/app/Http/Controllers/Reporting/AuditReportController.php'))->toBeTrue();
     } finally {
         ($withoutLocalization['cleanup'])();
     }
@@ -1034,13 +1006,11 @@ it('handles registration and email-verification: login, logout, registration, em
 });
 
 it('verifies individual optional module removal preserves other modules and cleans up pruned feature', function (string $removedModule): void {
-    $allModules = ['authorization', 'settings', 'user-management', 'localization', 'notifications', 'audit-trails', 'reporting'];
+    $allModules = ['authorization', 'settings', 'user-management', 'localization', 'notifications', 'audit-trails'];
 
     $excluded = [$removedModule];
     if ($removedModule === 'authorization') {
-        $excluded = ['authorization', 'settings', 'user-management', 'audit-trails', 'reporting'];
-    } elseif ($removedModule === 'audit-trails' || $removedModule === 'user-management') {
-        $excluded = [$removedModule, 'reporting'];
+        $excluded = ['authorization', 'settings', 'user-management', 'audit-trails'];
     }
 
     $selectedModules = array_values(array_diff($allModules, $excluded));
@@ -1075,7 +1045,7 @@ it('verifies individual optional module removal preserves other modules and clea
         ($sandbox['cleanup'])();
     }
 })->with([
-    'reporting removed' => ['reporting'],
+    'audit-trails removed' => ['audit-trails'],
     'notifications removed' => ['notifications'],
     'localization removed' => ['localization'],
     'settings removed' => ['settings'],

@@ -123,7 +123,6 @@ final readonly class InstallerScenario
                 'localization',
                 'notifications',
                 'audit-trails',
-                'reporting',
             ],
             admin: [
                 'name' => 'Full Admin',
@@ -149,7 +148,6 @@ final readonly class InstallerScenario
                 'localization',
                 'notifications',
                 'audit-trails',
-                'reporting',
             ],
         );
     }
@@ -179,14 +177,13 @@ final readonly class InstallerScenario
         return new self(
             id: 'dependency-heavy',
             name: 'Dependency-Heavy Profile',
-            description: 'Chained dependency tree: Reporting requires Audit Trails and User Management, which requires Authorization.',
+            description: 'Modules requiring Authorization: Audit Trails and User Management with Authorization.',
             category: 'profile',
             authFeatures: ['login', 'logout'],
             optionalModules: [
                 'authorization',
                 'user-management',
                 'audit-trails',
-                'reporting',
             ],
         );
     }
@@ -260,18 +257,6 @@ final readonly class InstallerScenario
             category: 'module',
             authFeatures: ['login', 'logout'],
             optionalModules: ['authorization', 'audit-trails'],
-        );
-    }
-
-    public static function moduleReporting(): self
-    {
-        return new self(
-            id: 'module-reporting',
-            name: 'Reporting Module',
-            description: 'Reporting module enabled with required dependencies Authorization, User Management, and Audit Trails.',
-            category: 'module',
-            authFeatures: ['login', 'logout'],
-            optionalModules: ['authorization', 'user-management', 'audit-trails', 'reporting'],
         );
     }
 
@@ -487,12 +472,12 @@ final readonly class InstallerScenario
         return new self(
             id: 'failure-dependency-validation',
             name: 'Missing Dependency Validation Failure',
-            description: 'Attempting to install Reporting without required dependencies (must fail before mutations).',
+            description: 'Attempting to install Audit Trails without required Authorization dependency (must fail before mutations).',
             category: 'failure',
             authFeatures: ['login', 'logout'],
-            optionalModules: ['reporting'],
+            optionalModules: ['audit-trails'],
             expectedExitCode: 1,
-            expectedOutputContains: ['requires the following feature(s): audit-trails'],
+            expectedOutputContains: ['requires the following feature(s): authorization'],
         );
     }
 
@@ -570,7 +555,6 @@ final readonly class InstallerScenario
                 'authorization',
                 'user-management',
                 'audit-trails',
-                'reporting',
             ],
             env: ['LARAVEL_INSTALLER_NO_NODE' => 'true'],
         );
@@ -624,7 +608,6 @@ final readonly class InstallerScenario
             'module-localization' => self::moduleLocalization(),
             'module-notifications' => self::moduleNotifications(),
             'module-audit-trails' => self::moduleAuditTrails(),
-            'module-reporting' => self::moduleReporting(),
 
             // Auth variants
             'auth-no-registration' => self::authNoRegistration(),
@@ -739,11 +722,6 @@ final readonly class InstallerScenario
     public function hasNotifications(): bool
     {
         return $this->hasFeature('notifications');
-    }
-
-    public function hasReporting(): bool
-    {
-        return $this->hasFeature('reporting');
     }
 
     public function hasLocalization(): bool
@@ -870,11 +848,6 @@ final readonly class InstallerScenario
             $paths[] = 'resources/js/pages/audit-trails/index.tsx';
         }
 
-        if ($this->hasReporting()) {
-            $paths[] = 'app/Http/Controllers/Reporting/ReportIndexController.php';
-            $paths[] = 'resources/js/pages/reports/index.tsx';
-        }
-
         if ($this->hasLocalization()) {
             $paths[] = 'app/Http/Middleware/HandleLocale.php';
             $paths[] = 'app/Http/Controllers/LocaleController.php';
@@ -929,11 +902,6 @@ final readonly class InstallerScenario
             $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails';
             $paths[] = 'resources/js/pages/audit-trails';
-        }
-
-        if (! $this->hasReporting()) {
-            $paths[] = 'app/Http/Controllers/Reporting';
-            $paths[] = 'resources/js/pages/reports';
         }
 
         if (! $this->hasLocalization()) {

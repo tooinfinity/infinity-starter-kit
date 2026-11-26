@@ -15,14 +15,12 @@ beforeEach(function (): void {
 test('dependency map is properly defined and has expected structure', function (): void {
     expect($this->dependencies)->toBeArray()
         ->and($this->dependencies)->toHaveKeys([
-            'reporting',
             'audit-trails',
             'user-management',
             'settings',
         ]);
 
-    expect($this->dependencies['reporting'])->toContain('audit-trails', 'user-management', 'authorization')
-        ->and($this->dependencies['audit-trails'])->toContain('authorization')
+    expect($this->dependencies['audit-trails'])->toContain('authorization')
         ->and($this->dependencies['user-management'])->toContain('authorization')
         ->and($this->dependencies['settings'])->toContain('authorization');
 });
@@ -42,18 +40,6 @@ test('chiselValidateDependencies rejects missing required dependencies', functio
     expect(fn () => chiselValidateDependencies($answers, $this->dependencies))
         ->toThrow(RuntimeException::class, $expectedMessage);
 })->with([
-    'reporting without audit-trails' => [
-        ['reporting', 'user-management', 'authorization'],
-        'The "reporting" feature requires the following feature(s): audit-trails.',
-    ],
-    'reporting without user-management' => [
-        ['reporting', 'audit-trails', 'authorization'],
-        'The "reporting" feature requires the following feature(s): user-management.',
-    ],
-    'reporting without authorization' => [
-        ['reporting', 'audit-trails', 'user-management'],
-        'The "reporting" feature requires the following feature(s): authorization.',
-    ],
     'audit-trails without authorization' => [
         ['audit-trails'],
         'The "audit-trails" feature requires the following feature(s): authorization.',
@@ -84,7 +70,6 @@ test('chiselValidateDependencies accepts valid combinations', function (array $m
         'localization',
         'notifications',
         'audit-trails',
-        'reporting',
     ]],
     'authorization only' => [['authorization']],
     'localization only' => [['localization']],
@@ -93,10 +78,9 @@ test('chiselValidateDependencies accepts valid combinations', function (array $m
     'authorization and settings' => [['authorization', 'settings']],
     'authorization and user-management' => [['authorization', 'user-management']],
     'authorization and audit-trails' => [['authorization', 'audit-trails']],
-    'authorization, audit-trails, user-management and reporting' => [[
+    'authorization, audit-trails, and user-management' => [[
         'authorization',
         'audit-trails',
         'user-management',
-        'reporting',
     ]],
 ]);

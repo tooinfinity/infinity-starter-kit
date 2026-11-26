@@ -69,7 +69,6 @@ final readonly class Profile
                     'localization',
                     'notifications',
                     'audit-trails',
-                    'reporting',
                 ],
             ],
             default => throw new InvalidArgumentException(sprintf(
@@ -173,11 +172,6 @@ final readonly class Profile
         return $this->hasFeature('notifications');
     }
 
-    public function hasReporting(): bool
-    {
-        return $this->hasFeature('reporting');
-    }
-
     public function hasLocalization(): bool
     {
         return $this->hasFeature('localization');
@@ -240,12 +234,7 @@ final readonly class Profile
             $paths[] = 'resources/js/pages/audit-trails/index.tsx';
         }
 
-        if ($this->hasReporting()) {
-            $paths[] = 'app/Http/Controllers/Reporting/ReportIndexController.php';
-            $paths[] = 'resources/js/pages/reports/index.tsx';
-        }
-
-        if ($this->hasReporting() || $this->hasUserManagement()) {
+        if ($this->hasUserManagement()) {
             $paths[] = 'config/data.php';
         }
 
@@ -302,12 +291,7 @@ final readonly class Profile
             $paths[] = 'resources/js/pages/audit-trails';
         }
 
-        if (! $this->hasReporting()) {
-            $paths[] = 'app/Http/Controllers/Reporting';
-            $paths[] = 'resources/js/pages/reports';
-        }
-
-        if (! $this->hasReporting() && ! $this->hasUserManagement()) {
+        if (! $this->hasUserManagement()) {
             $paths[] = 'config/data.php';
         }
 
@@ -427,10 +411,6 @@ final readonly class Profile
 
         if (! $this->hasNotifications()) {
             $tokens[] = 'NotificationPreference';
-        }
-
-        if (! $this->hasReporting()) {
-            $tokens[] = 'ReportIndexController';
         }
 
         if (! $this->hasLocalization()) {

@@ -22,7 +22,7 @@ function isValidCombination(array $answers): bool
 {
     $auth = $answers['auth_features'] ?? [];
     $modules = $answers['optional_modules'] ?? [];
-    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails', 'reporting'];
+    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails'];
 
     if (! in_array('login', $auth, true) && array_intersect($modules, $modulesRequiringLogin) !== []) {
         return false;
@@ -47,22 +47,9 @@ function isValidCombination(array $answers): bool
 function resolveDependencies(array $auth, array $modules): array
 {
     // If any auth feature is chosen, or any module requiring authentication, login is required
-    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails', 'reporting'];
+    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails'];
     if (($auth !== [] || array_intersect($modules, $modulesRequiringLogin) !== []) && ! in_array('login', $auth, true)) {
         $auth[] = 'login';
-    }
-
-    // Reporting requires audit-trails, user-management, authorization
-    if (in_array('reporting', $modules, true)) {
-        if (! in_array('audit-trails', $modules, true)) {
-            $modules[] = 'audit-trails';
-        }
-        if (! in_array('user-management', $modules, true)) {
-            $modules[] = 'user-management';
-        }
-        if (! in_array('authorization', $modules, true)) {
-            $modules[] = 'authorization';
-        }
     }
 
     // Settings, user-management, audit-trails require authorization
@@ -107,11 +94,7 @@ function getFastCombinations(array $allAuth, array $allModules): array
         $modules = array_values(array_diff($allModules, [$module]));
         // If authorization is turned off, dependent modules must also be turned off
         if ($module === 'authorization') {
-            $modules = array_values(array_diff($modules, ['settings', 'user-management', 'audit-trails', 'reporting']));
-        }
-        // If user-management or audit-trails is turned off, reporting must also be turned off
-        if ($module === 'user-management' || $module === 'audit-trails') {
-            $modules = array_values(array_diff($modules, ['reporting']));
+            $modules = array_values(array_diff($modules, ['settings', 'user-management', 'audit-trails']));
         }
 
         $combos[] = [
@@ -221,23 +204,15 @@ function getPairwiseCombinations(array $allAuth, array $allModules): array
                     }
 
                     // e.g. settings = 1, authorization = 0
-                    if ($valA === 1 && in_array($featA, ['settings', 'user-management', 'audit-trails', 'reporting'], true) && $featB === 'authorization' && $valB === 0) {
+                    if ($valA === 1 && in_array($featA, ['settings', 'user-management', 'audit-trails'], true) && $featB === 'authorization' && $valB === 0) {
                         continue;
                     }
-                    if ($valB === 1 && in_array($featB, ['settings', 'user-management', 'audit-trails', 'reporting'], true) && $featA === 'authorization' && $valA === 0) {
-                        continue;
-                    }
-
-                    // e.g. reporting = 1, audit-trails/user-management = 0
-                    if ($valA === 1 && $featA === 'reporting' && in_array($featB, ['audit-trails', 'user-management'], true) && $valB === 0) {
-                        continue;
-                    }
-                    if ($valB === 1 && $featB === 'reporting' && in_array($featA, ['audit-trails', 'user-management'], true) && $valA === 0) {
+                    if ($valB === 1 && in_array($featB, ['settings', 'user-management', 'audit-trails'], true) && $featA === 'authorization' && $valA === 0) {
                         continue;
                     }
 
                     // e.g. module requiring login = 1, but login = 0
-                    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails', 'reporting'];
+                    $modulesRequiringLogin = ['authorization', 'settings', 'user-management', 'notifications', 'audit-trails'];
                     if ($valA === 1 && in_array($featA, $modulesRequiringLogin, true) && $featB === 'login' && $valB === 0) {
                         continue;
                     }
