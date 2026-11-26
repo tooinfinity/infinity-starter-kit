@@ -16,3 +16,8 @@
 - Chisel supports dry-run mode: `php artisan install:features --dry-run`.
 - Dry-run mode resolves features, validates dependencies, and previews planned mutations with **zero filesystem or database side effects**.
 - Always verify feature combinations (e.g. `bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":[]}'`) when modifying installer-related logic or feature paths to ensure full test suite coverage for pruning flows.
+
+## Initial Generation vs. Runtime Feature Disabling
+
+- **Initial project generation (`install:features`)**: An unselected optional feature should not leave its exclusive Composer dependency or exclusive configuration/migrations in the generated application. Chisel's `ComposerManifestPruner` removes unselected packages and syncs `composer.lock`.
+- **Runtime feature disabling**: Disabling a feature in an already-generated application (via runtime settings, permissions, or feature flags) must **never** automatically uninstall Composer packages or drop database tables. Runtime disabling preserves infrastructure and stored data.

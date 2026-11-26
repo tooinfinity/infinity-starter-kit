@@ -242,9 +242,17 @@ test('validatePostCleanup checks spatie/laravel-activitylog removal when audit-t
     try {
         $context = makeContext(selectedModules: ['authorization']); // authorization on, audit-trails off
 
-        // spatie/laravel-activitylog still present
+        // spatie/laravel-activitylog still present in require
         File::put($tempDir.'/composer.json', json_encode([
             'require' => ['php' => '^8.2', 'spatie/laravel-permission' => '^6.0', 'spatie/laravel-activitylog' => '^5.1.5'],
+        ]));
+        expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir))
+            ->toThrow(RuntimeException::class, 'spatie/laravel-activitylog was not removed when audit-trails is disabled.');
+
+        // spatie/laravel-activitylog still present in require-dev
+        File::put($tempDir.'/composer.json', json_encode([
+            'require' => ['php' => '^8.2', 'spatie/laravel-permission' => '^6.0'],
+            'require-dev' => ['spatie/laravel-activitylog' => '^5.1.5'],
         ]));
         expect(fn () => GeneratedApplicationValidator::validatePostCleanup($context, true, $tempDir))
             ->toThrow(RuntimeException::class, 'spatie/laravel-activitylog was not removed when audit-trails is disabled.');

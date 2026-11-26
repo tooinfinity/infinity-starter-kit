@@ -371,10 +371,13 @@ In a UUID-primary-key application, polymorphic tables must consistently store st
 
 > **Note on Subject Key Compatibility**: While `causer_id` strictly requires UUID format (users use `HasUuids`), `subject_id` must use an explicit nullable string column (alongside string `subject_type` and their composite index) rather than Blueprint `morphs()`/`nullableMorphs()` helpers, in order to safely support both UUIDs and existing string/integer model keys (such as `"42"`). Attempting to enforce UUID on `subject_id` would trigger fatal casting exceptions in PostgreSQL (`invalid input syntax for type uuid`).
 
-### 6.2 Data Migration Principles for Phases 1 & 2
+### 6.2 Data Migration & Feature Lifecycle Principles for Phases 1 & 2
 1. **Never Drop Existing Data**: Any migration transitioning from `audit_trails` to `activity_log` or updating `settings` must transfer all rows before altering or retiring old tables.
 2. **Idempotence**: Migrations must check for existing records and table states using `Schema::hasTable()` and `Schema::hasColumn()`.
 3. **Rollback Safety**: Every migration must define an explicit recovery path or backward-compatible schema view.
+4. **Initial Generation vs. Runtime Feature Disabling**:
+   - **Initial Project Generation (`install:features`)**: An unselected optional feature must not leave its exclusive Composer dependencies or configuration/migration artifacts in the generated project. Chisel's `ComposerManifestPruner` removes unselected packages and synchronizes `composer.lock`.
+   - **Runtime Feature Disabling in Generated Applications**: Disabling an optional feature in an already-installed application (via runtime configuration, permissions, or feature flags) must **never** automatically uninstall Composer dependencies or drop database tables. Runtime disabling preserves infrastructure, operational stability, and stored records.
 
 ---
 
