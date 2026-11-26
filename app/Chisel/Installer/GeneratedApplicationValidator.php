@@ -191,15 +191,23 @@ final class GeneratedApplicationValidator
 
         if (! in_array('authorization', $context->selectedModules, true)) {
             throw_if(
-                isset($composerRequire['spatie/laravel-permission']),
+                isset($composerRequire['spatie/laravel-permission']) || isset($composerRequireDev['spatie/laravel-permission']),
                 RuntimeException::class,
                 'Post-cleanup validation failed: spatie/laravel-permission was not removed when authorization is disabled.',
             );
         }
 
+        if (! in_array('audit-trails', $context->selectedModules, true)) {
+            throw_if(
+                isset($composerRequire['spatie/laravel-activitylog']) || isset($composerRequireDev['spatie/laravel-activitylog']),
+                RuntimeException::class,
+                'Post-cleanup validation failed: spatie/laravel-activitylog was not removed when audit-trails is disabled.',
+            );
+        }
+
         if (! in_array('localization', $context->selectedModules, true)) {
             throw_if(
-                isset($composerRequire['erag/laravel-lang-sync-inertia']),
+                isset($composerRequire['erag/laravel-lang-sync-inertia']) || isset($composerRequireDev['erag/laravel-lang-sync-inertia']),
                 RuntimeException::class,
                 'Post-cleanup validation failed: erag/laravel-lang-sync-inertia was not removed when localization is disabled.',
             );
