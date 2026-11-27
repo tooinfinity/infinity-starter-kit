@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Chisel\FeatureRegistry;
+
 test('all chisel markers in repository are well-formed and properly paired', function (): void {
     $command = 'git ls-files -c -o --exclude-standard';
     $output = shell_exec($command);
@@ -90,17 +92,36 @@ test('all marker tags have corresponding handlers in chisel.php', function (): v
                 continue;
             }
 
-            $tagsInRepo[$tag] = true;
+            $tagsInRepo[$tag][] = $file;
         }
     }
 
     $chiselScript = (string) file_get_contents(base_path('chisel.php'));
+    $registryMarkers = [];
+    foreach (FeatureRegistry::all() as $feature) {
+        if ($feature->sectionMarker !== null) {
+            $registryMarkers[$feature->sectionMarker] = $feature;
+        }
+    }
 
-    foreach (array_keys($tagsInRepo) as $tag) {
-        $hasHandler = str_contains($chiselScript, "'{$tag}'")
+    foreach ($tagsInRepo as $tag => $sourceFiles) {
+        if (isset($registryMarkers[$tag])) {
+            $feature = $registryMarkers[$tag];
+            foreach ($sourceFiles as $sourceFile) {
+                // If the file is not exclusive to this feature, it must be declared in markerFiles to be properly unwrapped/removed
+                if (! in_array($sourceFile, $feature->exclusiveFiles, true)) {
+                    expect(in_array($sourceFile, $feature->markerFiles, true))
+                        ->toBeTrue("Marker tag '{$tag}' in '{$sourceFile}' is managed by feature [{$feature->key}] but '{$sourceFile}' is missing from markerFiles.");
+                }
+            }
+
+            continue;
+        }
+
+        $hasDirectHandler = str_contains($chiselScript, "'{$tag}'")
             || str_contains($chiselScript, "\"{$tag}\"");
 
-        expect($hasHandler)->toBeTrue("Marker tag '{$tag}' found in codebase has no handler in chisel.php");
+        expect($hasDirectHandler)->toBeTrue("Marker tag '{$tag}' found in codebase has no handler in chisel.php or FeatureRegistry");
     }
 });
 

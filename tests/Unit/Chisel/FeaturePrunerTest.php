@@ -124,3 +124,63 @@ test('feature pruner pruneUnselected removes sections, deletes exclusive files, 
     $packageContent = json_decode((string) file_get_contents($packageFile), true);
     expect($packageContent['dependencies'] ?? [])->not->toHaveKey('npm-dummy');
 });
+
+test('feature pruner register wires selected and unselected callbacks with beforePrune and afterPrune hooks', function (): void {
+    $file = $this->tempDir.'/feature.php';
+    $openTag = '/* @'.'chisel-alpha */';
+    $closeTag = '/* @'.'end-chisel-alpha */';
+    $betaOpen = '/* @'.'chisel-beta */';
+    $betaClose = '/* @'.'end-chisel-beta */';
+    file_put_contents($file, "{$openTag}\nalpha();\n{$closeTag}\n{$betaOpen}\nbeta();\n{$betaClose}\n");
+
+    $features = [
+        'alpha' => new FeatureDefinition(
+            key: 'alpha',
+            label: 'Alpha',
+            sectionMarker: 'alpha',
+            markerFiles: ['feature.php'],
+        ),
+        'beta' => new FeatureDefinition(
+            key: 'beta',
+            label: 'Beta',
+            sectionMarker: 'beta',
+            markerFiles: ['feature.php'],
+        ),
+    ];
+
+    $events = [];
+    $script = Chisel::script($this->tempDir);
+    FeaturePruner::register(
+        $script,
+        'modules',
+        $features,
+        $this->tempDir,
+        beforePrune: [
+            'alpha' => static function () use (&$events): void {
+                $events[] = 'alpha:before';
+            },
+            'beta' => static function (Chisel $chisel) use (&$events, $file): void {
+                $events[] = 'beta:before';
+                expect($chisel)->toBeInstanceOf(Chisel::class)
+                    ->and((string) file_get_contents($file))->toContain('beta();');
+            },
+        ],
+        afterPrune: [
+            'alpha' => static function () use (&$events): void {
+                $events[] = 'alpha:after';
+            },
+            'beta' => static function () use (&$events, $file): void {
+                $events[] = 'beta:after';
+                expect((string) file_get_contents($file))->not->toContain('beta();');
+            },
+        ],
+    );
+
+    $script->chisel(['modules' => ['alpha']]);
+
+    $content = (string) file_get_contents($file);
+    expect($content)->toContain('alpha();')
+        ->and($content)->not->toContain('@'.'chisel-alpha')
+        ->and($content)->not->toContain('beta();')
+        ->and($events)->toBe(['beta:before', 'beta:after']);
+});
