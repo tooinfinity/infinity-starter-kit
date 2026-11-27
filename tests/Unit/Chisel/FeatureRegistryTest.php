@@ -274,7 +274,6 @@ test('FeatureRegistry options and defaults derive directly from feature definiti
             'localization' => 'Localization',
             'notifications' => 'Notifications',
             'audit-trails' => 'Audit Trails',
-            'reporting' => 'Reporting',
         ])->and(FeatureRegistry::defaults($optionalModules))->toBe(array_keys($optionalModules));
 });
 
