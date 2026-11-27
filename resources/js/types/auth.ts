@@ -21,14 +21,3 @@ export type Auth = {
     roles: string[];
     /* @end-chisel-roles-permissions */
 };
-
-/* @chisel-two-factor */
-export type TwoFactorSetupData = {
-    svg: string;
-    url: string;
-};
-
-export type TwoFactorSecretKey = {
-    secretKey: string;
-};
-/* @end-chisel-two-factor */

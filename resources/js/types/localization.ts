@@ -6,3 +6,12 @@ export type LocaleOption = {
     nativeName: string;
     direction: Direction;
 };
+
+declare global {
+    interface SharedPageProps {
+        locale: string;
+        direction: Direction;
+        supportedLocales: LocaleOption[];
+        lang?: Record<string, unknown>;
+    }
+}
