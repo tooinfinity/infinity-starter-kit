@@ -1,7 +1,15 @@
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor';
-import type { TwoFactorSecretKey, TwoFactorSetupData } from '@/types';
+
+export type TwoFactorSetupData = {
+    svg: string;
+    url: string;
+};
+
+export type TwoFactorSecretKey = {
+    secretKey: string;
+};
 
 export type UseTwoFactorAuthReturn = {
     qrCodeSvg: string | null;

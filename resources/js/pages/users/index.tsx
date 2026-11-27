@@ -55,12 +55,8 @@ import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import { formatDate } from '@/lib/formatters';
 import { create, edit, index } from '@/routes/users';
-import type {
-    BreadcrumbItem,
-    PaginatedUsers,
-    UserFilters,
-    UserListItem,
-} from '@/types';
+import type { BreadcrumbItem } from '@/types';
+import type { PaginatedUsers, UserFilters, UserListItem } from '@/types/users';
 
 export default function UsersIndex({
     users,

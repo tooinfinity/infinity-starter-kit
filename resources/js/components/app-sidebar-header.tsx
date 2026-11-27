@@ -1,10 +1,5 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
-/* @chisel-localization */
-import { LanguageSelector } from '@/components/language-selector';
-/* @end-chisel-localization */
-/* @chisel-notifications */
-import { NotificationBell } from '@/components/notifications/notification-bell';
-/* @end-chisel-notifications */
+import { HeaderActions } from '@/components/header-actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
@@ -21,12 +16,7 @@ export function AppSidebarHeader({
             </div>
 
             <div className="flex items-center gap-2">
-                {/* @chisel-notifications */}
-                <NotificationBell />
-                {/* @end-chisel-notifications */}
-                {/* @chisel-localization */}
-                <LanguageSelector />
-                {/* @end-chisel-localization */}
+                <HeaderActions />
             </div>
         </header>
     );

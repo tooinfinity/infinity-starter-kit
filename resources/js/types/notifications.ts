@@ -42,3 +42,9 @@ export type NotificationsSharedData = {
     unreadCount: number;
     recent?: NotificationItem[];
 };
+
+declare global {
+    interface SharedPageProps {
+        notifications: NotificationsSharedData;
+    }
+}

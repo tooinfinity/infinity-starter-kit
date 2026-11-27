@@ -21,7 +21,8 @@ import { UserStatusBadge } from '@/components/users/user-status-badge';
 import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import { edit, index } from '@/routes/users';
-import type { BreadcrumbItem, UserListItem } from '@/types';
+import type { BreadcrumbItem } from '@/types';
+import type { UserListItem } from '@/types/users';
 
 export default function UsersEdit({
     user,

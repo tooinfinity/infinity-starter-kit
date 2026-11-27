@@ -16,7 +16,8 @@ import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/settings';
-import type { ApplicationSettings, BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem } from '@/types';
+import type { ApplicationSettings } from '@/types/settings';
 
 const commonTimezones = [
     'UTC',

@@ -15,7 +15,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { update as updateLocale } from '@/routes/locale';
-import type { LocaleOption } from '@/types';
+import type { LocaleOption } from '@/types/localization';
 
 export function LanguageSelector() {
     const { locale, supportedLocales } = usePage().props;
