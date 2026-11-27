@@ -616,6 +616,17 @@ it('handles removing user-management leaving no broken imports, routes, or front
         $typesContent = (string) file_get_contents($dir.'/resources/js/types/index.ts');
         expect($typesContent)->not->toContain('./users');
 
+        $userModel = (string) file_get_contents($dir.'/app/Models/User.php');
+        expect($userModel)
+            ->not->toContain('use App\Enums\Role;')
+            ->not->toContain('function canManage(')
+            ->not->toContain("'is_active'")
+            ->toContain('use HasRoles;')
+            ->toContain('HasLocalePreference')
+            ->toContain('MustVerifyEmail')
+            ->toContain('use TwoFactorAuthenticatable;')
+            ->toContain('function notificationPreferences(');
+
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);
     } finally {
@@ -667,8 +678,14 @@ it('handles auth combinations: email-verification OFF, two-factor OFF, registrat
             ->and(file_exists($dir.'/app/Http/Controllers/UserTwoFactorAuthenticationController.php'))->toBeFalse();
 
         $userModel = (string) file_get_contents($dir.'/app/Models/User.php');
-        expect($userModel)->not->toContain('implements MustVerifyEmail')
-            ->and($userModel)->not->toContain('use TwoFactorAuthenticatable');
+        expect($userModel)
+            ->not->toContain('implements MustVerifyEmail')
+            ->not->toContain('implements')
+            ->not->toContain('$email_verified_at')
+            ->not->toContain('use TwoFactorAuthenticatable')
+            ->not->toContain('two_factor_secret')
+            ->not->toContain('two_factor_recovery_codes')
+            ->not->toContain('two_factor_confirmed_at');
 
         $registrationRequest = (string) file_get_contents($dir.'/app/Http/Requests/CreateUserRequest.php');
         $registrationController = (string) file_get_contents($dir.'/app/Http/Controllers/RegisterController.php');
@@ -1050,3 +1067,31 @@ it('verifies individual optional module removal preserves other modules and clea
     'localization removed' => ['localization'],
     'settings removed' => ['settings'],
 ]);
+
+it('preserves User model localization interface when email-verification is disabled', function (): void {
+    $sandbox = runChiselSandbox([
+        'auth_features' => ['login', 'logout'],
+        'optional_modules' => ['localization'],
+    ]);
+
+    try {
+        $dir = $sandbox['dir'];
+
+        $userModel = (string) file_get_contents($dir.'/app/Models/User.php');
+        expect($userModel)
+            ->toContain('implements HasLocalePreference')
+            ->toContain('@property-read Locale|null $locale')
+            ->toContain('function preferredLocale(')
+            ->toContain("'locale' => Locale::class")
+            ->not->toContain('MustVerifyEmail')
+            ->not->toContain('$email_verified_at')
+            ->not->toContain('TwoFactorAuthenticatable')
+            ->not->toContain('HasRoles')
+            ->not->toContain('notificationPreferences');
+
+        assertNoOrphanedMarkersInSandbox($dir);
+        assertPhpSyntaxValid($dir);
+    } finally {
+        ($sandbox['cleanup'])();
+    }
+});
