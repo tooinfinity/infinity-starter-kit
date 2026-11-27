@@ -48,8 +48,7 @@ test('generateOptionalModulesTable generates table containing all registered opt
         ->and($table)->toContain('| **User Management** | `user-management` |')
         ->and($table)->toContain('| **Localization** | `localization` |')
         ->and($table)->toContain('| **Notifications** | `notifications` |')
-        ->and($table)->toContain('| **Audit Trails** | `audit-trails` |')
-        ->and($table)->toContain('| **Reporting** | `reporting` |');
+        ->and($table)->toContain('| **Audit Trails** | `audit-trails` |');
 });
 
 test('updateContent replaces content between start and end markers', function (): void {

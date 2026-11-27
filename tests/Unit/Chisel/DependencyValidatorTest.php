@@ -19,11 +19,10 @@ test('dependency validator accepts completely valid combinations', function (arr
         'localization',
         'notifications',
         'audit-trails',
-        'reporting',
     ]],
     'authorization only' => [['authorization']],
     'audit-trails with authorization' => [['authorization', 'audit-trails']],
-    'reporting with audit, users, and auth' => [['authorization', 'user-management', 'audit-trails', 'reporting']],
+    'user-management with authorization' => [['authorization', 'user-management']],
 ]);
 
 test('dependency validator rejects module with missing single dependency', function (): void {
@@ -31,19 +30,30 @@ test('dependency validator rejects module with missing single dependency', funct
         ->toThrow(RuntimeException::class, 'The "settings" feature requires the following feature(s): authorization.');
 });
 
-test('dependency validator rejects module with multiple missing dependencies and lists all missing', function (): void {
-    expect(fn () => DependencyValidator::validate(['optional_modules' => ['reporting']]))
-        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): audit-trails, user-management, authorization.');
+test('dependency validator rejects multiple modules with missing dependencies and lists all missing', function (): void {
+    $custom = [
+        'authorization' => new FeatureDefinition(key: 'authorization', label: 'Authorization'),
+        'audit-trails' => new FeatureDefinition(key: 'audit-trails', label: 'Audit Trails', dependencies: ['authorization']),
+        'analytics' => new FeatureDefinition(key: 'analytics', label: 'Analytics', dependencies: ['audit-trails', 'authorization']),
+    ];
+
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['analytics']], $custom))
+        ->toThrow(RuntimeException::class, 'The "analytics" feature requires the following feature(s): audit-trails, authorization.');
 });
 
 test('dependency validator rejects cross-feature dependency chain when intermediary is missing', function (): void {
-    // reporting has authorization and audit-trails, but user-management is missing
-    $answers = [
-        'optional_modules' => ['authorization', 'audit-trails', 'reporting'],
+    $custom = [
+        'authorization' => new FeatureDefinition(key: 'authorization', label: 'Authorization'),
+        'audit-trails' => new FeatureDefinition(key: 'audit-trails', label: 'Audit Trails', dependencies: ['authorization']),
+        'analytics' => new FeatureDefinition(key: 'analytics', label: 'Analytics', dependencies: ['audit-trails', 'authorization']),
     ];
 
-    expect(fn () => DependencyValidator::validate($answers))
-        ->toThrow(RuntimeException::class, 'The "reporting" feature requires the following feature(s): user-management.');
+    $answers = [
+        'optional_modules' => ['authorization', 'analytics'],
+    ];
+
+    expect(fn () => DependencyValidator::validate($answers, $custom))
+        ->toThrow(RuntimeException::class, 'The "analytics" feature requires the following feature(s): audit-trails.');
 });
 
 test('dependency validator works with custom FeatureDefinition instances', function (): void {
@@ -311,16 +321,15 @@ test('validateDefinitions accepts raw array definitions when all targets are reg
 
 test('validate rejects partial legacy dependency map with unknown dependency target', function (): void {
     $legacyMap = [
-        'reporting' => ['does-not-exist'],
+        'audit-trails' => ['does-not-exist'],
     ];
 
-    expect(fn () => DependencyValidator::validate(['optional_modules' => ['reporting']], $legacyMap))
-        ->toThrow(RuntimeException::class, 'Feature "reporting" declares unknown dependency "does-not-exist".');
+    expect(fn () => DependencyValidator::validate(['optional_modules' => ['audit-trails']], $legacyMap))
+        ->toThrow(RuntimeException::class, 'Feature "audit-trails" declares unknown dependency "does-not-exist".');
 });
 
 test('validate accepts partial legacy dependency map with known registered targets and verifies missing dependencies', function (): void {
     $legacyMap = [
-        'reporting' => ['audit-trails', 'user-management', 'authorization'],
         'audit-trails' => ['authorization'],
         'user-management' => ['authorization'],
         'settings' => ['authorization'],

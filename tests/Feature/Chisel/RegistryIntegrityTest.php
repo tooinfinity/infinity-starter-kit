@@ -55,7 +55,6 @@ test('all dependencies in dependency map refer to valid declared modules', funct
         'localization',
         'notifications',
         'audit-trails',
-        'reporting',
     ];
 
     foreach ($paths['dependencies'] as $feature => $required) {
@@ -78,7 +77,6 @@ test('all cross-feature test files exist and refer to valid features', function 
         'localization',
         'notifications',
         'audit-trails',
-        'reporting',
     ];
 
     foreach ($paths['cross_feature_tests'] as $entry) {
@@ -141,7 +139,6 @@ test('all localization and language files are consistently declared and accounte
     $localization = FeatureRegistry::optionalModules()['localization'];
     $notifications = FeatureRegistry::optionalModules()['notifications'];
     $auditTrails = FeatureRegistry::optionalModules()['audit-trails'];
-    $reporting = FeatureRegistry::optionalModules()['reporting'];
 
     expect($localization->exclusiveFiles)->toContain('lang/en/localization.php')
         ->and($localization->exclusiveFiles)->toContain('lang/fr/common.php')
@@ -154,10 +151,6 @@ test('all localization and language files are consistently declared and accounte
     expect($auditTrails->exclusiveFiles)->toContain('lang/en/audit.php')
         ->and($auditTrails->exclusiveFiles)->toContain('lang/fr/audit.php')
         ->and($auditTrails->exclusiveFiles)->toContain('lang/ar/audit.php');
-
-    expect($reporting->exclusiveFiles)->toContain('lang/en/reports.php')
-        ->and($reporting->exclusiveFiles)->toContain('lang/fr/reports.php')
-        ->and($reporting->exclusiveFiles)->toContain('lang/ar/reports.php');
 
     // Verify all physical files in lang/ are registered
     $rdi = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('lang')));
@@ -179,8 +172,7 @@ test('all localization and language files are consistently declared and accounte
 
         $isAccounted = in_array($relPath, $localization->exclusiveFiles, true)
             || in_array($relPath, $notifications->exclusiveFiles, true)
-            || in_array($relPath, $auditTrails->exclusiveFiles, true)
-            || in_array($relPath, $reporting->exclusiveFiles, true);
+            || in_array($relPath, $auditTrails->exclusiveFiles, true);
 
         expect($isAccounted)->toBeTrue("Translation file [{$relPath}] exists on disk but is not registered in any feature's exclusiveFiles.");
     }

@@ -6,7 +6,7 @@ use App\Chisel\FeatureRegistry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-test('feature registry contains all six core features evaluated in package strategy audit', function (): void {
+test('feature registry contains all five core features evaluated in package strategy audit', function (): void {
     $features = FeatureRegistry::all();
 
     expect($features)->toHaveKeys([
@@ -15,7 +15,6 @@ test('feature registry contains all six core features evaluated in package strat
         'user-management',
         'notifications',
         'audit-trails',
-        'reporting',
     ]);
 });
 
@@ -25,12 +24,6 @@ test('inter-feature dependency map satisfies package strategy architecture invar
     expect($features['settings']->dependencies)->toContain('authorization');
     expect($features['user-management']->dependencies)->toContain('authorization');
     expect($features['audit-trails']->dependencies)->toContain('authorization');
-
-    expect($features['reporting']->dependencies)->toEqualCanonicalizing([
-        'audit-trails',
-        'user-management',
-        'authorization',
-    ]);
 });
 
 test('all exclusive and marker files for audited features exist on disk', function (): void {
@@ -40,7 +33,6 @@ test('all exclusive and marker files for audited features exist on disk', functi
         'user-management',
         'notifications',
         'audit-trails',
-        'reporting',
     ];
 
     foreach ($auditedKeys as $key) {
@@ -132,21 +124,6 @@ test('record audit trail redacts sensitive fields and credentials by design when
     expect($redacted['api_key'])->toBe('[REDACTED]');
     expect($redacted['nested']['oauth_token'])->toBe('[REDACTED]');
     expect($redacted['nested']['public_field'])->toBe('visible-data');
-});
-
-test('time bucket sql supports all required relational database dialects when installed', function (): void {
-    $timeBucketClass = 'App\\Queries\\Reporting\\'.'TimeBucketSql';
-    if (! class_exists($timeBucketClass)) {
-        return;
-    }
-
-    $drivers = ['sqlite', 'pgsql', 'sqlsrv', 'mysql'];
-
-    foreach ($drivers as $driver) {
-        $sql = $timeBucketClass::forDriver($driver, 'created_at');
-        expect($sql)->toBeString()
-            ->and($sql)->not->toBeEmpty();
-    }
 });
 
 test('package strategy baseline audit documentation exists and contains all required sections', function (): void {

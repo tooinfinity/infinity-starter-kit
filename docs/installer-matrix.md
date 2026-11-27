@@ -35,7 +35,7 @@ Run a verification check for a single feature combination by providing its answe
 bash scripts/verify-combo.sh '{"auth_features":["login","logout"],"optional_modules":[]}'
 
 # Verify full combination with all optional modules
-bash scripts/verify-combo.sh '{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails","reporting"]}'
+bash scripts/verify-combo.sh '{"auth_features":["login","logout","registration","email-verification","password-reset","password-update","two-factor"],"optional_modules":["authorization","settings","user-management","localization","notifications","audit-trails"]}'
 ```
 
 ### Fast Matrix Combinations
@@ -64,17 +64,16 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `minimal` | Minimal Profile | Profile | `login`, `logout` | _(none)_ | Default | Success (Exit 0), all optional modules pruned | Combination |
 | `default` | Default Profile | Profile | Standard auth (6 features) | `authorization`, `settings`, `user-management`, `notifications` | Admin credentials provided | Success (Exit 0), admin created, secret redacted | Combination |
-| `full` | Full Profile | Profile | All auth (incl. `two-factor`) | All optional modules (7 modules) | Admin credentials provided | Success (Exit 0), full stack verified | Combination |
-| `auth-minimal` | Auth-Minimal Profile | Profile | `login`, `logout` | All optional modules (7 modules) | Default | Success (Exit 0), modules work with minimal auth | Feature / Combination |
+| `full` | Full Profile | Profile | All auth (incl. `two-factor`) | All optional modules (6 modules) | Admin credentials provided | Success (Exit 0), full stack verified | Combination |
+| `auth-minimal` | Auth-Minimal Profile | Profile | `login`, `logout` | All optional modules (6 modules) | Default | Success (Exit 0), modules work with minimal auth | Feature / Combination |
 | `no-modules` | No Optional Modules | Profile | All auth (incl. `two-factor`) | _(none)_ | Default | Success (Exit 0), clean auth-only application | Feature / Combination |
-| `dependency-heavy` | Dependency-Heavy | Profile | `login`, `logout` | `authorization`, `user-management`, `audit-trails`, `reporting` | Chained dependency resolution | Success (Exit 0), all transitives retained | Feature / Combination |
+| `dependency-heavy` | Dependency-Heavy | Profile | `login`, `logout` | `authorization`, `user-management`, `audit-trails` | Modules requiring Authorization | Success (Exit 0), all transitives retained | Feature / Combination |
 | `module-authorization` | Authorization Alone | Module | `login`, `logout` | `authorization` | Standalone module | Success (Exit 0), roles & permissions retained | Feature / Integration |
 | `module-settings` | Settings Module | Module | `login`, `logout` | `authorization`, `settings` | Required dependency `authorization` | Success (Exit 0), settings schema & UI retained | Feature / Integration |
 | `module-user-management`| User Management Module | Module | `login`, `logout` | `authorization`, `user-management` | Required dependency `authorization` | Success (Exit 0), user directory retained | Feature / Integration |
 | `module-localization` | Localization Module | Module | `login`, `logout` | `localization` | Zero module dependencies | Success (Exit 0), `@erag` packages retained | Feature / Integration |
 | `module-notifications` | Notifications Module | Module | `login`, `logout` | `notifications` | Zero module dependencies | Success (Exit 0), notification channels retained | Feature / Integration |
 | `module-audit-trails` | Audit Trails Module | Module | `login`, `logout` | `authorization`, `audit-trails` | Required dependency `authorization` | Success (Exit 0), audit logging retained | Feature / Integration |
-| `module-reporting` | Reporting Module | Module | `login`, `logout` | `authorization`, `user-management`, `audit-trails`, `reporting` | Full analytics chain | Success (Exit 0), charts & CSV export retained | Feature / Integration |
 | `auth-no-registration` | Registration Disabled | Auth | All except `registration` | `authorization`, `user-management` | Invite-only setup | Success (Exit 0), registration route pruned | Feature / Integration |
 | `auth-no-email-verification` | Email Verification Disabled | Auth | All except `email-verification` | `authorization` | Direct login flow | Success (Exit 0), verification notice pruned | Feature / Integration |
 | `auth-no-password-reset` | Password Reset Disabled | Auth | All except `password-reset` | `authorization` | Managed passwords only | Success (Exit 0), reset routes pruned | Feature / Integration |
@@ -88,12 +87,12 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 | `admin-cli-options` | Admin via CLI Flags | Admin | `login`, `logout` | `authorization` | `--admin-*` flags | Success (Exit 0), options parsed properly | Feature / Integration |
 | `admin-answers-payload` | Admin via Answers JSON | Admin | `login`, `logout` | `authorization` | `admin` key in JSON | Success (Exit 0), payload parsed properly | Feature / Integration |
 | `failure-preflight` | Failure at Preflight | Failure | `login`, `logout` | `authorization` | `CHISEL_TEST_FAIL_STAGE=preflight` | Failure (Exit 1), zero filesystem mutations | Feature / Unit |
-| `failure-dependency-validation` | Missing Dependency Failure | Failure | `login`, `logout` | `reporting` only | Missing prerequisite modules | Failure (Exit 1), rejected with clear message | Unit / Feature |
+| `failure-dependency-validation` | Missing Dependency Failure | Failure | `login`, `logout` | `audit-trails` only | Missing prerequisite module | Failure (Exit 1), rejected with clear message | Unit / Feature |
 | `failure-post-chisel-resume` | Post-Chisel Recovery | Failure | `login`, `logout` | `authorization` | Deterministic fail + retry | Failure on run 1, clean recovery on run 2 | E2E / Feature |
 | `failure-post-migration` | Post-Migration Failure | Failure | `login`, `logout` | `authorization` | `CHISEL_TEST_FAIL_STAGE=post_migration` | Failure (Exit 1), state saved post-migration | Feature / Unit |
 | `failure-cleanup` | Cleanup Phase Failure | Failure | `login`, `logout` | `authorization` | `CHISEL_TEST_FAIL_STAGE=cleanup` | Failure (Exit 1), error recorded in cleanup | Feature / Unit |
 | `failure-conflicting-retry` | Conflicting Retry Rejection | Failure | `login`, `logout` | `authorization`, `settings` | Retrying with altered answers | Failure (Exit 1), conflict details printed | Feature / Unit |
-| `env-no-node` | No Node / Bun Mode | Environment | `login`, `logout` | `authorization`, `user-management`, `audit-trails`, `reporting` | `LARAVEL_INSTALLER_NO_NODE=true` | Success (Exit 0), skips node steps, manifests ok | E2E / Feature |
+| `env-no-node` | No Node / Bun Mode | Environment | `login`, `logout` | `authorization`, `user-management`, `audit-trails` | `LARAVEL_INSTALLER_NO_NODE=true` | Success (Exit 0), skips node steps, manifests ok | E2E / Feature |
 | `env-deferred-hooks` | Deferred Hooks Mode | Environment | `login`, `logout` | `authorization` | `LARAVEL_INSTALLER_DEFER_HOOKS=true` | Success (Exit 0), graceful exit | Feature / Integration |
 | `env-missing-chisel` | Missing Chisel Files | Environment | `login`, `logout` | _(none)_ | `chisel.php` absent | Success (Exit 0), graceful no-op | Feature / Integration |
 
@@ -117,14 +116,13 @@ vendor/bin/pest tests/Feature/Chisel/FeatureCombinationTest.php
 - **Localization**: Verified in `module-localization` (retains `erag/laravel-lang-sync-inertia` and `@erag/lang-sync-inertia`), disabled in `minimal`.
 - **Notifications**: Verified in `module-notifications`, disabled in `minimal`.
 - **Audit Trails**: Verified in `module-audit-trails`, disabled in `minimal`.
-- **Reporting**: Verified in `module-reporting` (retains `spatie/laravel-data` and reporting queries), disabled in `minimal`.
 
 ### 3. Representative Combined Profiles
 - Exercised in true E2E tests:
   - `minimal` (core auth only, zero optional modules);
   - `default` / `standard` (recommended configuration);
   - `full` (all auth + all optional modules);
-  - `dependency-heavy` (reporting + audit-trails + user-management + authorization);
+  - `dependency-heavy` (audit-trails + user-management + authorization);
   - `no-modules` (full auth, zero optional modules);
   - `auth-minimal` (minimal auth, full optional modules).
 

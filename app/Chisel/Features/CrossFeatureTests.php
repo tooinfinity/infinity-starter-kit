@@ -29,10 +29,6 @@ final class CrossFeatureTests
                 'files' => ['tests/Feature/Notifications/NotificationLocalizationTest.php'],
             ],
             [
-                'features' => ['reporting', 'localization'],
-                'files' => ['tests/Feature/Reporting/ReportingLocalizationTest.php'],
-            ],
-            [
                 'features' => ['notifications', 'user-management'],
                 'files' => ['tests/Feature/Queue/UserActionQueueTest.php'],
             ],

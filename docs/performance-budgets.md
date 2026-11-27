@@ -4,7 +4,7 @@ This document establishes and describes the authoritative, reproducible performa
 
 ## Purpose & Philosophy
 
-As optional modules (such as authorization, settings, notifications, reporting, and localization) and shared application infrastructure grow, they risk introducing unintended request work, middleware-induced queries, N+1 lookups, or frontend bundle bloat.
+As optional modules (such as authorization, settings, notifications, and localization) and shared application infrastructure grow, they risk introducing unintended request work, middleware-induced queries, N+1 lookups, or frontend bundle bloat.
 
 The performance budget suite exists to:
 - Detect regressions early in automated CI before they reach production.

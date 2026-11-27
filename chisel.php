@@ -418,18 +418,6 @@ $script = Chisel::script(__DIR__)
             // Marker: 'audit-trails'
             FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['audit-trails']);
         },
-    )
-    ->selected(
-        'optional_modules',
-        'reporting',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'reporting'
-            FeaturePruner::applySelected($chisel, $optionalModules['reporting']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
-            // Marker: 'reporting'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['reporting']);
-        },
     );
 
 foreach (CrossFeatureTests::all() as $entry) {
@@ -473,7 +461,7 @@ return $script
     )
     ->selectedAny(
         'optional_modules',
-        ['user-management', 'reporting', 'audit-trails'],
+        ['user-management', 'audit-trails'],
         then: null,
         else: function (Chisel $chisel) use ($directory): void {
             $chisel->file('config/data.php')->delete();

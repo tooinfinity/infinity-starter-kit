@@ -135,7 +135,7 @@ final class HandleInertiaRequests extends Middleware
 
         Lang::clearResolvedInstances();
 
-        $groups = ['common', 'localization', 'notifications', 'reports', 'audit'];
+        $groups = ['common', 'localization', 'notifications', 'audit'];
         $groupTranslations = syncLangFiles($groups);
 
         foreach ($groupTranslations as $key => $value) {

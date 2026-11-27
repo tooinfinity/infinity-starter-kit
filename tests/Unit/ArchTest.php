@@ -167,7 +167,7 @@ arch('runtime console commands do not depend on chisel or installer internals')
 
 // 6. Cross-Feature Modular Boundaries
 /* @chisel-audit-trails */
-arch('audit-trails does not depend on reporting or user management')
+arch('audit-trails does not depend on user management')
     ->expect([
         'App\Actions\AuditTrails',
         'App\Http\Controllers\AuditTrails',
@@ -179,11 +179,6 @@ arch('audit-trails does not depend on reporting or user management')
         'App\Data\AuditTrails',
     ])
     ->not->toUse([
-        'App\Http\Controllers\Reporting',
-        'App\Queries\Reporting',
-        'App\Data\Reporting',
-        'App\Enums\ReportType',
-        'App\Enums\ReportCategory',
         'App\Actions\Users',
         'App\Http\Controllers\Users',
         'App\Queries\Users',
@@ -192,7 +187,7 @@ arch('audit-trails does not depend on reporting or user management')
 /* @end-chisel-audit-trails */
 
 /* @chisel-settings */
-arch('settings does not depend on reporting or user management')
+arch('settings does not depend on user management')
     ->expect([
         'App\Actions\UpdateSettings',
         'App\Http\Controllers\SettingController',
@@ -205,11 +200,6 @@ arch('settings does not depend on reporting or user management')
         'App\Enums\SettingGroup',
     ])
     ->not->toUse([
-        'App\Http\Controllers\Reporting',
-        'App\Queries\Reporting',
-        'App\Data\Reporting',
-        'App\Enums\ReportType',
-        'App\Enums\ReportCategory',
         'App\Actions\Users',
         'App\Http\Controllers\Users',
         'App\Queries\Users',
@@ -220,7 +210,7 @@ arch('settings does not depend on reporting or user management')
 /* @end-chisel-settings */
 
 /* @chisel-notifications */
-arch('notifications does not depend on reporting, audit trails, or settings')
+arch('notifications does not depend on audit trails or settings')
     ->expect([
         'App\Actions\Notifications',
         'App\Console\Commands\PruneNotificationsCommand',
@@ -233,11 +223,6 @@ arch('notifications does not depend on reporting, audit trails, or settings')
         'App\Enums\NotificationType',
     ])
     ->not->toUse([
-        'App\Http\Controllers\Reporting',
-        'App\Queries\Reporting',
-        'App\Data\Reporting',
-        'App\Enums\ReportType',
-        'App\Enums\ReportCategory',
         'App\Actions\AuditTrails',
         'App\Models\Activity',
         'App\Enums\AuditEvent',
@@ -263,11 +248,6 @@ arch('localization does not depend on other optional feature modules')
         'App\Enums\Locale',
     ])
     ->not->toUse([
-        'App\Http\Controllers\Reporting',
-        'App\Queries\Reporting',
-        'App\Data\Reporting',
-        'App\Enums\ReportType',
-        'App\Enums\ReportCategory',
         'App\Actions\AuditTrails',
         'App\Models\Activity',
         'App\Enums\AuditEvent',
@@ -284,47 +264,6 @@ arch('localization does not depend on other optional feature modules')
         'App\Enums\SettingGroup',
     ]);
 /* @end-chisel-localization */
-
-/* @chisel-user-management */
-arch('user management does not depend on reporting')
-    ->expect([
-        'App\Actions\Users',
-        'App\Http\Controllers\Users',
-        'App\Http\Requests\Users',
-        'App\Queries\Users',
-        'App\Data\Users',
-        'App\Rules\CanAssignRoles',
-        'App\Rules\NotLastSuperAdmin',
-        'App\Enums\SuperAdminRestrictionOperation',
-    ])
-    ->not->toUse([
-        'App\Http\Controllers\Reporting',
-        'App\Queries\Reporting',
-        'App\Data\Reporting',
-        'App\Enums\ReportType',
-        'App\Enums\ReportCategory',
-    ]);
-/* @end-chisel-user-management */
-
-/* @chisel-reporting */
-arch('reporting does not depend on settings, notifications, or localization')
-    ->expect([
-        'App\Data\Reporting',
-        'App\Http\Controllers\Reporting',
-        'App\Http\Requests\Reporting',
-        'App\Queries\Reporting',
-        'App\Enums\ReportType',
-        'App\Enums\ReportCategory',
-    ])
-    ->not->toUse([
-        'App\Actions\UpdateSettings',
-        'App\Models\Setting',
-        'App\Actions\Notifications',
-        'App\Notifications',
-        'App\Actions\UpdateUserLocale',
-        'App\Services\Locales',
-    ]);
-/* @end-chisel-reporting */
 
 // 7. Test Suite Organization Boundaries
 test('http controller and middleware tests belong strictly in tests/Feature', function (): void {

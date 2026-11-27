@@ -93,7 +93,6 @@ Which optional modules should be installed?
  [x] Localization
  [x] Notifications
  [x] Audit Trails
- [x] Reporting
 ```
 
 Select the features you want using `Space`, then press `Enter`.
@@ -190,8 +189,6 @@ enum Permission: string
     case UsersManagePassword = 'users.manage-password';
     case SettingsManage = 'settings.manage';
     case AuditView = 'audit.view';
-    case ReportsView = 'reports.view';
-    case ReportsExport = 'reports.export';
 }
 ```
 
@@ -270,33 +267,6 @@ When authorization is disabled, Chisel removes:
 
 ---
 
-### 📊 Reporting & Analytics Module
-
-A **production-ready, read-only** reporting engine designed to extract actionable insights directly from existing application models (`users` and `activity_log`) without redundant tables or schema overhead.
-
-#### Implemented Reports
-
-| Report | Path | Metrics & Visualizations |
-| :--- | :--- | :--- |
-| **User Activity & Growth** | `/reports/users` | Total users, active/inactive counts, period registrations, daily registration trend SVG chart, and filterable/sortable user listing. |
-| **Audit Trail Activity** | `/reports/audit` | Total audit events, active actors, top event & resource, event distribution breakdown, daily volume trend chart, and audit log table. |
-
-#### Key Design Decisions
-
-- **Strictly Read-Only** — Directly queries existing application tables; no parallel database models, snapshots, or migrations.
-- **Dedicated Query Services** — Complex aggregations and filtering live in `App\Queries\Reporting`, keeping controllers clean and invokable.
-- **Spatie Data Transfer Objects** — Typed contracts (`ReportSummaryCardData`, `ReportTimeSeriesPointData`, `ReportBreakdownItemData`, `ReportMetadataData`) serialize seamlessly to Inertia.
-- **Zero-Dependency Accessible Visualizations** — Custom SVG/CSS charts featuring interactive tooltips, full keyboard/screen-reader accessibility, RTL layout support, and a companion tabular view switch.
-- **Secure Streaming CSV Export** — Memory-efficient chunked streaming (`lazy()`), Excel UTF-8 BOM (`\xEF\xBB\xBF`), and formula injection sanitization (`=`, `+`, `-`, `@`, `\t`, `\r` neutralized).
-- **Granular RBAC Permissions** — Protected via `Permission::ReportsView` (`reports.view`) and `Permission::ReportsExport` (`reports.export`).
-- **Trilingual Localization** — Full translations available in English (`en`), French (`fr`), and Arabic (`ar`).
-
-#### Chisel Pruning
-
-When reporting is unselected in Chisel, all 25 reporting files (controllers, queries, DTOs, translations, frontend components, pages, and tests) are cleanly deleted and routes are removed.
-
----
-
 ## 🧩 Chisel-Based Scaffolding & Feature Installation
 
 The Infinity Starter Kit features a deterministic, declarative feature configuration and pruning system built on **Laravel Chisel** (matching the architecture of official starter kits like `laravel/react-starter-kit`). The system operates strictly as a one-time project generation and scaffolding tool. Once configured via `php artisan install:features`, Chisel prunes all unselected features, cleans up its own installer files (`chisel.php`, `InstallFeaturesCommand.php`, and Chisel requirements), leaving behind pure, zero-overhead Laravel application code.
@@ -311,7 +281,6 @@ The Infinity Starter Kit features a deterministic, declarative feature configura
   4. **Localization** (`localization`): Trilingual support (EN, FR, AR), RTL layout switching, `Locale` enum, `LanguageSelector` component, and `@erag/lang-sync-inertia`.
   5. **Notifications** (`notifications`): Database and email notification center, user preference toggles, notification dropdown and bell.
   6. **Audit Trails** (`audit-trails`): Searchable activity log tracking user actions, IP addresses, user agents, and timestamps, with automated retention pruning and transactional PII anonymization on account deletion.
-  7. **Reporting & Analytics** (`reporting`): Read-only dashboards, SVG trend charts, date filtering, and streaming CSV exports.
 
 ---
 
@@ -326,7 +295,6 @@ The Infinity Starter Kit features a deterministic, declarative feature configura
 | **Localization** | `localization` | Trilingual localization with real-time language switching, RTL layout support, and Inertia translation sync. | — | — | `erag/laravel-lang-sync-inertia` | `@erag/lang-sync-inertia` | — | Enabled | Trilingual support (EN, FR, AR), RTL layout auto-switching, Language selector component, Persistent guest & user locale cookie, Inertia translation synchronization |
 | **Notifications** | `notifications` | Database and email notification system with user channel preferences and interactive notification center. | — | — | — | — | — | Enabled | Database & email notifications, User notification channel preferences, Header bell & interactive dropdown, Mark all as read & batch prune, Security event alerts |
 | **Audit Trails** | `audit-trails` | Security audit logging capturing actor context, IP addresses, events, and automated retention pruning. | `authorization` | — | `spatie/laravel-activitylog` | — | `audit.view` | Enabled | Security & activity event tracking, Actor, IP, and user agent recording, Searchable audit log viewer, Automated log pruning command |
-| **Reporting** | `reporting` | Read-only analytics dashboards, accessible SVG trend charts, date filtering, and streaming CSV exports. | `audit-trails`, `user-management`, `authorization` | — | — | — | `reports.view`, `reports.export` | Enabled | User growth & activity analytics, Audit event trend dashboards, Zero-dependency accessible SVG charts, Formula-safe streaming CSV export, Multi-day date range filtering |
 <!-- @end-chisel-feature-matrix -->
 
 ---
@@ -352,7 +320,6 @@ Which optional modules should be installed?
  [x] Localization
  [x] Notifications
  [x] Audit Trails
- [x] Reporting
 
 Include AI assistant guidelines?
  [x] AI assistant guidelines (.claude, .cursor, AGENTS.md, ...)
@@ -397,8 +364,7 @@ php artisan install:features \
     "user-management",
     "localization",
     "notifications",
-    "audit-trails",
-    "reporting"
+    "audit-trails"
   ],
   "ai_guidelines": [
     "guidelines"
@@ -544,11 +510,10 @@ The starter kit enforces structural and architectural boundaries through executa
   - Runtime console commands must not depend on Chisel infrastructure (only installer commands `InstallFeaturesCommand` and `GenerateFeatureDocsCommand` may use Chisel).
 - **Cross-Feature Modular Boundaries**:
   - Optional feature modules follow strict acyclic dependency rules:
-    - `audit-trails` does not depend on `reporting` or `user-management`.
-    - `settings` does not depend on `reporting` or `user-management`.
-    - `notifications` does not depend on `reporting`, `audit-trails`, or `settings`.
+    - `audit-trails` does not depend on `user-management`.
+    - `settings` does not depend on `user-management`.
+    - `notifications` does not depend on `audit-trails` or `settings`.
     - `localization` does not depend on other optional feature modules.
-    - `user-management` does not depend on `reporting`.
 - **Test Suite Organization**:
   - HTTP controller and middleware tests belong strictly in `tests/Feature`, never in `tests/Unit`.
 
@@ -566,24 +531,19 @@ The starter kit enforces structural and architectural boundaries through executa
 │   │   ├── SetupAuthorizationCommand.php # 🛡️ Authorization runtime synchronization
 │   │   └── SetupAdminUserCommand.php     # ⚙️ Installer-only (removed after install)
 │   ├── Data/                     # Spatie Data transfer objects
-│   │   └── Reporting/            # Report summary, series, and breakdown DTOs
 │   ├── Enums/                    # PHP string-backed enums
 │   │   ├── AuditEvent.php
 │   │   ├── Permission.php
-│   │   ├── ReportCategory.php
-│   │   ├── ReportType.php
 │   │   └── Role.php
 │   ├── Http/
 │   │   ├── Controllers/          # Inertia HTTP controllers
 │   │   │   ├── AuditTrails/
-│   │   │   ├── Reporting/        # Invokable reporting & export controllers
 │   │   │   └── Users/
 │   │   ├── Middleware/           # HandleInertiaRequests (shares auth data)
 │   │   └── Requests/            # Form Requests with authorize() & validation
 │   ├── Models/                   # Eloquent models (User, Activity, Setting)
 │   ├── Queries/                  # Read-only query & export services
 │   │   ├── AuditTrails/
-│   │   ├── Reporting/            # UserReportQuery, AuditReportQuery, CSV streams
 │   │   └── Users/
 │   └── Providers/                # AppServiceProvider (Gate::before)
 ├── chisel.php                    # ⚙️ Installer-only feature pruning (removed after install)
@@ -594,22 +554,16 @@ The starter kit enforces structural and architectural boundaries through executa
 ├── lang/                         # Localized translations (en, fr, ar)
 ├── resources/js/
 │   ├── components/
-│   │   ├── can.tsx               # <Can> authorization component
-│   │   └── reports/              # Summary cards, SVG charts, date range filters
+│   │   └── can.tsx               # <Can> authorization component
 │   ├── hooks/
 │   │   └── use-authorization.ts  # useAuthorization() hook
-│   ├── pages/
-│   │   └── reports/              # Catalog index, Users report, Audit report
 │   └── types/
-│       ├── auth.ts               # Auth type with permissions/roles
-│       └── reports.ts            # Report DTO & filter type definitions
+│       └── auth.ts               # Auth type with permissions/roles
 └── tests/
     ├── Feature/
-    │   ├── Authorization/        # RBAC + command tests
-    │   └── Reporting/            # Report queries, controllers, exports, and pruning tests
+    │   └── Authorization/        # RBAC + command tests
     └── Unit/
-        ├── Enums/                # Enum tests
-        └── Reporting/            # Report type & category tests
+        └── Enums/                # Enum tests
 ```
 
 ---
