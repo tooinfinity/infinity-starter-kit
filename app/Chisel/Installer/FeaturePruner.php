@@ -28,7 +28,8 @@ final class FeaturePruner
         array $beforePrune = [],
         array $afterPrune = [],
     ): void {
-        foreach ($features as $key => $feature) {
+        foreach ($features as $feature) {
+            $key = $feature->key;
             $script->selected(
                 $questionKey,
                 $key,
