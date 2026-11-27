@@ -609,6 +609,15 @@ it('handles removing user-management leaving no broken imports, routes, or front
             ->and($routesContent)->not->toContain("Route::get('users'")
             ->and($routesContent)->not->toContain('users.activate');
 
+        expect(file_exists($dir.'/routes/user-management.php'))->toBeFalse();
+
+        $bootstrapContent = (string) file_get_contents($dir.'/bootstrap/app.php');
+        expect($bootstrapContent)->not->toContain('routes/user-management.php')
+            ->and($bootstrapContent)->toContain('routes/settings.php')
+            ->and($bootstrapContent)->toContain('routes/localization.php')
+            ->and($bootstrapContent)->toContain('routes/notifications.php')
+            ->and($bootstrapContent)->toContain('routes/audit-trails.php');
+
         $sidebarContent = (string) file_get_contents($dir.'/resources/js/components/app-sidebar.tsx');
         expect($sidebarContent)->not->toContain("title: 'Users'")
             ->and($sidebarContent)->not->toContain('@/routes/users');
@@ -1055,6 +1064,10 @@ it('verifies individual optional module removal preserves other modules and clea
 
             assertRegistrationEmailNormalizedInSandbox($dir);
         }
+
+        $bootstrapContent = (string) file_get_contents($dir.'/bootstrap/app.php');
+        expect($bootstrapContent)->not->toContain("routes/{$removedModule}.php")
+            ->and(file_exists($dir."/routes/{$removedModule}.php"))->toBeFalse();
 
         assertNoOrphanedMarkersInSandbox($dir);
         assertPhpSyntaxValid($dir);

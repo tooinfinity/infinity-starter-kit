@@ -26,7 +26,24 @@ use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
+        web: [
+            __DIR__.'/../routes/web.php',
+            /* @chisel-localization */
+            __DIR__.'/../routes/localization.php',
+            /* @end-chisel-localization */
+            /* @chisel-settings */
+            __DIR__.'/../routes/settings.php',
+            /* @end-chisel-settings */
+            /* @chisel-user-management */
+            __DIR__.'/../routes/user-management.php',
+            /* @end-chisel-user-management */
+            /* @chisel-notifications */
+            __DIR__.'/../routes/notifications.php',
+            /* @end-chisel-notifications */
+            /* @chisel-audit-trails */
+            __DIR__.'/../routes/audit-trails.php',
+            /* @end-chisel-audit-trails */
+        ],
         commands: __DIR__.'/../routes/console.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
