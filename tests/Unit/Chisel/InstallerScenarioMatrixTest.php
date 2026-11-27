@@ -6,6 +6,7 @@ use App\Chisel\FeatureRegistry;
 use App\Chisel\Installer\DependencyValidator;
 use App\Chisel\Installer\InstallerScenario;
 use App\Chisel\Installer\InstallerState;
+use App\Chisel\Installer\Profile;
 
 describe('Installer Scenario Matrix Integrity', function (): void {
     it('covers enabled and disabled states for every registered optional module', function (): void {
@@ -237,4 +238,25 @@ describe('Installer Scenario Matrix Integrity', function (): void {
                 ->and($scenario->answers())->toHaveKeys(['auth_features', 'optional_modules']);
         }
     });
+
+    it('aligns profile scenarios with Profile definitions and expectations', function (string $profileName): void {
+        $profile = Profile::fromName($profileName);
+        $scenario = match ($profileName) {
+            Profile::MINIMAL => InstallerScenario::minimal(),
+            Profile::DEFAULT => InstallerScenario::default(),
+            Profile::FULL => InstallerScenario::full(),
+        };
+
+        expect($scenario->answers())->toBe($profile->answers())
+            ->and($scenario->expectedRetainedPaths())->toBe($profile->expectedPresentPaths())
+            ->and($scenario->expectedRemovedPaths())->toBe($profile->expectedAbsentPaths())
+            ->and($scenario->expectedPresentTables())->toBe($profile->expectedPresentTables())
+            ->and($scenario->expectedAbsentTables())->toBe($profile->expectedAbsentTables())
+            ->and($scenario->expectedPresentColumns())->toBe($profile->expectedPresentColumns())
+            ->and($scenario->expectedAbsentColumns())->toBe($profile->expectedAbsentColumns());
+    })->with([
+        Profile::MINIMAL,
+        Profile::DEFAULT,
+        Profile::FULL,
+    ]);
 });

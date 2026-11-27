@@ -60,37 +60,29 @@ final readonly class InstallerScenario
 
     public static function minimal(): self
     {
+        $answers = Profile::answersFor(Profile::MINIMAL);
+
         return new self(
             id: 'minimal',
             name: 'Minimal Profile',
             description: 'Core session authentication only (login + logout), all optional modules pruned.',
             category: 'profile',
-            authFeatures: ['login', 'logout'],
-            optionalModules: [],
+            authFeatures: $answers['auth_features'],
+            optionalModules: $answers['optional_modules'],
         );
     }
 
     public static function default(): self
     {
+        $answers = Profile::answersFor(Profile::DEFAULT);
+
         return new self(
             id: 'default',
             name: 'Default Profile',
             description: 'Standard authentication flow and recommended modules (authorization, settings, user-management, notifications).',
             category: 'profile',
-            authFeatures: [
-                'login',
-                'logout',
-                'registration',
-                'email-verification',
-                'password-reset',
-                'password-update',
-            ],
-            optionalModules: [
-                'authorization',
-                'settings',
-                'user-management',
-                'notifications',
-            ],
+            authFeatures: $answers['auth_features'],
+            optionalModules: $answers['optional_modules'],
             admin: [
                 'name' => 'Default Admin',
                 'email' => 'admin@example.com',
@@ -102,28 +94,15 @@ final readonly class InstallerScenario
 
     public static function full(): self
     {
+        $answers = Profile::answersFor(Profile::FULL);
+
         return new self(
             id: 'full',
             name: 'Full Profile',
             description: 'All authentication capabilities (including 2FA) and all optional starter kit modules enabled.',
             category: 'profile',
-            authFeatures: [
-                'login',
-                'logout',
-                'registration',
-                'email-verification',
-                'password-reset',
-                'password-update',
-                'two-factor',
-            ],
-            optionalModules: [
-                'authorization',
-                'settings',
-                'user-management',
-                'localization',
-                'notifications',
-                'audit-trails',
-            ],
+            authFeatures: $answers['auth_features'],
+            optionalModules: $answers['optional_modules'],
             admin: [
                 'name' => 'Full Admin',
                 'email' => 'full-admin@example.com',
@@ -808,60 +787,7 @@ final readonly class InstallerScenario
      */
     public function expectedRetainedPaths(): array
     {
-        if ($this->expectedRetainedPaths !== null) {
-            return $this->expectedRetainedPaths;
-        }
-
-        $paths = ['app/Models/User.php', 'routes/web.php'];
-
-        if ($this->hasAuthorization()) {
-            $paths[] = 'config/permission.php';
-            $paths[] = 'app/Enums/Permission.php';
-            $paths[] = 'app/Enums/Role.php';
-            $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
-            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
-        }
-
-        if ($this->hasSettings()) {
-            $paths[] = 'app/Models/Setting.php';
-            $paths[] = 'app/Http/Controllers/SettingController.php';
-            $paths[] = 'resources/js/pages/settings/application/edit.tsx';
-            $paths[] = 'routes/settings.php';
-        }
-
-        if ($this->hasUserManagement()) {
-            $paths[] = 'app/Http/Controllers/Users/UserController.php';
-            $paths[] = 'resources/js/pages/users/index.tsx';
-            $paths[] = 'routes/user-management.php';
-        }
-
-        if ($this->hasNotifications()) {
-            $paths[] = 'app/Models/NotificationPreference.php';
-            $paths[] = 'app/Http/Controllers/NotificationController.php';
-            $paths[] = 'resources/js/pages/notifications/index.tsx';
-            $paths[] = 'routes/notifications.php';
-        }
-
-        if ($this->hasAuditTrails()) {
-            $paths[] = 'config/activitylog.php';
-            $paths[] = 'config/audit.php';
-            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
-            $paths[] = 'app/Models/Activity.php';
-            $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
-            $paths[] = 'resources/js/pages/audit-trails/index.tsx';
-            $paths[] = 'routes/audit-trails.php';
-        }
-
-        if ($this->hasLocalization()) {
-            $paths[] = 'app/Http/Middleware/HandleLocale.php';
-            $paths[] = 'app/Http/Controllers/LocaleController.php';
-        }
-
-        if ($this->hasTwoFactor()) {
-            $paths[] = 'app/Http/Controllers/UserTwoFactorAuthenticationController.php';
-        }
-
-        return $paths;
+        return $this->expectedRetainedPaths ?? Profile::expectedPresentPathsFor($this->selectedFeatures());
     }
 
     /**
@@ -869,55 +795,7 @@ final readonly class InstallerScenario
      */
     public function expectedRemovedPaths(): array
     {
-        if ($this->expectedRemovedPaths !== null) {
-            return $this->expectedRemovedPaths;
-        }
-
-        $paths = [];
-
-        if (! $this->hasAuthorization()) {
-            $paths[] = 'config/permission.php';
-            $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
-            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
-            $paths[] = 'resources/js/hooks/use-authorization.ts';
-        }
-
-        if (! $this->hasSettings()) {
-            $paths[] = 'app/Models/Setting.php';
-            $paths[] = 'app/Http/Controllers/SettingController.php';
-            $paths[] = 'resources/js/pages/settings/application/edit.tsx';
-        }
-
-        if (! $this->hasUserManagement()) {
-            $paths[] = 'app/Http/Controllers/Users/UserController.php';
-            $paths[] = 'resources/js/pages/users';
-        }
-
-        if (! $this->hasNotifications()) {
-            $paths[] = 'app/Models/NotificationPreference.php';
-            $paths[] = 'app/Http/Controllers/NotificationController.php';
-            $paths[] = 'resources/js/pages/notifications';
-        }
-
-        if (! $this->hasAuditTrails()) {
-            $paths[] = 'config/activitylog.php';
-            $paths[] = 'config/audit.php';
-            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
-            $paths[] = 'app/Models/Activity.php';
-            $paths[] = 'app/Http/Controllers/AuditTrails';
-            $paths[] = 'resources/js/pages/audit-trails';
-        }
-
-        if (! $this->hasLocalization()) {
-            $paths[] = 'app/Http/Middleware/HandleLocale.php';
-            $paths[] = 'app/Http/Controllers/LocaleController.php';
-        }
-
-        if (! $this->hasTwoFactor()) {
-            $paths[] = 'app/Http/Controllers/UserTwoFactorAuthenticationController.php';
-        }
-
-        return $paths;
+        return $this->expectedRemovedPaths ?? Profile::expectedAbsentPathsFor($this->selectedFeatures());
     }
 
     /**
@@ -925,31 +803,7 @@ final readonly class InstallerScenario
      */
     public function expectedPresentTables(): array
     {
-        if ($this->expectedPresentTables !== null) {
-            return $this->expectedPresentTables;
-        }
-
-        $tables = ['users'];
-
-        if ($this->hasAuthorization()) {
-            $tables[] = 'roles';
-            $tables[] = 'permissions';
-        }
-
-        if ($this->hasSettings()) {
-            $tables[] = 'settings';
-        }
-
-        if ($this->hasNotifications()) {
-            $tables[] = 'notifications';
-            $tables[] = 'notification_preferences';
-        }
-
-        if ($this->hasAuditTrails()) {
-            $tables[] = 'activity_log';
-        }
-
-        return $tables;
+        return $this->expectedPresentTables ?? Profile::expectedPresentTablesFor($this->selectedFeatures());
     }
 
     /**
@@ -957,31 +811,7 @@ final readonly class InstallerScenario
      */
     public function expectedAbsentTables(): array
     {
-        if ($this->expectedAbsentTables !== null) {
-            return $this->expectedAbsentTables;
-        }
-
-        $tables = [];
-
-        if (! $this->hasAuthorization()) {
-            $tables[] = 'roles';
-            $tables[] = 'permissions';
-        }
-
-        if (! $this->hasSettings()) {
-            $tables[] = 'settings';
-        }
-
-        if (! $this->hasNotifications()) {
-            $tables[] = 'notifications';
-            $tables[] = 'notification_preferences';
-        }
-
-        if (! $this->hasAuditTrails()) {
-            $tables[] = 'activity_log';
-        }
-
-        return $tables;
+        return $this->expectedAbsentTables ?? Profile::expectedAbsentTablesFor($this->selectedFeatures());
     }
 
     /**
@@ -989,21 +819,7 @@ final readonly class InstallerScenario
      */
     public function expectedPresentColumns(): array
     {
-        if ($this->expectedPresentColumns !== null) {
-            return $this->expectedPresentColumns;
-        }
-
-        $columns = ['users' => ['email', 'password']];
-
-        if ($this->hasTwoFactor()) {
-            $columns['users'][] = 'two_factor_secret';
-        }
-
-        if ($this->hasLocalization()) {
-            $columns['users'][] = 'locale';
-        }
-
-        return $columns;
+        return $this->expectedPresentColumns ?? Profile::expectedPresentColumnsFor($this->selectedFeatures());
     }
 
     /**
@@ -1011,20 +827,14 @@ final readonly class InstallerScenario
      */
     public function expectedAbsentColumns(): array
     {
-        if ($this->expectedAbsentColumns !== null) {
-            return $this->expectedAbsentColumns;
-        }
+        return $this->expectedAbsentColumns ?? Profile::expectedAbsentColumnsFor($this->selectedFeatures());
+    }
 
-        $columns = ['users' => []];
-
-        if (! $this->hasTwoFactor()) {
-            $columns['users'][] = 'two_factor_secret';
-        }
-
-        if (! $this->hasLocalization()) {
-            $columns['users'][] = 'locale';
-        }
-
-        return $columns;
+    /**
+     * @return list<string>
+     */
+    private function selectedFeatures(): array
+    {
+        return array_merge($this->authFeatures, $this->optionalModules);
     }
 }
