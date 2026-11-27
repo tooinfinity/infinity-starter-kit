@@ -8,7 +8,9 @@ use App\Chisel\Features\CrossFeatureTests;
 use App\Chisel\Installer\Cleanup;
 
 /**
- * Adapter serializing FeatureRegistry definitions into the backward-compatible shape expected by chisel-paths.php.
+ * Compatibility adapter serializing FeatureRegistry definitions into the array shape
+ * consumed by chisel-paths.php, InstallerContextResolver, Cleanup, ComposerLockSynchronizer,
+ * and GeneratedApplicationValidator.
  */
 final class LegacyPathsAdapter
 {

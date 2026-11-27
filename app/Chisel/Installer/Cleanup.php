@@ -53,7 +53,6 @@ final class Cleanup
             'app/Chisel/Installer/FeaturePruner.php',
             'app/Chisel/Installer/AiToolingPruner.php',
             'app/Chisel/Installer/InstallerScenario.php',
-            'tests/Support/CrossFeatureTests.php',
             'tests/Support/GeneratedProjectFixture.php',
             'tests/Support/GeneratedApplicationSmokePipeline.php',
             'tests/Unit/Chisel/AiToolingPrunerTest.php',
