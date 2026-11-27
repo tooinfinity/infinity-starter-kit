@@ -159,17 +159,19 @@ test('feature pruner register wires selected and unselected callbacks with befor
             'alpha' => static function () use (&$events): void {
                 $events[] = 'alpha:before';
             },
-            'beta' => static function (Chisel $chisel) use (&$events): void {
+            'beta' => static function (Chisel $chisel) use (&$events, $file): void {
                 $events[] = 'beta:before';
-                expect($chisel)->toBeInstanceOf(Chisel::class);
+                expect($chisel)->toBeInstanceOf(Chisel::class)
+                    ->and((string) file_get_contents($file))->toContain('beta();');
             },
         ],
         afterPrune: [
             'alpha' => static function () use (&$events): void {
                 $events[] = 'alpha:after';
             },
-            'beta' => static function () use (&$events): void {
+            'beta' => static function () use (&$events, $file): void {
                 $events[] = 'beta:after';
+                expect((string) file_get_contents($file))->not->toContain('beta();');
             },
         ],
     );
