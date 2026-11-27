@@ -118,9 +118,24 @@ describe('Installer Scenario Matrix Integrity', function (): void {
 
         $envNoNode = InstallerScenario::envNoNode();
         $minimal = InstallerScenario::minimal();
+        $full = InstallerScenario::full();
 
         expect($envNoNode->isNodeSkipped())->toBeTrue()
-            ->and($minimal->isNodeSkipped())->toBeFalse();
+            ->and($minimal->isNodeSkipped())->toBeFalse()
+            ->and($minimal->hasAuthorization())->toBeFalse()
+            ->and($minimal->hasTwoFactor())->toBeFalse()
+            ->and($minimal->hasAuditTrails())->toBeFalse()
+            ->and($minimal->hasNotifications())->toBeFalse()
+            ->and($minimal->hasLocalization())->toBeFalse()
+            ->and($minimal->hasUserManagement())->toBeFalse()
+            ->and($minimal->hasSettings())->toBeFalse()
+            ->and($full->hasAuthorization())->toBeTrue()
+            ->and($full->hasTwoFactor())->toBeTrue()
+            ->and($full->hasAuditTrails())->toBeTrue()
+            ->and($full->hasNotifications())->toBeTrue()
+            ->and($full->hasLocalization())->toBeTrue()
+            ->and($full->hasUserManagement())->toBeTrue()
+            ->and($full->hasSettings())->toBeTrue();
 
         // Exercise scenario with custom non-null expectations
         $custom = new InstallerScenario(
