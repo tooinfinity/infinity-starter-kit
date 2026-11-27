@@ -7,9 +7,9 @@ namespace App\Models;
 /* @chisel-localization */
 use App\Enums\Locale;
 /* @end-chisel-localization */
-/* @chisel-roles-permissions */
+/* @chisel-user-management */
 use App\Enums\Role;
-/* @end-chisel-roles-permissions */
+/* @end-chisel-user-management */
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 /* @chisel-email-verification */
@@ -41,10 +41,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read CarbonInterface|null $email_verified_at
  * @property-read string $password
  * @property-read string|null $remember_token
- * @property-read string|null $two_factor_secret
- * @property-read string|null $two_factor_recovery_codes
- * @property-read CarbonInterface|null $two_factor_confirmed_at
- * @property-read bool $is_active
  * @property-read Locale|null $locale
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
@@ -52,8 +48,10 @@ use Spatie\Permission\Traits\HasRoles;
 #[Hidden([
     'password',
     'remember_token',
+    /* @chisel-two-factor */
     'two_factor_secret',
     'two_factor_recovery_codes',
+    /* @end-chisel-two-factor */
 ])]
 final class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {

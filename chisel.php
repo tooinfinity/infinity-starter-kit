@@ -246,16 +246,6 @@ FeaturePruner::register(
             $chisel->file('app/Models/User.php')
                 ->removeLinesContaining('@property-read CarbonInterface|null $email_verified_at');
         },
-        'two-factor' => static function (Chisel $chisel): void {
-            $chisel->file('app/Models/User.php')
-                ->removeLinesContaining(
-                    '@property-read string|null $two_factor_secret',
-                    '@property-read string|null $two_factor_recovery_codes',
-                    '@property-read CarbonInterface|null $two_factor_confirmed_at',
-                    "'two_factor_secret',",
-                    "'two_factor_recovery_codes',",
-                );
-        },
     ],
     afterPrune: [
         'email-verification' => static function (Chisel $chisel): void {
@@ -274,10 +264,6 @@ FeaturePruner::register(
     $optionalModules,
     $directory,
     beforePrune: [
-        'user-management' => static function (Chisel $chisel): void {
-            $chisel->file('app/Models/User.php')
-                ->removeLinesContaining('@property-read bool $is_active');
-        },
         'localization' => static function (Chisel $chisel): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('HasLocalePreference');
