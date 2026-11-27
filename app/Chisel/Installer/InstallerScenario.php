@@ -826,17 +826,20 @@ final readonly class InstallerScenario
             $paths[] = 'app/Models/Setting.php';
             $paths[] = 'app/Http/Controllers/SettingController.php';
             $paths[] = 'resources/js/pages/settings/application/edit.tsx';
+            $paths[] = 'routes/settings.php';
         }
 
         if ($this->hasUserManagement()) {
             $paths[] = 'app/Http/Controllers/Users/UserController.php';
             $paths[] = 'resources/js/pages/users/index.tsx';
+            $paths[] = 'routes/user-management.php';
         }
 
         if ($this->hasNotifications()) {
             $paths[] = 'app/Models/NotificationPreference.php';
             $paths[] = 'app/Http/Controllers/NotificationController.php';
             $paths[] = 'resources/js/pages/notifications/index.tsx';
+            $paths[] = 'routes/notifications.php';
         }
 
         if ($this->hasAuditTrails()) {
@@ -846,6 +849,7 @@ final readonly class InstallerScenario
             $paths[] = 'app/Models/Activity.php';
             $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
             $paths[] = 'resources/js/pages/audit-trails/index.tsx';
+            $paths[] = 'routes/audit-trails.php';
         }
 
         if ($this->hasLocalization()) {

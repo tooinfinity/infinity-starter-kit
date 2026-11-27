@@ -2,41 +2,21 @@
 
 declare(strict_types=1);
 
-/* @chisel-audit-trails */
-use App\Http\Controllers\AuditTrails\AuditTrailController;
-/* @end-chisel-audit-trails */
 use App\Http\Controllers\DeleteAccountController;
-/* @chisel-localization */
-use App\Http\Controllers\LocaleController;
-/* @end-chisel-localization */
 /* @chisel-login */
 use App\Http\Controllers\LoginController;
 /* @end-chisel-login */
 /* @chisel-logout */
 use App\Http\Controllers\LogoutController;
 /* @end-chisel-logout */
-/* @chisel-notifications */
-use App\Http\Controllers\MarkAllNotificationsAsReadController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\NotificationPreferenceController;
-/* @end-chisel-notifications */
 /* @chisel-registration */
 use App\Http\Controllers\RegisterController;
 /* @end-chisel-registration */
-/* @chisel-settings */
-use App\Http\Controllers\SettingController;
-/* @end-chisel-settings */
 /* @chisel-password-reset */
 use App\Http\Controllers\UserEmailResetNotificationController;
 /* @end-chisel-password-reset */
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
-/* @chisel-user-management */
-use App\Http\Controllers\Users\ActivateUserController;
-use App\Http\Controllers\Users\DeactivateUserController;
-use App\Http\Controllers\Users\UserController as UserManagementController;
-use App\Http\Controllers\Users\UserPasswordController as AdminUserPasswordController;
-/* @end-chisel-user-management */
 /* @chisel-two-factor */
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 /* @end-chisel-two-factor */
@@ -45,10 +25,6 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
-
-/* @chisel-localization */
-Route::post('locale', [LocaleController::class, 'update'])->name('locale.update');
-/* @end-chisel-localization */
 
 Route::middleware(['auth'/* @chisel-email-verification */, 'verified'/* @end-chisel-email-verification */])->group(function (): void {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
@@ -79,47 +55,6 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
     /* @end-chisel-two-factor */
-
-    /* @chisel-settings */
-    // Application Settings...
-    Route::get('settings/application', [SettingController::class, 'edit'])
-        ->name('settings.edit');
-    Route::put('settings/application', [SettingController::class, 'update'])
-        ->name('settings.update');
-    /* @end-chisel-settings */
-
-    /* @chisel-user-management */
-    // User Management...
-    Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
-    Route::get('users/create', [UserManagementController::class, 'create'])->name('users.create');
-    Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
-    Route::get('users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
-    Route::put('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
-    Route::patch('users/{user}/activate', ActivateUserController::class)->name('users.activate');
-    Route::patch('users/{user}/deactivate', DeactivateUserController::class)->name('users.deactivate');
-    Route::put('users/{user}/password', AdminUserPasswordController::class)
-        ->middleware('password.confirm')
-        ->name('users.password.update');
-    Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
-    /* @end-chisel-user-management */
-
-    /* @chisel-notifications */
-    // Notifications...
-    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::patch('notifications/{notification}/read', [NotificationController::class, 'update'])->name('notifications.mark-read');
-    Route::patch('notifications/read-all', MarkAllNotificationsAsReadController::class)->name('notifications.mark-all-read');
-    Route::delete('notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
-
-    // Notification Preferences...
-    Route::get('settings/notifications', [NotificationPreferenceController::class, 'edit'])->name('notification-preferences.edit');
-    Route::put('settings/notifications', [NotificationPreferenceController::class, 'update'])->name('notification-preferences.update');
-    /* @end-chisel-notifications */
-
-    /* @chisel-audit-trails */
-    // Audit Trails...
-    Route::get('audit-trails', [AuditTrailController::class, 'index'])
-        ->name('audit-trails.index');
-    /* @end-chisel-audit-trails */
 });
 
 Route::middleware('guest')->group(function (): void {
