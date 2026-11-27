@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Chisel\FeatureDefinition;
+use App\Chisel\FeatureRegistry;
+
 test('all chisel markers in repository are well-formed and properly paired', function (): void {
     $command = 'git ls-files -c -o --exclude-standard';
     $output = shell_exec($command);
@@ -95,9 +98,14 @@ test('all marker tags have corresponding handlers in chisel.php', function (): v
     }
 
     $chiselScript = (string) file_get_contents(base_path('chisel.php'));
+    $registeredMarkers = array_filter(array_map(
+        static fn (FeatureDefinition $feature): ?string => $feature->sectionMarker,
+        FeatureRegistry::all(),
+    ));
 
     foreach (array_keys($tagsInRepo) as $tag) {
-        $hasHandler = str_contains($chiselScript, "'{$tag}'")
+        $hasHandler = in_array($tag, $registeredMarkers, true)
+            || str_contains($chiselScript, "'{$tag}'")
             || str_contains($chiselScript, "\"{$tag}\"");
 
         expect($hasHandler)->toBeTrue("Marker tag '{$tag}' found in codebase has no handler in chisel.php");

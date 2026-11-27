@@ -231,99 +231,22 @@ $script = Chisel::script(__DIR__)
     ])
     ->apply(function (Chisel $chisel, array $answers): void {
         chiselValidateDependencies($answers);
-    })
-    ->selected(
-        'auth_features',
-        'login',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'login'
-            FeaturePruner::applySelected($chisel, $authFeatures['login']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
-            // Marker: 'login'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['login']);
-        },
-    )
-    ->selected(
-        'auth_features',
-        'logout',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'logout'
-            FeaturePruner::applySelected($chisel, $authFeatures['logout']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
-            // Marker: 'logout'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['logout']);
-        },
-    )
-    ->selected(
-        'auth_features',
-        'registration',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'registration'
-            FeaturePruner::applySelected($chisel, $authFeatures['registration']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
-            // Marker: 'registration'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['registration']);
-        },
-    )
-    ->selected(
-        'auth_features',
-        'email-verification',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'email-verification'
-            FeaturePruner::applySelected($chisel, $authFeatures['email-verification']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
+    });
+
+FeaturePruner::register(
+    $script,
+    'auth_features',
+    $authFeatures,
+    $directory,
+    beforePrune: [
+        'email-verification' => static function (Chisel $chisel): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('MustVerifyEmail');
 
             $chisel->file('app/Models/User.php')
                 ->removeLinesContaining('@property-read CarbonInterface|null $email_verified_at');
-
-            // Marker: 'email-verification'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['email-verification']);
-
-            $chisel->file('resources/js/pages/user-profile/edit.tsx')
-                ->replace(
-                    "import { Form, Head, Link, usePage } from '@inertiajs/react';",
-                    "import { Form, Head, usePage } from '@inertiajs/react';",
-                );
         },
-    )
-    ->selected(
-        'auth_features',
-        'password-reset',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'password-reset'
-            FeaturePruner::applySelected($chisel, $authFeatures['password-reset']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
-            // Marker: 'password-reset'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['password-reset']);
-        },
-    )
-    ->selected(
-        'auth_features',
-        'password-update',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'password-update'
-            FeaturePruner::applySelected($chisel, $authFeatures['password-update']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
-            // Marker: 'password-update'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['password-update']);
-        },
-    )
-    ->selected(
-        'auth_features',
-        'two-factor',
-        then: function (Chisel $chisel) use ($authFeatures): void {
-            // Marker: 'two-factor'
-            FeaturePruner::applySelected($chisel, $authFeatures['two-factor']);
-        },
-        else: function (Chisel $chisel) use ($authFeatures, $directory): void {
+        'two-factor' => static function (Chisel $chisel): void {
             $chisel->file('app/Models/User.php')
                 ->removeLinesContaining(
                     '@property-read string|null $two_factor_secret',
@@ -332,93 +255,43 @@ $script = Chisel::script(__DIR__)
                     "'two_factor_secret',",
                     "'two_factor_recovery_codes',",
                 );
+        },
+    ],
+    afterPrune: [
+        'email-verification' => static function (Chisel $chisel): void {
+            $chisel->file('resources/js/pages/user-profile/edit.tsx')
+                ->replace(
+                    "import { Form, Head, Link, usePage } from '@inertiajs/react';",
+                    "import { Form, Head, usePage } from '@inertiajs/react';",
+                );
+        },
+    ],
+);
 
-            // Marker: 'two-factor'
-            FeaturePruner::pruneUnselected($directory, $chisel, $authFeatures['two-factor']);
-        },
-    )
-    ->selected(
-        'optional_modules',
-        'authorization',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'roles-permissions'
-            FeaturePruner::applySelected($chisel, $optionalModules['authorization']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
-            // Marker: 'roles-permissions'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['authorization']);
-            ConfigCleaner::cleanPhpstan($directory, removePermissionMigrationExclude: true);
-        },
-    )
-    ->selected(
-        'optional_modules',
-        'settings',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'settings'
-            FeaturePruner::applySelected($chisel, $optionalModules['settings']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
-            // Marker: 'settings'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['settings']);
-        },
-    )
-    ->selected(
-        'optional_modules',
-        'user-management',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'user-management'
-            FeaturePruner::applySelected($chisel, $optionalModules['user-management']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
+FeaturePruner::register(
+    $script,
+    'optional_modules',
+    $optionalModules,
+    $directory,
+    beforePrune: [
+        'user-management' => static function (Chisel $chisel): void {
             $chisel->file('app/Models/User.php')
                 ->removeLinesContaining('@property-read bool $is_active');
-
-            // Marker: 'user-management'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['user-management']);
         },
-    )
-    ->selected(
-        'optional_modules',
-        'localization',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'localization'
-            FeaturePruner::applySelected($chisel, $optionalModules['localization']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
+        'localization' => static function (Chisel $chisel): void {
             $chisel->php('app/Models/User.php')
                 ->removeInterface('HasLocalePreference');
 
             $chisel->file('app/Models/User.php')
                 ->removeLinesContaining('@property-read Locale|null $locale');
-
-            // Marker: 'localization'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['localization']);
         },
-    )
-    ->selected(
-        'optional_modules',
-        'notifications',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'notifications'
-            FeaturePruner::applySelected($chisel, $optionalModules['notifications']);
+    ],
+    afterPrune: [
+        'authorization' => static function () use ($directory): void {
+            ConfigCleaner::cleanPhpstan($directory, removePermissionMigrationExclude: true);
         },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
-            // Marker: 'notifications'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['notifications']);
-        },
-    )
-    ->selected(
-        'optional_modules',
-        'audit-trails',
-        then: function (Chisel $chisel) use ($optionalModules): void {
-            // Marker: 'audit-trails'
-            FeaturePruner::applySelected($chisel, $optionalModules['audit-trails']);
-        },
-        else: function (Chisel $chisel) use ($optionalModules, $directory): void {
-            // Marker: 'audit-trails'
-            FeaturePruner::pruneUnselected($directory, $chisel, $optionalModules['audit-trails']);
-        },
-    );
+    ],
+);
 
 foreach (CrossFeatureTests::all() as $entry) {
     $script->selectedAll(
