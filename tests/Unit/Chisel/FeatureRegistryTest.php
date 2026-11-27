@@ -256,8 +256,30 @@ test('cross-feature test definitions are owned by production CrossFeatureTests c
             ->and($entry['features'])->toBeArray()
             ->and($entry['files'])->toBeArray();
     }
+});
 
-    expect(Tests\Support\CrossFeatureTests::all())->toBe($crossTests);
+test('FeatureRegistry options and defaults derive directly from feature definitions', function (): void {
+    $authFeatures = FeatureRegistry::authFeatures();
+    $optionalModules = FeatureRegistry::optionalModules();
+
+    expect(FeatureRegistry::options($authFeatures))->toBe([
+        'login' => 'Login',
+        'logout' => 'Logout',
+        'registration' => 'Registration',
+        'email-verification' => 'Email verification',
+        'password-reset' => 'Password reset',
+        'password-update' => 'Password update',
+        'two-factor' => 'Two-factor authentication',
+    ])->and(FeatureRegistry::defaults($authFeatures))->toBe(array_keys($authFeatures))
+        ->and(FeatureRegistry::options($optionalModules))->toBe([
+            'authorization' => 'Authorization',
+            'settings' => 'Settings',
+            'user-management' => 'User Management',
+            'localization' => 'Localization',
+            'notifications' => 'Notifications',
+            'audit-trails' => 'Audit Trails',
+            'reporting' => 'Reporting',
+        ])->and(FeatureRegistry::defaults($optionalModules))->toBe(array_keys($optionalModules));
 });
 
 test('FeatureRegistry toPathsArray cross_feature_tests is sourced from production CrossFeatureTests', function (): void {

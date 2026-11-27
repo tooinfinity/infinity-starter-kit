@@ -7,6 +7,7 @@ if (! class_exists('Laravel\Chisel\Chisel')) {
 }
 
 use App\Chisel\FeatureRegistry;
+use App\Chisel\Features\CrossFeatureTests;
 use App\Chisel\Installer\AiToolingPruner;
 use App\Chisel\Installer\Cleanup;
 use App\Chisel\Installer\ComposerLockSynchronizer;
@@ -196,9 +197,6 @@ if (! function_exists('chiselPruneAiTooling')) {
     }
 }
 
-/** @var array<string, mixed> $paths */
-$paths = require __DIR__.'/chisel-paths.php';
-
 $directory = __DIR__;
 $authFeatures = FeatureRegistry::authFeatures();
 $optionalModules = FeatureRegistry::optionalModules();
@@ -208,47 +206,15 @@ $script = Chisel::script(__DIR__)
         Question::multiselect(
             name: 'auth_features',
             label: 'Which authentication features would you like to enable?',
-            options: [
-                'login' => 'Login',
-                'logout' => 'Logout',
-                'registration' => 'Registration',
-                'email-verification' => 'Email verification',
-                'password-reset' => 'Password reset',
-                'password-update' => 'Password update',
-                'two-factor' => 'Two-factor authentication',
-            ],
-            default: [
-                'login',
-                'logout',
-                'registration',
-                'email-verification',
-                'password-reset',
-                'password-update',
-                'two-factor',
-            ],
+            options: FeatureRegistry::options($authFeatures),
+            default: FeatureRegistry::defaults($authFeatures),
             hint: 'Use space to select, enter to confirm.',
         ),
         Question::multiselect(
             name: 'optional_modules',
             label: 'Which optional modules should be installed?',
-            options: [
-                'authorization' => 'Authorization',
-                'settings' => 'Settings',
-                'user-management' => 'User Management',
-                'localization' => 'Localization',
-                'notifications' => 'Notifications',
-                'audit-trails' => 'Audit Trails',
-                'reporting' => 'Reporting',
-            ],
-            default: [
-                'authorization',
-                'settings',
-                'user-management',
-                'localization',
-                'notifications',
-                'audit-trails',
-                'reporting',
-            ],
+            options: FeatureRegistry::options($optionalModules),
+            default: FeatureRegistry::defaults($optionalModules),
             hint: 'Use space to select, enter to confirm.',
         ),
         Question::multiselect(
@@ -466,7 +432,7 @@ $script = Chisel::script(__DIR__)
         },
     );
 
-foreach ($paths['cross_feature_tests'] ?? [] as $entry) {
+foreach (CrossFeatureTests::all() as $entry) {
     $script->selectedAll(
         'optional_modules',
         $entry['features'],
@@ -515,6 +481,6 @@ return $script
         },
     )
 
-    ->apply(function () use ($directory, $paths): void {
-        chiselSyncComposerLock($directory, $paths);
+    ->apply(function () use ($directory): void {
+        chiselSyncComposerLock($directory);
     });
