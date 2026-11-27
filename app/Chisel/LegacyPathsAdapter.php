@@ -133,12 +133,14 @@ final class LegacyPathsAdapter
     }
 
     /**
+     * @param  array<string, FeatureDefinition>|null  $modules
      * @return array<string, list<string>>
      */
-    public static function dependencies(): array
+    public static function dependencies(?array $modules = null): array
     {
         $deps = [];
-        foreach (FeatureRegistry::optionalModules() as $key => $feature) {
+        $modules ??= FeatureRegistry::optionalModules();
+        foreach ($modules as $key => $feature) {
             if ($feature->dependencies !== []) {
                 $deps[$key] = $feature->dependencies;
             }

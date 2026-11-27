@@ -42,7 +42,7 @@ test('LegacyPathsAdapter serializeModule mechanically serializes arbitrary Featu
         emptyDirectories: ['resources/js/pages/custom'],
         composerPackages: ['vendor/custom-composer-pkg'],
         frontendPackages: ['@custom/frontend-pkg'],
-        dependencies: ['authorization'],
+        dependencies: ['authorization', 'settings'],
     );
 
     $serialized = LegacyPathsAdapter::serializeModule($customFeature);
@@ -97,6 +97,24 @@ test('LegacyPathsAdapter dependencies matches FeatureRegistry optional module de
             expect(isset($deps[$key]))->toBeFalse();
         }
     }
+});
+
+test('LegacyPathsAdapter dependencies sorts by count of dependencies descending then by name', function (): void {
+    $mockModules = [
+        'single-dep' => new FeatureDefinition(
+            key: 'single-dep',
+            label: 'Single Dep',
+            dependencies: ['dep-a'],
+        ),
+        'two-deps' => new FeatureDefinition(
+            key: 'two-deps',
+            label: 'Two Deps',
+            dependencies: ['dep-a', 'dep-b'],
+        ),
+    ];
+
+    $deps = LegacyPathsAdapter::dependencies($mockModules);
+    expect(array_keys($deps))->toBe(['two-deps', 'single-dep']);
 });
 
 test('LegacyPathsAdapter serializeModule handles multiple type definition files', function (): void {
