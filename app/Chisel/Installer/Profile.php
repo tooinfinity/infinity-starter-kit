@@ -169,6 +169,9 @@ final readonly class Profile
             $paths[] = 'app/Http/Controllers/Users/UserController.php';
             $paths[] = 'resources/js/pages/users/index.tsx';
             $paths[] = 'routes/user-management.php';
+        }
+
+        if ($has('user-management') || $has('audit-trails')) {
             $paths[] = 'config/data.php';
         }
 
@@ -228,6 +231,9 @@ final readonly class Profile
         if (! $has('user-management')) {
             $paths[] = 'app/Http/Controllers/Users/UserController.php';
             $paths[] = 'resources/js/pages/users';
+        }
+
+        if (! $has('user-management') && ! $has('audit-trails')) {
             $paths[] = 'config/data.php';
         }
 
