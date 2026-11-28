@@ -137,6 +137,238 @@ final readonly class Profile
     }
 
     /**
+     * @param  list<string>  $selectedFeatures
+     * @return list<string>
+     */
+    public static function expectedPresentPathsFor(array $selectedFeatures): array
+    {
+        $has = static fn (string $feature): bool => in_array($feature, $selectedFeatures, true);
+
+        $paths = [
+            'app/Models/User.php',
+            'app/Http/Controllers/UserProfileController.php',
+            'routes/web.php',
+        ];
+
+        if ($has('authorization')) {
+            $paths[] = 'config/permission.php';
+            $paths[] = 'app/Enums/Permission.php';
+            $paths[] = 'app/Enums/Role.php';
+            $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
+        }
+
+        if ($has('settings')) {
+            $paths[] = 'app/Models/Setting.php';
+            $paths[] = 'app/Http/Controllers/SettingController.php';
+            $paths[] = 'resources/js/pages/settings/application/edit.tsx';
+            $paths[] = 'routes/settings.php';
+        }
+
+        if ($has('user-management')) {
+            $paths[] = 'app/Http/Controllers/Users/UserController.php';
+            $paths[] = 'resources/js/pages/users/index.tsx';
+            $paths[] = 'routes/user-management.php';
+        }
+
+        if ($has('user-management') || $has('audit-trails')) {
+            $paths[] = 'config/data.php';
+        }
+
+        if ($has('notifications')) {
+            $paths[] = 'app/Models/NotificationPreference.php';
+            $paths[] = 'app/Http/Controllers/NotificationController.php';
+            $paths[] = 'resources/js/pages/notifications/index.tsx';
+            $paths[] = 'routes/notifications.php';
+        }
+
+        if ($has('audit-trails')) {
+            $paths[] = 'config/activitylog.php';
+            $paths[] = 'config/audit.php';
+            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
+            $paths[] = 'app/Models/Activity.php';
+            $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
+            $paths[] = 'resources/js/pages/audit-trails/index.tsx';
+            $paths[] = 'routes/audit-trails.php';
+        }
+
+        if ($has('localization')) {
+            $paths[] = 'app/Http/Middleware/HandleLocale.php';
+            $paths[] = 'app/Http/Controllers/LocaleController.php';
+            $paths[] = 'routes/localization.php';
+        }
+
+        if ($has('two-factor')) {
+            $paths[] = 'app/Http/Controllers/UserTwoFactorAuthenticationController.php';
+        }
+
+        return $paths;
+    }
+
+    /**
+     * @param  list<string>  $selectedFeatures
+     * @return list<string>
+     */
+    public static function expectedAbsentPathsFor(array $selectedFeatures): array
+    {
+        $has = static fn (string $feature): bool => in_array($feature, $selectedFeatures, true);
+
+        $paths = [];
+
+        if (! $has('authorization')) {
+            $paths[] = 'config/permission.php';
+            $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
+            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
+            $paths[] = 'resources/js/hooks/use-authorization.ts';
+        }
+
+        if (! $has('settings')) {
+            $paths[] = 'app/Models/Setting.php';
+            $paths[] = 'app/Http/Controllers/SettingController.php';
+            $paths[] = 'resources/js/pages/settings/application/edit.tsx';
+        }
+
+        if (! $has('user-management')) {
+            $paths[] = 'app/Http/Controllers/Users/UserController.php';
+            $paths[] = 'resources/js/pages/users';
+        }
+
+        if (! $has('user-management') && ! $has('audit-trails')) {
+            $paths[] = 'config/data.php';
+        }
+
+        if (! $has('notifications')) {
+            $paths[] = 'app/Models/NotificationPreference.php';
+            $paths[] = 'app/Http/Controllers/NotificationController.php';
+            $paths[] = 'resources/js/pages/notifications';
+        }
+
+        if (! $has('audit-trails')) {
+            $paths[] = 'config/activitylog.php';
+            $paths[] = 'config/audit.php';
+            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
+            $paths[] = 'app/Models/Activity.php';
+            $paths[] = 'app/Http/Controllers/AuditTrails';
+            $paths[] = 'resources/js/pages/audit-trails';
+        }
+
+        if (! $has('localization')) {
+            $paths[] = 'app/Http/Middleware/HandleLocale.php';
+            $paths[] = 'app/Http/Controllers/LocaleController.php';
+        }
+
+        if (! $has('two-factor')) {
+            $paths[] = 'app/Http/Controllers/UserTwoFactorAuthenticationController.php';
+        }
+
+        return $paths;
+    }
+
+    /**
+     * @param  list<string>  $selectedFeatures
+     * @return list<string>
+     */
+    public static function expectedPresentTablesFor(array $selectedFeatures): array
+    {
+        $has = static fn (string $feature): bool => in_array($feature, $selectedFeatures, true);
+
+        $tables = ['users'];
+
+        if ($has('authorization')) {
+            $tables[] = 'roles';
+            $tables[] = 'permissions';
+        }
+
+        if ($has('settings')) {
+            $tables[] = 'settings';
+        }
+
+        if ($has('notifications')) {
+            $tables[] = 'notifications';
+            $tables[] = 'notification_preferences';
+        }
+
+        if ($has('audit-trails')) {
+            $tables[] = 'activity_log';
+        }
+
+        return $tables;
+    }
+
+    /**
+     * @param  list<string>  $selectedFeatures
+     * @return list<string>
+     */
+    public static function expectedAbsentTablesFor(array $selectedFeatures): array
+    {
+        $has = static fn (string $feature): bool => in_array($feature, $selectedFeatures, true);
+
+        $tables = [];
+
+        if (! $has('authorization')) {
+            $tables[] = 'roles';
+            $tables[] = 'permissions';
+        }
+
+        if (! $has('settings')) {
+            $tables[] = 'settings';
+        }
+
+        if (! $has('notifications')) {
+            $tables[] = 'notifications';
+            $tables[] = 'notification_preferences';
+        }
+
+        if (! $has('audit-trails')) {
+            $tables[] = 'activity_log';
+        }
+
+        return $tables;
+    }
+
+    /**
+     * @param  list<string>  $selectedFeatures
+     * @return array<string, list<string>>
+     */
+    public static function expectedPresentColumnsFor(array $selectedFeatures): array
+    {
+        $has = static fn (string $feature): bool => in_array($feature, $selectedFeatures, true);
+
+        $columns = ['users' => ['email', 'password']];
+
+        if ($has('two-factor')) {
+            $columns['users'][] = 'two_factor_secret';
+        }
+
+        if ($has('localization')) {
+            $columns['users'][] = 'locale';
+        }
+
+        return $columns;
+    }
+
+    /**
+     * @param  list<string>  $selectedFeatures
+     * @return array<string, list<string>>
+     */
+    public static function expectedAbsentColumnsFor(array $selectedFeatures): array
+    {
+        $has = static fn (string $feature): bool => in_array($feature, $selectedFeatures, true);
+
+        $columns = ['users' => []];
+
+        if (! $has('two-factor')) {
+            $columns['users'][] = 'two_factor_secret';
+        }
+
+        if (! $has('localization')) {
+            $columns['users'][] = 'locale';
+        }
+
+        return $columns;
+    }
+
+    /**
      * @return array{auth_features: list<string>, optional_modules: list<string>}
      */
     public function answers(): array
@@ -194,64 +426,7 @@ final readonly class Profile
      */
     public function expectedPresentPaths(): array
     {
-        $paths = [
-            'app/Models/User.php',
-            'app/Http/Controllers/UserProfileController.php',
-            'routes/web.php',
-        ];
-
-        if ($this->hasAuthorization()) {
-            $paths[] = 'config/permission.php';
-            $paths[] = 'app/Enums/Permission.php';
-            $paths[] = 'app/Enums/Role.php';
-            $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
-            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
-        }
-
-        if ($this->hasSettings()) {
-            $paths[] = 'app/Models/Setting.php';
-            $paths[] = 'app/Http/Controllers/SettingController.php';
-            $paths[] = 'resources/js/pages/settings/application/edit.tsx';
-            $paths[] = 'routes/settings.php';
-        }
-
-        if ($this->hasUserManagement()) {
-            $paths[] = 'app/Http/Controllers/Users/UserController.php';
-            $paths[] = 'resources/js/pages/users/index.tsx';
-            $paths[] = 'routes/user-management.php';
-        }
-
-        if ($this->hasNotifications()) {
-            $paths[] = 'app/Models/NotificationPreference.php';
-            $paths[] = 'app/Http/Controllers/NotificationController.php';
-            $paths[] = 'resources/js/pages/notifications/index.tsx';
-            $paths[] = 'routes/notifications.php';
-        }
-
-        if ($this->hasAuditTrails()) {
-            $paths[] = 'config/activitylog.php';
-            $paths[] = 'config/audit.php';
-            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
-            $paths[] = 'app/Models/Activity.php';
-            $paths[] = 'app/Http/Controllers/AuditTrails/AuditTrailController.php';
-            $paths[] = 'resources/js/pages/audit-trails/index.tsx';
-            $paths[] = 'routes/audit-trails.php';
-        }
-
-        if ($this->hasUserManagement()) {
-            $paths[] = 'config/data.php';
-        }
-
-        if ($this->hasLocalization()) {
-            $paths[] = 'app/Http/Middleware/HandleLocale.php';
-            $paths[] = 'routes/localization.php';
-        }
-
-        if ($this->hasTwoFactor()) {
-            $paths[] = 'app/Http/Controllers/UserTwoFactorAuthenticationController.php';
-        }
-
-        return $paths;
+        return self::expectedPresentPathsFor($this->selectedFeatures());
     }
 
     /**
@@ -261,54 +436,7 @@ final readonly class Profile
      */
     public function expectedAbsentPaths(): array
     {
-        $paths = [];
-
-        if (! $this->hasAuthorization()) {
-            $paths[] = 'config/permission.php';
-            $paths[] = 'app/Console/Commands/SetupAuthorizationCommand.php';
-            $paths[] = 'app/Console/Commands/CreateAdminCommand.php';
-            $paths[] = 'resources/js/hooks/use-authorization.ts';
-        }
-
-        if (! $this->hasSettings()) {
-            $paths[] = 'app/Models/Setting.php';
-            $paths[] = 'app/Http/Controllers/SettingController.php';
-            $paths[] = 'resources/js/pages/settings/application/edit.tsx';
-        }
-
-        if (! $this->hasUserManagement()) {
-            $paths[] = 'app/Http/Controllers/Users/UserController.php';
-            $paths[] = 'resources/js/pages/users';
-        }
-
-        if (! $this->hasNotifications()) {
-            $paths[] = 'app/Models/NotificationPreference.php';
-            $paths[] = 'app/Http/Controllers/NotificationController.php';
-            $paths[] = 'resources/js/pages/notifications';
-        }
-
-        if (! $this->hasAuditTrails()) {
-            $paths[] = 'config/activitylog.php';
-            $paths[] = 'config/audit.php';
-            $paths[] = 'database/migrations/2026_11_20_000000_create_activity_log_table.php';
-            $paths[] = 'app/Models/Activity.php';
-            $paths[] = 'app/Http/Controllers/AuditTrails';
-            $paths[] = 'resources/js/pages/audit-trails';
-        }
-
-        if (! $this->hasUserManagement()) {
-            $paths[] = 'config/data.php';
-        }
-
-        if (! $this->hasLocalization()) {
-            $paths[] = 'app/Http/Middleware/HandleLocale.php';
-        }
-
-        if (! $this->hasTwoFactor()) {
-            $paths[] = 'app/Http/Controllers/UserTwoFactorAuthenticationController.php';
-        }
-
-        return $paths;
+        return self::expectedAbsentPathsFor($this->selectedFeatures());
     }
 
     /**
@@ -316,27 +444,7 @@ final readonly class Profile
      */
     public function expectedPresentTables(): array
     {
-        $tables = ['users'];
-
-        if ($this->hasAuthorization()) {
-            $tables[] = 'roles';
-            $tables[] = 'permissions';
-        }
-
-        if ($this->hasSettings()) {
-            $tables[] = 'settings';
-        }
-
-        if ($this->hasNotifications()) {
-            $tables[] = 'notifications';
-            $tables[] = 'notification_preferences';
-        }
-
-        if ($this->hasAuditTrails()) {
-            $tables[] = 'activity_log';
-        }
-
-        return $tables;
+        return self::expectedPresentTablesFor($this->selectedFeatures());
     }
 
     /**
@@ -344,27 +452,7 @@ final readonly class Profile
      */
     public function expectedAbsentTables(): array
     {
-        $tables = [];
-
-        if (! $this->hasAuthorization()) {
-            $tables[] = 'roles';
-            $tables[] = 'permissions';
-        }
-
-        if (! $this->hasSettings()) {
-            $tables[] = 'settings';
-        }
-
-        if (! $this->hasNotifications()) {
-            $tables[] = 'notifications';
-            $tables[] = 'notification_preferences';
-        }
-
-        if (! $this->hasAuditTrails()) {
-            $tables[] = 'activity_log';
-        }
-
-        return $tables;
+        return self::expectedAbsentTablesFor($this->selectedFeatures());
     }
 
     /**
@@ -372,17 +460,7 @@ final readonly class Profile
      */
     public function expectedPresentColumns(): array
     {
-        $columns = ['users' => ['email', 'password']];
-
-        if ($this->hasTwoFactor()) {
-            $columns['users'][] = 'two_factor_secret';
-        }
-
-        if ($this->hasLocalization()) {
-            $columns['users'][] = 'locale';
-        }
-
-        return $columns;
+        return self::expectedPresentColumnsFor($this->selectedFeatures());
     }
 
     /**
@@ -390,17 +468,7 @@ final readonly class Profile
      */
     public function expectedAbsentColumns(): array
     {
-        $columns = ['users' => []];
-
-        if (! $this->hasTwoFactor()) {
-            $columns['users'][] = 'two_factor_secret';
-        }
-
-        if (! $this->hasLocalization()) {
-            $columns['users'][] = 'locale';
-        }
-
-        return $columns;
+        return self::expectedAbsentColumnsFor($this->selectedFeatures());
     }
 
     /**
@@ -435,5 +503,15 @@ final readonly class Profile
     private static function normalize(string $name): string
     {
         return mb_strtolower(mb_trim($name));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function selectedFeatures(): array
+    {
+        $answers = $this->answers();
+
+        return array_merge($answers['auth_features'], $answers['optional_modules']);
     }
 }
